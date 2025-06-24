@@ -8,6 +8,9 @@ class DashboardScreen extends StatelessWidget {
   Future<void> _signOut(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
+      if (context.mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -28,9 +31,34 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('TimeTrader'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _signOut(context),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'logout') {
+                _signOut(context);
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    const Icon(Icons.logout, color: Colors.red),
+                    const SizedBox(width: 8),
+                    const Text('Cerrar Sesión'),
+                  ],
+                ),
+              ),
+            ],
+            child: CircleAvatar(
+              backgroundColor: const Color(0xFF21CE99),
+              child: Text(
+                user?.email?.substring(0, 1).toUpperCase() ?? 'U',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -54,6 +82,16 @@ class DashboardScreen extends StatelessWidget {
                 color: Colors.grey[400],
               ),
             ),
+            if (user?.displayName != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                user!.displayName!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF21CE99),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
 
             // Last Simulation Card

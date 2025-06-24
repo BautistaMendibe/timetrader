@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../routes.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isLoginMode = true;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   @override
   void dispose() {
@@ -92,6 +94,111 @@ class _LoginScreenState extends State<LoginScreen> {
             _isLoading = false;
           });
         }
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Primero, verificar si el usuario ya está autenticado
+      await _googleSignIn.signOut();
+      
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+        throw Exception('No se pudieron obtener los tokens de autenticación de Google');
+      }
+      
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await _auth.signInWithCredential(credential);
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Error al iniciar sesión con Google';
+      
+      switch (e.code) {
+        case 'account-exists-with-different-credential':
+          errorMessage = 'Ya existe una cuenta con este email usando otro método de autenticación';
+          break;
+        case 'invalid-credential':
+          errorMessage = 'Credenciales de Google inválidas';
+          break;
+        case 'operation-not-allowed':
+          errorMessage = 'El inicio de sesión con Google no está habilitado';
+          break;
+        case 'user-disabled':
+          errorMessage = 'La cuenta de usuario ha sido deshabilitada';
+          break;
+        case 'user-not-found':
+          errorMessage = 'No se encontró la cuenta de usuario';
+          break;
+        case 'wrong-password':
+          errorMessage = 'Contraseña incorrecta';
+          break;
+        case 'invalid-verification-code':
+          errorMessage = 'Código de verificación inválido';
+          break;
+        case 'invalid-verification-id':
+          errorMessage = 'ID de verificación inválido';
+          break;
+        default:
+          errorMessage = 'Error de autenticación: ${e.code}';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Google Sign-In Error: $e');
+      
+      String errorMessage = 'Error al conectar con Google';
+      
+      if (e.toString().contains('network')) {
+        errorMessage = 'Error de conexión a internet';
+      } else if (e.toString().contains('cancelled')) {
+        errorMessage = 'Inicio de sesión cancelado';
+      } else if (e.toString().contains('popup')) {
+        errorMessage = 'Error al abrir la ventana de Google';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -206,6 +313,44 @@ class _LoginScreenState extends State<LoginScreen> {
                           _isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                         ),
+                ),
+                const SizedBox(height: 16),
+
+                // Divider
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.grey[600])),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'O',
+                        style: TextStyle(color: Colors.grey[400]),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.grey[600])),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Google Sign-In Button
+                OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _handleGoogleSignIn,
+                  icon: Image.network(
+                    'https://developers.google.com/identity/images/g-logo.png',
+                    height: 24,
+                  ),
+                  label: const Text(
+                    'Continuar con Google',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: BorderSide(color: Colors.grey[600]!),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
 

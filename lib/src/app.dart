@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'routes.dart';
+import 'screens/login_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -27,8 +30,38 @@ class App extends StatelessWidget {
           surface: Color(0xFF2C2C2C),
         ),
       ),
-      initialRoute: AppRoutes.login,
+      home: const AuthWrapper(),
       routes: AppRoutes.routes,
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF21CE99),
+              ),
+            ),
+          );
+        }
+        
+        if (snapshot.hasData && snapshot.data != null) {
+          // User is signed in
+          return const DashboardScreen();
+        }
+        
+        // User is not signed in
+        return const LoginScreen();
+      },
     );
   }
 } 
