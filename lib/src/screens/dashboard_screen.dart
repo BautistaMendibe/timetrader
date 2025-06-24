@@ -1,20 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../routes.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
+  Future<void> _signOut(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al cerrar sesión'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('TimeTrader'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {
-              // TODO: Implement menu
-            },
+            icon: const Icon(Icons.logout),
+            onPressed: () => _signOut(context),
           ),
         ],
       ),
@@ -33,7 +49,7 @@ class DashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Continúa mejorando tus habilidades de trading',
+              user?.email ?? 'Usuario',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.grey[400],
               ),

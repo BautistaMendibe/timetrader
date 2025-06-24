@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../routes.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,6 +14,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isLoginMode = true;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void dispose() {
@@ -21,19 +24,82 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() async {
+  void _handleAuth() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      // Simulate login delay
-      await Future.delayed(const Duration(seconds: 1));
+      try {
+        if (_isLoginMode) {
+          // Login
+          await _auth.signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+        } else {
+          // Create account
+          await _auth.createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+        }
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+        }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = 'Ocurrió un error';
+        
+        switch (e.code) {
+          case 'user-not-found':
+            errorMessage = 'No se encontró una cuenta con este email';
+            break;
+          case 'wrong-password':
+            errorMessage = 'Contraseña incorrecta';
+            break;
+          case 'email-already-in-use':
+            errorMessage = 'Ya existe una cuenta con este email';
+            break;
+          case 'weak-password':
+            errorMessage = 'La contraseña es demasiado débil';
+            break;
+          case 'invalid-email':
+            errorMessage = 'Email inválido';
+            break;
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error de conexión'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
+  }
+
+  void _toggleMode() {
+    setState(() {
+      _isLoginMode = !_isLoginMode;
+    });
   }
 
   @override
@@ -123,9 +189,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Login Button
+                // Auth Button
                 ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
+                  onPressed: _isLoading ? null : _handleAuth,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF21CE99),
                     foregroundColor: Colors.white,
@@ -136,16 +202,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Iniciar Sesión',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      : Text(
+                          _isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                 ),
                 const SizedBox(height: 16),
 
-                // Create Account Button
+                // Toggle Mode Button
                 OutlinedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
+                  onPressed: _isLoading ? null : _toggleMode,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF21CE99),
                     side: const BorderSide(color: Color(0xFF21CE99)),
@@ -154,9 +220,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Crear Cuenta',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  child: Text(
+                    _isLoginMode ? 'Crear Cuenta' : 'Ya tengo cuenta',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
