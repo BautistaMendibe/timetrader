@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/setup.dart';
 
 class SetupProvider with ChangeNotifier {
-  List<Setup> _setups = [];
+  final List<Setup> _setups = [];
   Setup? _selectedSetup;
 
   List<Setup> get setups => _setups;

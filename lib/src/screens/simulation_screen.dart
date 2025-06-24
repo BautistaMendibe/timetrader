@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../routes.dart';
 
 class SimulationScreen extends StatelessWidget {
   const SimulationScreen({super.key});

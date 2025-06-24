@@ -5,7 +5,7 @@ import '../models/setup.dart';
 
 class SimulationProvider with ChangeNotifier {
   SimulationResult? _currentSimulation;
-  List<SimulationResult> _simulationHistory = [];
+  final List<SimulationResult> _simulationHistory = [];
   List<Candle> _historicalData = [];
   bool _isSimulationRunning = false;
   int _currentCandleIndex = 0;
