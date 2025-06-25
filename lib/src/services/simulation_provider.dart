@@ -12,6 +12,7 @@ class SimulationProvider with ChangeNotifier {
   double _currentBalance = 10000.0;
   List<Trade> _currentTrades = [];
   List<double> _equityCurve = [];
+  Setup? _currentSetup;
 
   SimulationResult? get currentSimulation => _currentSimulation;
   List<SimulationResult> get simulationHistory => _simulationHistory;
@@ -34,6 +35,7 @@ class SimulationProvider with ChangeNotifier {
     _currentTrades = [];
     _equityCurve = [10000.0];
     _isSimulationRunning = true;
+    _currentSetup = setup;
     notifyListeners();
   }
 
@@ -85,7 +87,7 @@ class SimulationProvider with ChangeNotifier {
     
     _currentSimulation = SimulationResult(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      setupId: 'setup_id', // This should come from the actual setup
+      setupId: _currentSetup?.id ?? 'unknown',
       startDate: _historicalData.first.timestamp,
       endDate: _historicalData.last.timestamp,
       initialBalance: 10000.0,

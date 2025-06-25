@@ -16,7 +16,7 @@ class AppRoutes {
   static const String setupForm = '/setup-form';
   static const String simulationSetup = '/simulation-setup';
   static const String simulation = '/simulation';
-  static const String simulationSummary = '/simulation-summary';
+  static const String simulationSummary = '/summary';
 
   static Map<String, WidgetBuilder> get routes => {
     login: (context) => const LoginScreen(),

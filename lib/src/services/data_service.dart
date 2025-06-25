@@ -55,10 +55,11 @@ class DataService {
 
   List<DateTime> getAvailableDates() {
     final List<DateTime> dates = [];
-    final DateTime now = DateTime.now();
+    // Use a fixed reference date to ensure consistency
+    final DateTime referenceDate = DateTime(2024, 1, 1);
     
     for (int i = 0; i < 12; i++) {
-      dates.add(now.subtract(Duration(days: i * 30)));
+      dates.add(referenceDate.subtract(Duration(days: i * 30)));
     }
     
     return dates;
