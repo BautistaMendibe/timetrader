@@ -16,18 +16,18 @@ class DataService {
       return jsonData.map((json) => Candle.fromJson(json)).toList();
     } catch (e) {
       // Return mock data if file doesn't exist
-      return _generateMockData();
+      return _generateMockData(date);
     }
   }
 
-  List<Candle> _generateMockData() {
+  List<Candle> _generateMockData([DateTime? startDate]) {
     final List<Candle> mockData = [];
-    final DateTime startDate = DateTime.now().subtract(const Duration(days: 30));
+    final DateTime baseDate = startDate ?? DateTime.now().subtract(const Duration(days: 30));
     
     double price = 50000.0;
     
     for (int i = 0; i < 100; i++) {
-      final timestamp = startDate.add(Duration(hours: i));
+      final timestamp = baseDate.add(Duration(hours: i));
       final change = (price * 0.02) * (0.5 - (i % 3) * 0.3);
       final open = price;
       final close = price + change;

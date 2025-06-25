@@ -31,10 +31,9 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
   void _initializeValues() {
     // Set default values
     final assets = _dataService.getAvailableAssets();
-    final dates = _dataService.getAvailableDates();
     
     if (assets.isNotEmpty) _selectedAsset = assets.first;
-    if (dates.isNotEmpty) _selectedDate = dates.first;
+    // Don't set a default date - let user choose from calendar
     
     _isInitialized = true;
   }
@@ -50,10 +49,29 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
 
   Future<void> _startSimulation() async {
     if (_selectedAsset == null || _selectedDate == null || _selectedSetup == null) {
+      String errorMessage = 'Por favor completa todos los campos:';
+      if (_selectedAsset == null) errorMessage += '\n• Selecciona un activo';
+      if (_selectedDate == null) errorMessage += '\n• Selecciona una fecha de inicio';
+      if (_selectedSetup == null) errorMessage += '\n• Selecciona un setup';
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Validar que la fecha no sea futura
+    final now = DateTime.now();
+    if (_selectedDate!.isAfter(now)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor selecciona todos los campos'),
+          content: Text('No se puede simular con fechas futuras. Selecciona una fecha anterior a hoy.'),
           backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
         ),
       );
       return;
@@ -101,16 +119,11 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
       _initializeValues();
     }
     
-    // Validate that selected values are in the available options
+    // Validate that selected asset is in the available options
     final availableAssets = _dataService.getAvailableAssets();
-    final availableDates = _dataService.getAvailableDates();
     
     if (_selectedAsset != null && !availableAssets.contains(_selectedAsset)) {
       _selectedAsset = availableAssets.isNotEmpty ? availableAssets.first : null;
-    }
-    
-    if (_selectedDate != null && !availableDates.contains(_selectedDate)) {
-      _selectedDate = availableDates.isNotEmpty ? availableDates.first : null;
     }
 
     return Scaffold(
@@ -183,36 +196,75 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<DateTime>(
-                      value: _selectedDate,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFF1E1E1E),
-                      ),
-                      dropdownColor: const Color(0xFF2C2C2C),
-                      style: const TextStyle(color: Colors.white),
-                      items: _dataService.getAvailableDates().map((date) {
-                        return DropdownMenuItem(
-                          value: date,
-                          child: Text('${date.day}/${date.month}/${date.year}'),
+                    InkWell(
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: _selectedDate ?? DateTime.now().subtract(const Duration(days: 1)),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now().subtract(const Duration(days: 1)),
+                          builder: (context, child) {
+                            return Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: const ColorScheme.dark(
+                                  primary: Color(0xFF21CE99),
+                                  onPrimary: Colors.white,
+                                  surface: Color(0xFF2C2C2C),
+                                  onSurface: Colors.white,
+                                ),
+                                dialogBackgroundColor: const Color(0xFF1E1E1E),
+                              ),
+                              child: child!,
+                            );
+                          },
                         );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) {
+                        if (picked != null) {
                           setState(() {
-                            _selectedDate = value;
+                            _selectedDate = picked;
                           });
                         }
                       },
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Por favor selecciona una fecha';
-                        }
-                        return null;
-                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[600]!),
+                          borderRadius: BorderRadius.circular(8),
+                          color: const Color(0xFF1E1E1E),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              color: Colors.grey[400],
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _selectedDate != null
+                                    ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                                    : 'Seleccionar fecha',
+                                style: TextStyle(
+                                  color: _selectedDate != null ? Colors.white : Colors.grey[400],
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_drop_down,
+                              color: Colors.grey[400],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Selecciona cualquier fecha desde 2020 hasta ayer (no fechas futuras)',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
