@@ -49,13 +49,16 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
             ],
-            child: CircleAvatar(
-              backgroundColor: const Color(0xFF21CE99),
-              child: Text(
-                user?.email?.substring(0, 1).toUpperCase() ?? 'U',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: CircleAvatar(
+                backgroundColor: const Color(0xFF21CE99),
+                child: Text(
+                  user?.email?.substring(0, 1).toUpperCase() ?? 'U',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
