@@ -245,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Simulador de Trading Histórico',
+                      'Practica cualquier set up en segundos,\ndirectamente desde tu móvil',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Colors.grey[400],
                       ),
