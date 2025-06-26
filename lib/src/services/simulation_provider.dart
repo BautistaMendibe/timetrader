@@ -24,16 +24,21 @@ class SimulationProvider with ChangeNotifier {
   List<double> get equityCurve => _equityCurve;
 
   void setHistoricalData(List<Candle> data) {
+    debugPrint('🔥 SimulationProvider: setHistoricalData() - Datos recibidos: ${data.length} velas');
+    if (data.isNotEmpty) {
+      debugPrint('🔥 SimulationProvider: Primera vela: ${data.first.timestamp} - ${data.first.close}');
+      debugPrint('🔥 SimulationProvider: Última vela: ${data.last.timestamp} - ${data.last.close}');
+    }
     _historicalData = data;
     notifyListeners();
   }
 
-  void startSimulation(Setup setup, DateTime startDate, double speed) {
+  void startSimulation(Setup setup, DateTime startDate, double speed, double initialBalance) {
     _currentSimulation = null;
     _currentCandleIndex = 0;
-    _currentBalance = 10000.0;
+    _currentBalance = initialBalance;
     _currentTrades = [];
-    _equityCurve = [10000.0];
+    _equityCurve = [initialBalance];
     _isSimulationRunning = true;
     _currentSetup = setup;
     notifyListeners();
@@ -62,6 +67,7 @@ class SimulationProvider with ChangeNotifier {
       type: type,
       price: price,
       quantity: quantity,
+      candleIndex: _currentCandleIndex,
     );
     _currentTrades.add(trade);
     

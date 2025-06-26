@@ -39,7 +39,7 @@ class App extends StatelessWidget {
           ),
         ),
         home: const AuthWrapper(),
-        routes: AppRoutes.routes,
+        routes: AppRoutes.getRoutes(),
       ),
     );
   }

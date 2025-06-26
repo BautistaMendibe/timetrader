@@ -19,6 +19,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
   DateTime? _selectedDate;
   Setup? _selectedSetup;
   double _selectedSpeed = 1.0;
+  double _initialBalance = 10000.0; // Default initial balance
   bool _isLoading = false;
   bool _isInitialized = false;
 
@@ -89,7 +90,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
       
       // Set data and start simulation
       simulationProvider.setHistoricalData(data);
-      simulationProvider.startSimulation(_selectedSetup!, _selectedDate!, _selectedSpeed);
+      simulationProvider.startSimulation(_selectedSetup!, _selectedDate!, _selectedSpeed, _initialBalance);
       
       if (mounted) {
         Navigator.pushNamed(context, AppRoutes.simulation);
@@ -212,7 +213,9 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                                   surface: Color(0xFF2C2C2C),
                                   onSurface: Colors.white,
                                 ),
-                                dialogBackgroundColor: const Color(0xFF1E1E1E),
+                                dialogTheme: const DialogThemeData(
+                                  backgroundColor: Color(0xFF1E1E1E),
+                                ),
                               ),
                               child: child!,
                             );
@@ -414,6 +417,60 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                           style: TextStyle(color: Colors.grey[400]),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Initial Balance Selection
+            Card(
+              color: const Color(0xFF2C2C2C),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Balance Inicial',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: _initialBalance.toString(),
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Cantidad en USD',
+                        labelStyle: TextStyle(color: Colors.grey[400]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFF1E1E1E),
+                        prefixText: '\$ ',
+                        prefixStyle: const TextStyle(color: Colors.white),
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                      onChanged: (value) {
+                        final balance = double.tryParse(value);
+                        if (balance != null && balance > 0) {
+                          setState(() {
+                            _initialBalance = balance;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Balance inicial para la simulación (mínimo \$100)',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingView Chart</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1E1E1E;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        #chart-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+        #chart {
+            width: 100%;
+            height: calc(100% - 30px);
+        }
+        #attribution {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background-color: #1E1E1E;
+            color: #888888;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid #333333;
+        }
+        #attribution a {
+            color: #21CE99;
+            text-decoration: none;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #CCCCCC;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart-container">
+        <div id="loading">Cargando gráfico...</div>
+        <div id="chart"></div>
+        <div id="attribution">
+            Powered by <a href="https://tradingview.com" target="_blank">Lightweight Charts™</a>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        let candlestickSeries;
+        let volumeSeries;
+        let isInitialized = false;
+
+        function initChart() {
+            try {
+                if (isInitialized) return;
+                
+                const chartContainer = document.getElementById('chart');
+                if (!chartContainer) {
+                    console.error('Chart container not found');
+                    return;
+                }
+
+                chart = LightweightCharts.createChart(chartContainer, {
+                    width: window.innerWidth,
+                    height: window.innerHeight - 30,
+                    layout: {
+                        background: { color: '#1E1E1E' },
+                        textColor: '#CCCCCC',
+                        fontFamily: 'Inter',
+                    },
+                    grid: {
+                        vertLines: { color: '#333333' },
+                        horzLines: { color: '#333333' },
+                    },
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Normal,
+                    },
+                    rightPriceScale: {
+                        borderColor: '#888888',
+                        textColor: '#CCCCCC',
+                        fontFamily: 'Inter',
+                    },
+                    timeScale: {
+                        borderColor: '#888888',
+                        textColor: '#CCCCCC',
+                        fontFamily: 'Inter',
+                        timeVisible: true,
+                        secondsVisible: false,
+                    },
+                    handleScroll: {
+                        mouseWheel: true,
+                        pressedMouseMove: true,
+                        horzTouchDrag: true,
+                        vertTouchDrag: true,
+                    },
+                    handleScale: {
+                        axisPressedMouseMove: true,
+                        mouseWheel: true,
+                        pinch: true,
+                    },
+                });
+
+                candlestickSeries = chart.addCandlestickSeries({
+                    upColor: '#21CE99',
+                    downColor: '#FF5A5F',
+                    borderDownColor: '#FF5A5F',
+                    borderUpColor: '#21CE99',
+                    wickDownColor: '#FF5A5F',
+                    wickUpColor: '#21CE99',
+                });
+
+                // Add volume series
+                volumeSeries = chart.addHistogramSeries({
+                    color: '#26a69a',
+                    priceFormat: {
+                        type: 'volume',
+                    },
+                    priceScaleId: '',
+                    scaleMargins: {
+                        top: 0.8,
+                        bottom: 0,
+                    },
+                });
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    if (chart) {
+                        chart.applyOptions({
+                            width: window.innerWidth,
+                            height: window.innerHeight - 30,
+                        });
+                    }
+                });
+
+                isInitialized = true;
+                document.getElementById('loading').style.display = 'none';
+                
+                console.log('Chart initialized successfully');
+            } catch (error) {
+                console.error('Error initializing chart:', error);
+            }
+        }
+
+        function updateData(data) {
+            try {
+                if (!isInitialized) {
+                    console.log('Chart not initialized, retrying...');
+                    setTimeout(() => updateData(data), 100);
+                    return;
+                }
+
+                if (!data || !Array.isArray(data) || data.length === 0) {
+                    console.warn('No data provided to updateData');
+                    return;
+                }
+
+                const candlestickData = data.map(item => ({
+                    time: new Date(item.timestamp).getTime() / 1000,
+                    open: parseFloat(item.open),
+                    high: parseFloat(item.high),
+                    low: parseFloat(item.low),
+                    close: parseFloat(item.close),
+                }));
+
+                const volumeData = data.map(item => ({
+                    time: new Date(item.timestamp).getTime() / 1000,
+                    value: parseFloat(item.volume),
+                    color: parseFloat(item.close) >= parseFloat(item.open) ? '#21CE99' : '#FF5A5F',
+                }));
+
+                candlestickSeries.setData(candlestickData);
+                volumeSeries.setData(volumeData);
+
+                // Fit content
+                chart.timeScale().fitContent();
+                
+                console.log('Data updated successfully:', candlestickData.length, 'candles');
+            } catch (error) {
+                console.error('Error updating data:', error);
+            }
+        }
+
+        function addTradeMarker(trade) {
+            try {
+                if (!isInitialized || !candlestickSeries) {
+                    console.log('Chart not ready for trade marker');
+                    return;
+                }
+
+                const marker = {
+                    time: new Date(trade.timestamp).getTime() / 1000,
+                    position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
+                    color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
+                    shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
+                    text: `${trade.type.toUpperCase()} @ $${parseFloat(trade.price).toFixed(2)}`,
+                    size: 1,
+                };
+
+                candlestickSeries.setMarkers([marker]);
+                console.log('Trade marker added:', trade.type, trade.price);
+            } catch (error) {
+                console.error('Error adding trade marker:', error);
+            }
+        }
+
+        // Initialize chart when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing chart...');
+            setTimeout(initChart, 100);
+        });
+
+        // Fallback initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initChart);
+        } else {
+            setTimeout(initChart, 100);
+        }
+    </script>
+</body>
+</html> 

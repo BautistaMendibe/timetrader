@@ -72,6 +72,7 @@ class Trade {
   final String type; // 'buy' or 'sell'
   final double price;
   final double quantity;
+  final int candleIndex; // Índice de la vela donde se ejecutó el trade
   double pnl;
 
   Trade({
@@ -80,6 +81,7 @@ class Trade {
     required this.type,
     required this.price,
     required this.quantity,
+    required this.candleIndex,
     this.pnl = 0.0,
   });
 
@@ -90,6 +92,7 @@ class Trade {
       'type': type,
       'price': price,
       'quantity': quantity,
+      'candleIndex': candleIndex,
       'pnl': pnl,
     };
   }
@@ -101,6 +104,7 @@ class Trade {
       type: json['type'],
       price: json['price'].toDouble(),
       quantity: json['quantity'].toDouble(),
+      candleIndex: json['candleIndex'] ?? 0,
       pnl: json['pnl']?.toDouble() ?? 0.0,
     );
   }

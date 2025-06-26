@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/simulation_provider.dart';
 import '../models/candle.dart';
+import '../models/simulation_result.dart';
+import '../widgets/trading_view_chart.dart';
 import '../routes.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SimulationScreen extends StatefulWidget {
   const SimulationScreen({super.key});
@@ -15,6 +18,7 @@ class SimulationScreen extends StatefulWidget {
 class _SimulationScreenState extends State<SimulationScreen> {
   Timer? _timer;
   int _currentCandleIndex = 0;
+  final double _initialBalance = 10000.0; // Default initial balance
 
   @override
   void initState() {
@@ -63,19 +67,233 @@ class _SimulationScreenState extends State<SimulationScreen> {
     Navigator.pushReplacementNamed(context, AppRoutes.simulationSummary);
   }
 
-  void _executeTrade(String type) {
+  void _showOrderModal(String type) {
     final simulationProvider = context.read<SimulationProvider>();
     final currentCandle = simulationProvider.historicalData[_currentCandleIndex];
-    final quantity = 1.0; // Fixed quantity for simplicity
+    final maxLots = 100; // Maximum lots available
     
-    simulationProvider.executeTrade(type, currentCandle.close, quantity);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Orden de $type ejecutada a \$${currentCandle.close.toStringAsFixed(2)}'),
-        backgroundColor: const Color(0xFF21CE99),
-        duration: const Duration(seconds: 1),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            int lots = 1;
+            double takeProfit = currentCandle.close * 1.02; // 2% above current price
+            double stopLoss = currentCandle.close * 0.98; // 2% below current price
+            int multiplier = 1;
+            
+            double totalCost = lots * currentCandle.close * multiplier;
+            
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16, 
+                right: 16, 
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        type == 'buy' ? 'Comprar' : 'Vender',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Current Price
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Precio Actual:',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          '\$${currentCandle.close.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Lots Input
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Número de lotes',
+                            suffixText: 'Max: $maxLots',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onChanged: (v) {
+                            final val = int.tryParse(v) ?? 1;
+                            setState(() => lots = val.clamp(1, maxLots));
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Lots Slider
+                  Slider(
+                    value: lots.toDouble(),
+                    min: 1,
+                    max: maxLots.toDouble(),
+                    divisions: maxLots - 1,
+                    onChanged: (v) => setState(() => lots = v.toInt()),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Take Profit and Stop Loss
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Take Profit',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          controller: TextEditingController(text: takeProfit.toStringAsFixed(2)),
+                          onChanged: (v) => setState(() => takeProfit = double.tryParse(v) ?? currentCandle.close),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Stop Loss',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          controller: TextEditingController(text: stopLoss.toStringAsFixed(2)),
+                          onChanged: (v) => setState(() => stopLoss = double.tryParse(v) ?? currentCandle.close),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Multiplier
+                  Row(
+                    children: [
+                      const Text('Multiplicador: '),
+                      DropdownButton<int>(
+                        value: multiplier,
+                        items: [1, 10, 100].map((m) => 
+                          DropdownMenuItem(value: m, child: Text('x$m'))
+                        ).toList(),
+                        onChanged: (v) => setState(() => multiplier = v ?? 1),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Total Cost
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Costo Total:',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          '\$${totalCost.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Action Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: type == 'buy' ? const Color(0xFF21CE99) : const Color(0xFFFF5A5F),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        final provider = context.read<SimulationProvider>();
+                        provider.executeTrade(type, currentCandle.close, lots * multiplier.toDouble());
+                        Navigator.pop(context);
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Orden de $type ejecutada a \$${currentCandle.close.toStringAsFixed(2)}'),
+                            backgroundColor: type == 'buy' ? const Color(0xFF21CE99) : const Color(0xFFFF5A5F),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        '${type == 'buy' ? 'Comprar' : 'Vender'}: \$${currentCandle.close.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16, 
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -100,6 +318,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Simulación'),
+            backgroundColor: const Color(0xFF1E1E1E),
+            foregroundColor: Colors.white,
             actions: [
               IconButton(
                 icon: Icon(
@@ -122,6 +342,64 @@ class _SimulationScreenState extends State<SimulationScreen> {
           ),
           body: Column(
             children: [
+              // Balance Display
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                color: const Color(0xFF2C2C2C),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Balance',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                        Text(
+                          '\$${simulationProvider.currentBalance.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'P&L',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                        Text(
+                          '\$${(simulationProvider.currentBalance - _initialBalance).toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: simulationProvider.currentBalance >= _initialBalance 
+                              ? const Color(0xFF21CE99) 
+                              : const Color(0xFFFF5A5F),
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
               // Progress Bar
               LinearProgressIndicator(
                 value: progress,
@@ -136,8 +414,15 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2C2C2C),
+                    color: const Color(0xFF1E1E1E),
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,6 +432,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         style: TextStyle(
                           color: Colors.grey[400],
                           fontSize: 14,
+                          fontFamily: 'Inter',
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -156,9 +442,10 @@ class _SimulationScreenState extends State<SimulationScreen> {
                           color: Colors.white,
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter',
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       
                       // Candle Info
                       Row(
@@ -167,34 +454,23 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             child: _buildCandleInfo('Apertura', currentCandle.open, Colors.blue),
                           ),
                           Expanded(
-                            child: _buildCandleInfo('Máximo', currentCandle.high, Colors.green),
+                            child: _buildCandleInfo('Máximo', currentCandle.high, const Color(0xFF21CE99)),
                           ),
                           Expanded(
-                            child: _buildCandleInfo('Mínimo', currentCandle.low, Colors.red),
+                            child: _buildCandleInfo('Mínimo', currentCandle.low, const Color(0xFFFF5A5F)),
                           ),
                           Expanded(
                             child: _buildCandleInfo('Cierre', currentCandle.close, 
-                              currentCandle.close >= currentCandle.open ? Colors.green : Colors.red),
+                              currentCandle.close >= currentCandle.open ? const Color(0xFF21CE99) : const Color(0xFFFF5A5F)),
                           ),
                         ],
                       ),
                       
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       
-                      // Simple Chart Representation
+                      // Professional Chart
                       Expanded(
-                        child: Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[600]!),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: CustomPaint(
-                            painter: CandleChartPainter(
-                              candles: simulationProvider.historicalData.take(_currentCandleIndex + 1).toList(),
-                            ),
-                          ),
-                        ),
+                        child: _buildChartWithTradeMarkers(simulationProvider.historicalData.take(_currentCandleIndex + 1).toList(), simulationProvider.currentTrades),
                       ),
                     ],
                   ),
@@ -256,7 +532,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => _executeTrade('buy'),
+                            onPressed: () => _showOrderModal('buy'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               foregroundColor: Colors.white,
@@ -274,7 +550,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => _executeTrade('sell'),
+                            onPressed: () => _showOrderModal('sell'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
                               foregroundColor: Colors.white,
@@ -304,6 +580,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ),
             ],
           ),
+          bottomNavigationBar: TextButton(
+            onPressed: () => launchUrl(Uri.parse('https://github.com/tradingview/lightweight-charts')),
+            child: const Text(
+              'Gráficos realizados con Lightweight Charts™ de TradingView',
+              style: TextStyle(decoration: TextDecoration.underline),
+            ),
+          ),
         );
       },
     );
@@ -315,7 +598,12 @@ class _SimulationScreenState extends State<SimulationScreen> {
       children: [
         Text(
           label,
-          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+          style: TextStyle(
+            color: Colors.grey[400], 
+            fontSize: 12,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -324,67 +612,30 @@ class _SimulationScreenState extends State<SimulationScreen> {
             color: color,
             fontSize: 16,
             fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
           ),
         ),
       ],
     );
   }
-}
 
-class CandleChartPainter extends CustomPainter {
-  final List<Candle> candles;
-  
-  CandleChartPainter({required this.candles});
-  
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (candles.isEmpty) return;
+  Widget _buildChartWithTradeMarkers(List<Candle> candles, List<Trade> trades) {
+    debugPrint('🔥 SimulationScreen: _buildChartWithTradeMarkers() - Candles: ${candles.length}, Trades: ${trades.length}');
     
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-    
-    final fillPaint = Paint()
-      ..style = PaintingStyle.fill;
-    
-    final double minPrice = candles.map((c) => c.low).reduce((a, b) => a < b ? a : b);
-    final double maxPrice = candles.map((c) => c.high).reduce((a, b) => a > b ? a : b);
-    final double priceRange = maxPrice - minPrice;
-    
-    final double candleWidth = size.width / candles.length;
-    
-    for (int i = 0; i < candles.length; i++) {
-      final candle = candles[i];
-      final x = i * candleWidth + candleWidth / 2;
-      
-      // Calculate y positions
-      final openY = size.height - ((candle.open - minPrice) / priceRange) * size.height;
-      final closeY = size.height - ((candle.close - minPrice) / priceRange) * size.height;
-      final highY = size.height - ((candle.high - minPrice) / priceRange) * size.height;
-      final lowY = size.height - ((candle.low - minPrice) / priceRange) * size.height;
-      
-      // Draw wick
-      canvas.drawLine(
-        Offset(x, highY),
-        Offset(x, lowY),
-        paint,
-      );
-      
-      // Draw body
-      final isGreen = candle.close >= candle.open;
-      fillPaint.color = isGreen ? Colors.green : Colors.red;
-      
-      final bodyHeight = (closeY - openY).abs();
-      final bodyY = isGreen ? closeY : openY;
-      
-      canvas.drawRect(
-        Rect.fromLTWH(x - candleWidth * 0.3, bodyY, candleWidth * 0.6, bodyHeight),
-        fillPaint,
+    if (candles.isEmpty) {
+      debugPrint('🔥 SimulationScreen: No hay datos de velas disponibles');
+      return const Center(
+        child: Text(
+          'No hay datos disponibles',
+          style: TextStyle(color: Colors.grey),
+        ),
       );
     }
+
+    debugPrint('🔥 SimulationScreen: Construyendo TradingViewChart con ${candles.length} velas');
+    return TradingViewChart(
+      candles: candles,
+      trades: trades,
+    );
   }
-  
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 } 

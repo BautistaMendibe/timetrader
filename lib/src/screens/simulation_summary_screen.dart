@@ -153,13 +153,7 @@ class SimulationSummaryScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         SizedBox(
                           height: 200,
-                          child: CustomPaint(
-                            painter: EquityCurvePainter(
-                              equityCurve: simulation.equityCurve,
-                              initialBalance: simulation.initialBalance,
-                            ),
-                            size: const Size(double.infinity, 200),
-                          ),
+                          child: _buildEquityCurveChart(simulation.equityCurve),
                         ),
                       ],
                     ),
@@ -379,13 +373,35 @@ class SimulationSummaryScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildEquityCurveChart(List<double> equityCurve) {
+    if (equityCurve.isEmpty) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[600]!),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Center(
+          child: Text(
+            'No hay datos de equity',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    return CustomPaint(
+      painter: EquityCurvePainter(equityCurve: equityCurve),
+      size: const Size(double.infinity, 200),
+    );
+  }
 }
 
 class EquityCurvePainter extends CustomPainter {
   final List<double> equityCurve;
-  final double initialBalance;
   
-  EquityCurvePainter({required this.equityCurve, required this.initialBalance});
+  EquityCurvePainter({required this.equityCurve});
   
   @override
   void paint(Canvas canvas, Size size) {

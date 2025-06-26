@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingView Chart</title>
+    <script src="lightweight-charts.standalone.production.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1E1E1E;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        #chart {
+            width: 100vw;
+            height: 100vh;
+        }
+        #debug {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #CCCCCC;
+            font-size: 12px;
+            z-index: 1000;
+            background-color: rgba(0,0,0,0.8);
+            padding: 8px;
+            border-radius: 4px;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div id="debug">Inicializando...</div>
+    <div id="chart"></div>
+
+    <script>
+        let chart, candlestickSeries;
+        let isInitialized = false;
+        let debugCounter = 0;
+
+        function updateDebug(message) {
+            debugCounter++;
+            const debugElement = document.getElementById('debug');
+            const timestamp = new Date().toLocaleTimeString();
+            debugElement.textContent = `[${timestamp}] #${debugCounter}: ${message}`;
+            console.log(`🔥 Chart Debug #${debugCounter}:`, message);
+        }
+
+        function checkLightweightCharts() {
+            if (typeof LightweightCharts === 'undefined') {
+                updateDebug('ERROR: LightweightCharts no está cargado');
+                return false;
+            }
+            updateDebug('LightweightCharts cargado correctamente');
+            return true;
+        }
+
+        function initChart() {
+            if (isInitialized) {
+                updateDebug('Gráfico ya inicializado, saltando...');
+                return;
+            }
+            
+            try {
+                updateDebug('Verificando LightweightCharts...');
+                if (!checkLightweightCharts()) {
+                    return;
+                }
+                
+                updateDebug('Creando gráfico...');
+                
+                const chartContainer = document.getElementById('chart');
+                if (!chartContainer) {
+                    updateDebug('ERROR: No se encontró el contenedor del gráfico');
+                    return;
+                }
+                
+                chart = LightweightCharts.createChart(chartContainer, {
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    layout: {
+                        background: { color: '#1E1E1E' },
+                        textColor: '#CCCCCC',
+                        fontFamily: 'Inter',
+                    },
+                    grid: {
+                        vertLines: { color: '#333333' },
+                        horzLines: { color: '#333333' },
+                    },
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Normal,
+                    },
+                    rightPriceScale: {
+                        borderColor: '#888888',
+                        textColor: '#CCCCCC',
+                    },
+                    timeScale: {
+                        borderColor: '#888888',
+                        textColor: '#CCCCCC',
+                        timeVisible: true,
+                        secondsVisible: false,
+                    },
+                });
+
+                updateDebug('Gráfico creado, agregando serie...');
+
+                candlestickSeries = chart.addCandlestickSeries({
+                    upColor: '#21CE99',
+                    downColor: '#FF5A5F',
+                    borderDownColor: '#FF5A5F',
+                    borderUpColor: '#21CE99',
+                    wickDownColor: '#FF5A5F',
+                    wickUpColor: '#21CE99',
+                });
+
+                isInitialized = true;
+                updateDebug('Gráfico inicializado exitosamente');
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    if (chart) {
+                        chart.applyOptions({
+                            width: window.innerWidth,
+                            height: window.innerHeight,
+                        });
+                    }
+                });
+                
+            } catch (error) {
+                updateDebug('ERROR inicializando: ' + error.message);
+                console.error('Error initializing chart:', error);
+            }
+        }
+
+        function renderChart(data) {
+            try {
+                updateDebug('renderChart llamado con: ' + JSON.stringify(data).substring(0, 100) + '...');
+                
+                if (!isInitialized) {
+                    updateDebug('Gráfico no inicializado, inicializando...');
+                    initChart();
+                    setTimeout(() => renderChart(data), 100);
+                    return;
+                }
+
+                if (!data || !data.candles || !Array.isArray(data.candles)) {
+                    updateDebug('Datos inválidos: ' + JSON.stringify(data));
+                    return;
+                }
+
+                updateDebug('Procesando ' + data.candles.length + ' velas...');
+
+                // Process candlestick data
+                const candlestickData = data.candles.map(item => ({
+                    time: new Date(item.timestamp).getTime() / 1000,
+                    open: parseFloat(item.open),
+                    high: parseFloat(item.high),
+                    low: parseFloat(item.low),
+                    close: parseFloat(item.close),
+                }));
+
+                updateDebug('Datos procesados, estableciendo en gráfico...');
+
+                // Update chart data
+                candlestickSeries.setData(candlestickData);
+
+                // Add trade markers if available
+                if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
+                    updateDebug('Agregando ' + data.trades.length + ' marcadores de trades...');
+                    const markers = data.trades.map(trade => ({
+                        time: new Date(trade.timestamp).getTime() / 1000,
+                        position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
+                        color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
+                        shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
+                        text: `${trade.type.toUpperCase()} @ $${parseFloat(trade.price).toFixed(2)}`,
+                        size: 1,
+                    }));
+                    candlestickSeries.setMarkers(markers);
+                }
+
+                // Fit content to view
+                chart.timeScale().fitContent();
+                
+                updateDebug('Gráfico renderizado: ' + candlestickData.length + ' velas');
+            } catch (error) {
+                updateDebug('ERROR renderizando: ' + error.message);
+                console.error('Error rendering chart:', error);
+            }
+        }
+
+        // Listen for messages from Flutter
+        window.addEventListener('message', (event) => {
+            try {
+                updateDebug('Mensaje recibido de Flutter: ' + event.data.substring(0, 50) + '...');
+                const data = JSON.parse(event.data);
+                console.log('Received data from Flutter:', data);
+                renderChart(data);
+            } catch (error) {
+                updateDebug('ERROR parseando mensaje: ' + error.message);
+                console.error('Error parsing message from Flutter:', error);
+            }
+        });
+
+        // Initialize chart when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDebug('DOM cargado, inicializando...');
+            setTimeout(initChart, 100);
+        });
+
+        // Fallback initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initChart);
+        } else {
+            updateDebug('DOM ya cargado, inicializando inmediatamente...');
+            setTimeout(initChart, 100);
+        }
+
+        // Test function for debugging
+        window.testChart = function() {
+            updateDebug('Función de prueba llamada');
+            return 'Chart test successful';
+        };
+    </script>
+</body>
+</html> 

@@ -229,6 +229,47 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ],
             ),
+
+            // Test Chart Button (Temporary)
+            Card(
+              color: const Color(0xFF2C2C2C),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.bug_report,
+                          color: Color(0xFFFF5A5F),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Debug - Test Chart',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, AppRoutes.testChart);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF5A5F),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Probar Gráfico TradingView'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
