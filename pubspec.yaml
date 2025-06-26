@@ -85,7 +85,6 @@ flutter:
     - assets/data/
     - assets/images/
     - assets/imgs/
-    - assets/web/
     - assets/chart.html
     - assets/lightweight-charts.standalone.production.js
 

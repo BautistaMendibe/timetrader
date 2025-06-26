@@ -107,7 +107,7 @@ class _TradingViewChartState extends State<TradingViewChart> {
       // Prepare data structure
       final data = {
         'candles': widget.candles.map((c) => {
-          'timestamp': c.timestamp.toIso8601String(),
+          'time': c.timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to seconds since epoch
           'open': c.open,
           'high': c.high,
           'low': c.low,
@@ -115,7 +115,7 @@ class _TradingViewChartState extends State<TradingViewChart> {
           'volume': c.volume,
         }).toList(),
         'trades': widget.trades?.map((t) => {
-          'timestamp': t.timestamp.toIso8601String(),
+          'time': t.timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to seconds since epoch
           'type': t.type,
           'price': t.price,
         }).toList() ?? [],
