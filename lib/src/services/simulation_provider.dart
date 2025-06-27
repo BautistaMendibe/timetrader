@@ -13,6 +13,14 @@ class SimulationProvider with ChangeNotifier {
   List<Trade> _currentTrades = [];
   List<double> _equityCurve = [];
   Setup? _currentSetup;
+  
+  // Trading state
+  bool _inPosition = false;
+  double _entryPrice = 0.0;
+  double _positionSize = 0.0;
+  int _entryCandleIndex = 0;
+  double _stopLossPrice = 0.0;
+  double _takeProfitPrice = 0.0;
 
   SimulationResult? get currentSimulation => _currentSimulation;
   List<SimulationResult> get simulationHistory => _simulationHistory;
@@ -22,6 +30,12 @@ class SimulationProvider with ChangeNotifier {
   double get currentBalance => _currentBalance;
   List<Trade> get currentTrades => _currentTrades;
   List<double> get equityCurve => _equityCurve;
+  bool get inPosition => _inPosition;
+  double get entryPrice => _entryPrice;
+  double get positionSize => _positionSize;
+  double get stopLossPrice => _stopLossPrice;
+  double get takeProfitPrice => _takeProfitPrice;
+  Setup? get currentSetup => _currentSetup;
 
   void setHistoricalData(List<Candle> data) {
     debugPrint('🔥 SimulationProvider: setHistoricalData() - Datos recibidos: ${data.length} velas');
@@ -34,6 +48,7 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void startSimulation(Setup setup, DateTime startDate, double speed, double initialBalance) {
+    debugPrint('🔥 SimulationProvider: startSimulation() - Setup: ${setup.name}, Balance inicial: $initialBalance');
     _currentSimulation = null;
     _currentCandleIndex = 0;
     _currentBalance = initialBalance;
@@ -41,6 +56,15 @@ class SimulationProvider with ChangeNotifier {
     _equityCurve = [initialBalance];
     _isSimulationRunning = true;
     _currentSetup = setup;
+    
+    // Reset trading state
+    _inPosition = false;
+    _entryPrice = 0.0;
+    _positionSize = 0.0;
+    _entryCandleIndex = 0;
+    _stopLossPrice = 0.0;
+    _takeProfitPrice = 0.0;
+    
     notifyListeners();
   }
 
@@ -60,26 +84,175 @@ class SimulationProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void executeTrade(String type, double price, double quantity) {
+  // Process next candle in simulation
+  void processNextCandle() {
+    if (!_isSimulationRunning || _currentCandleIndex >= _historicalData.length - 1) {
+      stopSimulation();
+      return;
+    }
+
+    _currentCandleIndex++;
+    final currentCandle = _historicalData[_currentCandleIndex];
+    
+    debugPrint('🔥 SimulationProvider: Procesando vela ${_currentCandleIndex}: ${currentCandle.timestamp} - Precio: ${currentCandle.close}');
+    
+    // Check if we need to close position due to stop loss or take profit
+    if (_inPosition) {
+      _checkStopLossAndTakeProfit(currentCandle);
+    }
+    
+    // Check for new entry signals
+    if (!_inPosition) {
+      _checkEntrySignals(currentCandle);
+    }
+    
+    // Update equity curve
+    _equityCurve.add(_currentBalance);
+    notifyListeners();
+  }
+
+  void _checkStopLossAndTakeProfit(Candle candle) {
+    if (!_inPosition) return;
+    
+    bool shouldClose = false;
+    String closeReason = '';
+    
+    // Check stop loss
+    if (candle.low <= _stopLossPrice) {
+      shouldClose = true;
+      closeReason = 'Stop Loss';
+    }
+    
+    // Check take profit
+    if (candle.high >= _takeProfitPrice) {
+      shouldClose = true;
+      closeReason = 'Take Profit';
+    }
+    
+    if (shouldClose) {
+      _closePosition(candle.close, closeReason);
+    }
+  }
+
+  void _checkEntrySignals(Candle candle) {
+    if (_inPosition || _currentSetup == null) return;
+    
+    // Simple breakout strategy for demonstration
+    // You can implement more sophisticated strategies here
+    if (_currentCandleIndex < 20) return; // Need at least 20 candles for analysis
+    
+    final lookbackPeriod = 20;
+    final highPrices = _historicalData
+        .skip(_currentCandleIndex - lookbackPeriod)
+        .take(lookbackPeriod)
+        .map((c) => c.high)
+        .toList();
+    
+    final lowPrices = _historicalData
+        .skip(_currentCandleIndex - lookbackPeriod)
+        .take(lookbackPeriod)
+        .map((c) => c.low)
+        .toList();
+    
+    final resistanceLevel = highPrices.reduce((a, b) => a > b ? a : b);
+    final supportLevel = lowPrices.reduce((a, b) => a < b ? a : b);
+    
+    // Breakout strategy
+    if (candle.close > resistanceLevel && candle.volume > _getAverageVolume(lookbackPeriod) * 1.5) {
+      _openPosition('buy', candle.close, 'Breakout Long');
+    } else if (candle.close < supportLevel && candle.volume > _getAverageVolume(lookbackPeriod) * 1.5) {
+      _openPosition('sell', candle.close, 'Breakout Short');
+    }
+  }
+
+  double _getAverageVolume(int period) {
+    final volumes = _historicalData
+        .skip(_currentCandleIndex - period)
+        .take(period)
+        .map((c) => c.volume)
+        .toList();
+    return volumes.reduce((a, b) => a + b) / volumes.length;
+  }
+
+  void _openPosition(String type, double price, String reason) {
+    if (_currentSetup == null) return;
+    
+    _inPosition = true;
+    _entryPrice = price;
+    _entryCandleIndex = _currentCandleIndex;
+    
+    // Calculate position size based on setup
+    final riskAmount = _currentBalance * (_currentSetup!.stopLossPercent / 100);
+    final stopLossDistance = price * (_currentSetup!.stopLossPercent / 100);
+    _positionSize = riskAmount / stopLossDistance;
+    
+    // Set stop loss and take profit
+    if (type == 'buy') {
+      _stopLossPrice = price - stopLossDistance;
+      _takeProfitPrice = price + (price * _currentSetup!.takeProfitPercent / 100);
+    } else {
+      _stopLossPrice = price + stopLossDistance;
+      _takeProfitPrice = price - (price * _currentSetup!.takeProfitPercent / 100);
+    }
+    
+    // Execute trade
+    executeTrade(type, price, _positionSize, reason);
+    
+    debugPrint('🔥 SimulationProvider: Posición abierta - Tipo: $type, Precio: $price, Tamaño: $_positionSize, Razón: $reason');
+  }
+
+  void _closePosition(double price, String reason) {
+    if (!_inPosition) return;
+    
+    // Determine trade type for closing
+    final closeType = _currentTrades.last.type == 'buy' ? 'sell' : 'buy';
+    
+    // Execute closing trade
+    executeTrade(closeType, price, _positionSize, reason);
+    
+    // Reset position state
+    _inPosition = false;
+    _entryPrice = 0.0;
+    _positionSize = 0.0;
+    _entryCandleIndex = 0;
+    _stopLossPrice = 0.0;
+    _takeProfitPrice = 0.0;
+    
+    debugPrint('🔥 SimulationProvider: Posición cerrada - Precio: $price, Razón: $reason');
+  }
+
+  void executeTrade(String type, double price, double quantity, [String? reason]) {
     final trade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: DateTime.now(),
+      timestamp: _historicalData[_currentCandleIndex].timestamp,
       type: type,
       price: price,
       quantity: quantity,
       candleIndex: _currentCandleIndex,
+      reason: reason,
     );
     _currentTrades.add(trade);
     
-    // Simple P&L calculation
-    if (type == 'sell' && _currentTrades.length > 1) {
-      final lastBuyTrade = _currentTrades.reversed.skip(1).firstWhere((t) => t.type == 'buy');
-      final pnl = (price - lastBuyTrade.price) * quantity;
-      trade.pnl = pnl;
-      _currentBalance += pnl;
+    // Calculate P&L for closing trades
+    if (_currentTrades.length > 1 && _currentTrades.length % 2 == 0) {
+      final openTrade = _currentTrades[_currentTrades.length - 2];
+      final closeTrade = _currentTrades[_currentTrades.length - 1];
+      
+      if (openTrade.type != closeTrade.type) {
+        double pnl;
+        if (openTrade.type == 'buy') {
+          pnl = (closeTrade.price - openTrade.price) * quantity;
+        } else {
+          pnl = (openTrade.price - openTrade.price) * quantity;
+        }
+        
+        closeTrade.pnl = pnl;
+        _currentBalance += pnl;
+        
+        debugPrint('🔥 SimulationProvider: P&L calculado: $pnl, Balance: $_currentBalance');
+      }
     }
     
-    _equityCurve.add(_currentBalance);
     notifyListeners();
   }
 
@@ -108,6 +281,8 @@ class SimulationProvider with ChangeNotifier {
     );
 
     _simulationHistory.add(_currentSimulation!);
+    
+    debugPrint('🔥 SimulationProvider: Simulación finalizada - P&L: ${_currentSimulation!.netPnL}, Win Rate: ${_currentSimulation!.winRate}');
   }
 
   double _calculateMaxDrawdown() {
@@ -134,6 +309,12 @@ class SimulationProvider with ChangeNotifier {
     _currentTrades = [];
     _equityCurve = [];
     _isSimulationRunning = false;
+    _inPosition = false;
+    _entryPrice = 0.0;
+    _positionSize = 0.0;
+    _entryCandleIndex = 0;
+    _stopLossPrice = 0.0;
+    _takeProfitPrice = 0.0;
     notifyListeners();
   }
 } 

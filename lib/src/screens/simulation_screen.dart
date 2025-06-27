@@ -48,15 +48,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
           return;
         }
 
-        setState(() {
-          if (_currentCandleIndex < simulationProvider.historicalData.length - 1) {
-            _currentCandleIndex++;
-          } else {
-            // Simulation completed
-            timer.cancel();
-            _stopSimulation();
-          }
-        });
+        // Process next candle automatically
+        simulationProvider.processNextCandle();
+        
+        // Check if simulation is complete
+        if (simulationProvider.currentCandleIndex >= simulationProvider.historicalData.length - 1) {
+          timer.cancel();
+          _stopSimulation();
+        }
       },
     );
   }
@@ -69,7 +68,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
   void _showOrderModal(String type) {
     final simulationProvider = context.read<SimulationProvider>();
-    final currentCandle = simulationProvider.historicalData[_currentCandleIndex];
+    final currentCandle = simulationProvider.historicalData[simulationProvider.currentCandleIndex];
     final maxLots = 100; // Maximum lots available
     
     showModalBottomSheet(
@@ -312,8 +311,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
           );
         }
 
-        final currentCandle = simulationProvider.historicalData[_currentCandleIndex];
-        final progress = (_currentCandleIndex + 1) / simulationProvider.historicalData.length;
+        final currentCandle = simulationProvider.historicalData[simulationProvider.currentCandleIndex];
+        final progress = (simulationProvider.currentCandleIndex + 1) / simulationProvider.historicalData.length;
 
         return Scaffold(
           appBar: AppBar(
@@ -407,6 +406,61 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF21CE99)),
               ),
               
+              // Position Status
+              if (simulationProvider.inPosition)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  color: const Color(0xFF1A1A1A),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Posición Abierta',
+                            style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF21CE99),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              simulationProvider.currentTrades.last.type.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildPositionInfo('Entrada', simulationProvider.entryPrice.toStringAsFixed(2), Colors.blue),
+                          ),
+                          Expanded(
+                            child: _buildPositionInfo('Stop Loss', simulationProvider.stopLossPrice.toStringAsFixed(2), const Color(0xFFFF5A5F)),
+                          ),
+                          Expanded(
+                            child: _buildPositionInfo('Take Profit', simulationProvider.takeProfitPrice.toStringAsFixed(2), const Color(0xFF21CE99)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              
               // Chart Area
               Expanded(
                 flex: 3,
@@ -470,7 +524,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       
                       // Professional Chart
                       Expanded(
-                        child: _buildChartWithTradeMarkers(simulationProvider.historicalData.take(_currentCandleIndex + 1).toList(), simulationProvider.currentTrades),
+                        child: _buildChartWithTradeMarkers(simulationProvider.historicalData.take(simulationProvider.currentCandleIndex + 1).toList(), simulationProvider.currentTrades),
                       ),
                     ],
                   ),
@@ -531,41 +585,119 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => _showOrderModal('buy'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2C2C2C),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[700]!),
                             ),
-                            child: const Text(
-                              'COMPRAR',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Estrategia',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 12,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  simulationProvider.currentSetup?.name ?? 'N/A',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => _showOrderModal('sell'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2C2C2C),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[700]!),
                             ),
-                            child: const Text(
-                              'VENDER',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Estado',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 12,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: simulationProvider.isSimulationRunning 
+                                      ? const Color(0xFF21CE99) 
+                                      : Colors.grey[600],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    simulationProvider.isSimulationRunning ? 'EJECUTANDO' : 'PAUSADO',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Trading Statistics
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2C2C2C),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[700]!),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Estadísticas de Trading',
+                            style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 14,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatistic('Total Trades', simulationProvider.currentTrades.length.toString(), Colors.blue),
+                              ),
+                              Expanded(
+                                child: _buildStatistic('Win Rate', '${_calculateWinRate(simulationProvider.currentTrades).toStringAsFixed(1)}%', Colors.green),
+                              ),
+                              Expanded(
+                                child: _buildStatistic('Avg P&L', '\$${_calculateAvgPnL(simulationProvider.currentTrades).toStringAsFixed(2)}', Colors.orange),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                     
                     const SizedBox(height: 16),
@@ -619,6 +751,33 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
+  Widget _buildPositionInfo(String label, String value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey[400], 
+            fontSize: 12,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildChartWithTradeMarkers(List<Candle> candles, List<Trade> trades) {
     debugPrint('🔥 SimulationScreen: _buildChartWithTradeMarkers() - Candles: ${candles.length}, Trades: ${trades.length}');
     
@@ -636,6 +795,55 @@ class _SimulationScreenState extends State<SimulationScreen> {
     return TradingViewChart(
       candles: candles,
       trades: trades,
+    );
+  }
+
+  double _calculateWinRate(List<Trade> trades) {
+    if (trades.isEmpty) return 0.0;
+    
+    int winCount = 0;
+    for (var trade in trades) {
+      if (trade.pnl > 0) {
+        winCount++;
+      }
+    }
+    return (winCount / trades.length) * 100;
+  }
+
+  double _calculateAvgPnL(List<Trade> trades) {
+    if (trades.isEmpty) return 0.0;
+    
+    double totalPnL = 0;
+    for (var trade in trades) {
+      totalPnL += trade.pnl;
+    }
+    return totalPnL / trades.length;
+  }
+
+  Widget _buildStatistic(String label, String value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey[400], 
+            fontSize: 12,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
+          ),
+        ),
+      ],
     );
   }
 } 
