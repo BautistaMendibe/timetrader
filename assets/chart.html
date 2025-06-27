@@ -17,29 +17,16 @@
             width: 100vw;
             height: 100vh;
         }
-        #debug {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: #CCCCCC;
-            font-size: 12px;
-            z-index: 1000;
-            background-color: rgba(0,0,0,0.8);
-            padding: 8px;
-            border-radius: 4px;
-            max-width: 300px;
-            word-wrap: break-word;
-        }
         #attribution {
             position: absolute;
-            bottom: 10px;
-            right: 10px;
-            color: #888888;
-            font-size: 10px;
+            bottom: 8px;
+            right: 8px;
+            color: #666666;
+            font-size: 8px;
             z-index: 1000;
-            background-color: rgba(0,0,0,0.8);
-            padding: 4px 8px;
-            border-radius: 4px;
+            background-color: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 3px;
         }
         #attribution a {
             color: #21CE99;
@@ -48,7 +35,6 @@
     </style>
 </head>
 <body>
-    <div id="debug">Inicializando...</div>
     <div id="chart"></div>
     <div id="attribution">
         Powered by <a href="https://www.tradingview.com" target="_blank">Lightweight Charts™</a>
@@ -57,22 +43,11 @@
     <script>
         let chart, candlestickSeries;
         let isInitialized = false;
-        let debugCounter = 0;
-
-        function updateDebug(message) {
-            debugCounter++;
-            const debugElement = document.getElementById('debug');
-            const timestamp = new Date().toLocaleTimeString();
-            debugElement.textContent = `[${timestamp}] #${debugCounter}: ${message}`;
-            console.log(`🔥 Chart Debug #${debugCounter}:`, message);
-        }
 
         function checkLightweightCharts() {
             if (typeof LightweightCharts === 'undefined') {
-                updateDebug('ERROR: LightweightCharts no está cargado');
                 return false;
             }
-            updateDebug('LightweightCharts cargado correctamente');
             return true;
         }
 
@@ -84,7 +59,6 @@
             // Fallback for string timestamps
             const date = new Date(timestamp);
             if (isNaN(date.getTime())) {
-                updateDebug('ERROR: Invalid timestamp: ' + timestamp);
                 return null;
             }
             return Math.floor(date.getTime() / 1000); // Convert to seconds since epoch
@@ -92,21 +66,16 @@
 
         function initChart() {
             if (isInitialized) {
-                updateDebug('Gráfico ya inicializado, saltando...');
                 return;
             }
             
             try {
-                updateDebug('Verificando LightweightCharts...');
                 if (!checkLightweightCharts()) {
                     return;
                 }
                 
-                updateDebug('Creando gráfico siguiendo documentación oficial...');
-                
                 const chartContainer = document.getElementById('chart');
                 if (!chartContainer) {
-                    updateDebug('ERROR: No se encontró el contenedor del gráfico');
                     return;
                 }
                 
@@ -138,8 +107,6 @@
                     },
                 });
 
-                updateDebug('Gráfico creado, agregando serie siguiendo documentación...');
-
                 // Following official documentation for CandlestickSeries
                 candlestickSeries = chart.addCandlestickSeries({
                     upColor: '#21CE99',
@@ -151,7 +118,6 @@
                 });
 
                 isInitialized = true;
-                updateDebug('Gráfico inicializado exitosamente siguiendo documentación');
                 
                 // Handle window resize
                 window.addEventListener('resize', () => {
@@ -164,35 +130,26 @@
                 });
                 
             } catch (error) {
-                updateDebug('ERROR inicializando: ' + error.message);
                 console.error('Error initializing chart:', error);
             }
         }
 
         function renderChart(data) {
             try {
-                updateDebug('renderChart llamado siguiendo documentación oficial...');
-                
                 if (!isInitialized) {
-                    updateDebug('Gráfico no inicializado, inicializando...');
                     initChart();
                     setTimeout(() => renderChart(data), 100);
                     return;
                 }
 
                 if (!data || !data.candles || !Array.isArray(data.candles)) {
-                    updateDebug('Datos inválidos: ' + JSON.stringify(data));
                     return;
                 }
-
-                updateDebug('Procesando ' + data.candles.length + ' velas siguiendo formato oficial...');
-                updateDebug('Primera vela: ' + JSON.stringify(data.candles[0]));
 
                 // Process candlestick data following official documentation format
                 const candlestickData = data.candles.map(item => {
                     const formattedTime = formatTime(item.time);
                     if (formattedTime === null) {
-                        updateDebug('ERROR: Skipping invalid timestamp: ' + item.time);
                         return null;
                     }
                     return {
@@ -204,22 +161,14 @@
                     };
                 }).filter(item => item !== null); // Remove invalid entries
 
-                updateDebug('Datos procesados: ' + candlestickData.length + ' velas válidas');
-                if (candlestickData.length > 0) {
-                    updateDebug('Primera vela procesada: ' + JSON.stringify(candlestickData[0]));
-                }
-
                 // Update chart data using official API
                 candlestickSeries.setData(candlestickData);
-                updateDebug('Datos establecidos en el gráfico: ' + candlestickData.length + ' velas');
 
                 // Add trade markers if available
                 if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
-                    updateDebug('Agregando ' + data.trades.length + ' marcadores de trades...');
                     const markers = data.trades.map(trade => {
                         const formattedTime = formatTime(trade.time);
                         if (formattedTime === null) {
-                            updateDebug('ERROR: Skipping invalid trade timestamp: ' + trade.time);
                             return null;
                         }
                         return {
@@ -234,17 +183,13 @@
                     
                     if (markers.length > 0) {
                         candlestickSeries.setMarkers(markers);
-                        updateDebug('Marcadores establecidos: ' + markers.length + ' trades');
                     }
                 }
 
                 // Fit content to view using official API
                 chart.timeScale().fitContent();
-                updateDebug('Contenido ajustado a la vista');
                 
-                updateDebug('Gráfico renderizado siguiendo documentación oficial: ' + candlestickData.length + ' velas');
             } catch (error) {
-                updateDebug('ERROR renderizando: ' + error.message);
                 console.error('Error rendering chart:', error);
             }
         }
@@ -252,19 +197,15 @@
         // Listen for messages from Flutter
         window.addEventListener('message', (event) => {
             try {
-                updateDebug('Mensaje recibido de Flutter: ' + event.data.substring(0, 50) + '...');
                 const data = JSON.parse(event.data);
-                console.log('Received data from Flutter:', data);
                 renderChart(data);
             } catch (error) {
-                updateDebug('ERROR parseando mensaje: ' + error.message);
                 console.error('Error parsing message from Flutter:', error);
             }
         });
 
         // Initialize chart when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            updateDebug('DOM cargado, inicializando siguiendo documentación...');
             setTimeout(initChart, 100);
         });
 
@@ -272,15 +213,8 @@
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initChart);
         } else {
-            updateDebug('DOM ya cargado, inicializando inmediatamente...');
             setTimeout(initChart, 100);
         }
-
-        // Test function for debugging
-        window.testChart = function() {
-            updateDebug('Función de prueba llamada');
-            return 'Chart test successful';
-        };
     </script>
 </body>
 </html> 

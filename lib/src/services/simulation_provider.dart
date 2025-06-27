@@ -3,6 +3,11 @@ import '../models/simulation_result.dart';
 import '../models/candle.dart';
 import '../models/setup.dart';
 
+enum SimulationMode {
+  automatic,
+  manual,
+}
+
 class SimulationProvider with ChangeNotifier {
   SimulationResult? _currentSimulation;
   final List<SimulationResult> _simulationHistory = [];
@@ -21,6 +26,10 @@ class SimulationProvider with ChangeNotifier {
   int _entryCandleIndex = 0;
   double _stopLossPrice = 0.0;
   double _takeProfitPrice = 0.0;
+  
+  // Simulation mode
+  SimulationMode _simulationMode = SimulationMode.automatic;
+  double _simulationSpeed = 1.0; // candles per second
 
   SimulationResult? get currentSimulation => _currentSimulation;
   List<SimulationResult> get simulationHistory => _simulationHistory;
@@ -36,6 +45,8 @@ class SimulationProvider with ChangeNotifier {
   double get stopLossPrice => _stopLossPrice;
   double get takeProfitPrice => _takeProfitPrice;
   Setup? get currentSetup => _currentSetup;
+  SimulationMode get simulationMode => _simulationMode;
+  double get simulationSpeed => _simulationSpeed;
 
   void setHistoricalData(List<Candle> data) {
     debugPrint('🔥 SimulationProvider: setHistoricalData() - Datos recibidos: ${data.length} velas');
@@ -56,6 +67,7 @@ class SimulationProvider with ChangeNotifier {
     _equityCurve = [initialBalance];
     _isSimulationRunning = true;
     _currentSetup = setup;
+    _simulationSpeed = speed;
     
     // Reset trading state
     _inPosition = false;
@@ -315,6 +327,81 @@ class SimulationProvider with ChangeNotifier {
     _entryCandleIndex = 0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
+    notifyListeners();
+  }
+
+  void setSimulationMode(SimulationMode mode) {
+    _simulationMode = mode;
+    debugPrint('🔥 SimulationProvider: Modo de simulación cambiado a: $mode');
+    notifyListeners();
+  }
+
+  void setSimulationSpeed(double speed) {
+    _simulationSpeed = speed;
+    debugPrint('🔥 SimulationProvider: Velocidad de simulación cambiada a: $speed');
+    notifyListeners();
+  }
+
+  void advanceCandle() {
+    if (_simulationMode != SimulationMode.manual) {
+      debugPrint('🔥 SimulationProvider: No se puede avanzar manualmente en modo automático');
+      return;
+    }
+    
+    if (_currentCandleIndex >= _historicalData.length - 1) {
+      debugPrint('🔥 SimulationProvider: Ya se llegó al final de los datos');
+      return;
+    }
+    
+    _advanceCandleManually();
+    debugPrint('🔥 SimulationProvider: Vela avanzada manualmente a índice: $_currentCandleIndex');
+  }
+
+  void _advanceCandleManually() {
+    if (_currentCandleIndex >= _historicalData.length - 1) {
+      return;
+    }
+
+    _currentCandleIndex++;
+    final currentCandle = _historicalData[_currentCandleIndex];
+    
+    debugPrint('🔥 SimulationProvider: Procesando vela ${_currentCandleIndex}: ${currentCandle.timestamp} - Precio: ${currentCandle.close}');
+    
+    // Check if we need to close position due to stop loss or take profit
+    if (_inPosition) {
+      _checkStopLossAndTakeProfit(currentCandle);
+    }
+    
+    // Check for new entry signals
+    if (!_inPosition) {
+      _checkEntrySignals(currentCandle);
+    }
+    
+    // Update equity curve
+    _equityCurve.add(_currentBalance);
+    notifyListeners();
+  }
+
+  void goToCandle(int index) {
+    if (index < 0 || index >= _historicalData.length) {
+      debugPrint('🔥 SimulationProvider: Índice de vela inválido: $index');
+      return;
+    }
+    
+    _currentCandleIndex = index;
+    
+    // Update equity curve to match the current position
+    if (_equityCurve.length <= index) {
+      // Fill missing equity curve entries
+      while (_equityCurve.length <= index) {
+        _equityCurve.add(_currentBalance);
+      }
+    } else {
+      // Trim equity curve to current position
+      _equityCurve = _equityCurve.take(index + 1).toList();
+    }
+    
+    debugPrint('🔥 SimulationProvider: Saltando a vela: $index');
     notifyListeners();
   }
 } 

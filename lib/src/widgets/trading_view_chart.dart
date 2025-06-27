@@ -27,12 +27,10 @@ class _TradingViewChartState extends State<TradingViewChart> {
   @override
   void initState() {
     super.initState();
-    debugPrint('🔥 TradingViewChart: initState() - Candles: ${widget.candles.length}, Trades: ${widget.trades?.length ?? 0}');
     _initializeWebView();
   }
 
   void _initializeWebView() {
-    debugPrint('🔥 TradingViewChart: Inicializando WebView...');
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFF1E1E1E))
@@ -40,12 +38,10 @@ class _TradingViewChartState extends State<TradingViewChart> {
         NavigationDelegate(
           onPageStarted: (String url) {
             _debugCounter++;
-            debugPrint('🔥 TradingViewChart: onPageStarted #$_debugCounter - URL: $url');
             setState(() => _status = 'Cargando página... ($_debugCounter)');
           },
           onPageFinished: (String url) {
             _debugCounter++;
-            debugPrint('🔥 TradingViewChart: onPageFinished #$_debugCounter - URL: $url');
             setState(() {
               _isWebViewReady = true;
               _status = 'Enviando datos... ($_debugCounter)';
@@ -53,55 +49,42 @@ class _TradingViewChartState extends State<TradingViewChart> {
             // Send data after page is loaded
             Future.delayed(const Duration(milliseconds: 1000), () {
               if (mounted) {
-                debugPrint('🔥 TradingViewChart: Delay completado, enviando datos...');
                 _sendDataToWebView();
-              } else {
-                debugPrint('🔥 TradingViewChart: Widget no montado después del delay');
               }
             });
           },
           onWebResourceError: (WebResourceError error) {
-            debugPrint('🔥 TradingViewChart: Error WebView: ${error.description} - Code: ${error.errorCode}');
             setState(() => _status = 'Error: ${error.description}');
           },
           onNavigationRequest: (NavigationRequest request) {
-            debugPrint('🔥 TradingViewChart: Navigation request: ${request.url}');
             return NavigationDecision.navigate;
           },
         ),
       );
     
-    debugPrint('🔥 TradingViewChart: Cargando asset: assets/chart.html');
     _controller.loadFlutterAsset('assets/chart.html');
   }
 
   @override
   void didUpdateWidget(covariant TradingViewChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    debugPrint('🔥 TradingViewChart: didUpdateWidget - Candles: ${widget.candles.length} -> ${oldWidget.candles.length}');
     if (_isWebViewReady && 
         (oldWidget.candles != widget.candles || oldWidget.trades != widget.trades)) {
-      debugPrint('🔥 TradingViewChart: Datos actualizados, enviando...');
       _sendDataToWebView();
     }
   }
 
   void _sendDataToWebView() async {
-    debugPrint('🔥 TradingViewChart: _sendDataToWebView() - WebView ready: $_isWebViewReady');
-    
     if (!_isWebViewReady) {
-      debugPrint('🔥 TradingViewChart: WebView no está listo');
       return;
     }
 
     if (widget.candles.isEmpty) {
-      debugPrint('🔥 TradingViewChart: No hay datos de velas');
       setState(() => _status = 'No hay datos disponibles');
       return;
     }
 
     try {
-      debugPrint('🔥 TradingViewChart: Enviando ${widget.candles.length} velas al WebView');
       setState(() => _status = 'Renderizando gráfico...');
       
       // Prepare data structure
@@ -122,28 +105,23 @@ class _TradingViewChartState extends State<TradingViewChart> {
       };
 
       final jsonData = jsonEncode(data);
-      debugPrint('🔥 TradingViewChart: JSON preparado, longitud: ${jsonData.length}');
       
       // Test JavaScript execution
       try {
-        final testResult = await _controller.runJavaScriptReturningResult('1 + 1');
-        debugPrint('🔥 TradingViewChart: Test JS ejecutado: $testResult');
+        await _controller.runJavaScriptReturningResult('1 + 1');
       } catch (e) {
-        debugPrint('🔥 TradingViewChart: Error en test JS: $e');
+        // Ignore test errors
       }
       
       await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
-      debugPrint('🔥 TradingViewChart: Datos enviados exitosamente via postMessage');
       setState(() => _status = 'Gráfico listo');
     } catch (e) {
-      debugPrint('🔥 TradingViewChart: Error enviando datos: $e');
       setState(() => _status = 'Error: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🔥 TradingViewChart: build() - Status: $_status, Ready: $_isWebViewReady');
     return Container(
       height: 300,
       decoration: BoxDecoration(
