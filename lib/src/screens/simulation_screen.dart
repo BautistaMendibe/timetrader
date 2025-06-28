@@ -300,6 +300,169 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
+  void _showTradeModal(BuildContext context, String type) {
+    final List<int> amounts = [100, 400, 1000, 1500, 3000];
+    final List<int> leverages = [1, 5, 10, 20, 30, 50];
+    int selectedAmount = amounts[0];
+    int selectedLeverage = leverages[0];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        type == 'buy' ? 'Comprar' : 'Vender',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Tamaño de la operación',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: amounts.map((amount) {
+                      final isSelected = selectedAmount == amount;
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: GestureDetector(
+                            onTap: () => setState(() => selectedAmount = amount),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFF21CE99) : Colors.grey[400]!,
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '\$${amount}',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    fontSize: isSelected ? 18 : 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Apalancamiento',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: leverages.map((lev) {
+                      final isSelected = selectedLeverage == lev;
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: GestureDetector(
+                            onTap: () => setState(() => selectedLeverage = lev),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFF1976D2) : Colors.grey[400]!,
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${lev}x',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    fontSize: isSelected ? 18 : 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: type == 'buy' ? const Color(0xFF21CE99) : const Color(0xFFFF5A5F),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _executeManualTrade(type, selectedAmount, selectedLeverage);
+                      },
+                      child: Text(
+                        'ABRIR OPERACIÓN → \$${selectedAmount}',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _executeManualTrade(String type, int amount, int leverage) {
+    final provider = context.read<SimulationProvider>();
+    provider.executeManualTrade(type: type, amount: amount.toDouble(), leverage: leverage);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SimulationProvider>(
@@ -647,6 +810,51 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 ),
               ),
               
+              // Botones de trading manual
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _showTradeModal(context, 'buy'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF21CE99),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'COMPRAR',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _showTradeModal(context, 'sell'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF5A5F),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'VENDER',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              
               // Controls Area - 30% of available height
               Expanded(
                 flex: 3, // 30% of the space
@@ -933,13 +1141,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 ),
               ),
             ],
-          ),
-          bottomNavigationBar: TextButton(
-            onPressed: () => launchUrl(Uri.parse('https://github.com/tradingview/lightweight-charts')),
-            child: const Text(
-              'Gráficos realizados con Lightweight Charts™ de TradingView',
-              style: TextStyle(decoration: TextDecoration.underline),
-            ),
           ),
         );
       },

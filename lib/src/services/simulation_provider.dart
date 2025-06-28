@@ -217,10 +217,23 @@ class SimulationProvider with ChangeNotifier {
     if (!_inPosition) return;
     
     // Determine trade type for closing
-    final closeType = _currentTrades.last.type == 'buy' ? 'sell' : 'buy';
+    final lastTrade = _currentTrades.last;
+    final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
     
-    // Execute closing trade
-    executeTrade(closeType, price, _positionSize, reason);
+    // Ejecutar trade de cierre con los mismos amount y leverage que la entrada
+    final closeTrade = Trade(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      type: closeType,
+      price: price,
+      quantity: lastTrade.quantity,
+      candleIndex: _currentCandleIndex,
+      reason: reason,
+      amount: lastTrade.amount,
+      leverage: lastTrade.leverage,
+    );
+    _currentTrades.add(closeTrade);
+    // (Opcional: calcular P&L y actualizar balance aquí si lo deseas)
     
     // Reset position state
     _inPosition = false;
@@ -231,6 +244,7 @@ class SimulationProvider with ChangeNotifier {
     _takeProfitPrice = 0.0;
     
     debugPrint('🔥 SimulationProvider: Posición cerrada - Precio: $price, Razón: $reason');
+    notifyListeners();
   }
 
   void executeTrade(String type, double price, double quantity, [String? reason]) {
@@ -402,6 +416,31 @@ class SimulationProvider with ChangeNotifier {
     }
     
     debugPrint('🔥 SimulationProvider: Saltando a vela: $index');
+    notifyListeners();
+  }
+
+  void executeManualTrade({
+    required String type,
+    required double amount,
+    required int leverage,
+  }) {
+    final candle = _historicalData[_currentCandleIndex];
+    final price = candle.close;
+    final positionSize = (amount * leverage) / price;
+    final trade = Trade(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      timestamp: candle.timestamp,
+      type: type,
+      price: price,
+      quantity: positionSize,
+      candleIndex: _currentCandleIndex,
+      reason: 'Manual',
+      amount: amount,
+      leverage: leverage,
+    );
+    _currentTrades.add(trade);
+    // Ajustar balance simulado (solo ejemplo, puedes ajustar la lógica de riesgo aquí)
+    _currentBalance -= amount;
     notifyListeners();
   }
 } 

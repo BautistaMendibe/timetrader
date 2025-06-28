@@ -171,15 +171,17 @@
                         if (formattedTime === null) {
                             return null;
                         }
+                        const amount = trade.amount ? `$${trade.amount}` : '';
+                        const lev = trade.leverage ? `x${trade.leverage}` : '';
                         return {
                             time: formattedTime,
                             position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
                             color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
                             shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
-                            text: `${trade.type.toUpperCase()} @ $${parseFloat(trade.price).toFixed(2)}`,
+                            text: `${trade.type.toUpperCase()} ${amount} ${lev}`.trim(),
                             size: 1,
                         };
-                    }).filter(marker => marker !== null); // Remove invalid entries
+                    }).filter(marker => marker !== null);
                     
                     if (markers.length > 0) {
                         candlestickSeries.setMarkers(markers);

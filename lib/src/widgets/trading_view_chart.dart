@@ -101,6 +101,8 @@ class _TradingViewChartState extends State<TradingViewChart> {
           'time': t.timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to seconds since epoch
           'type': t.type,
           'price': t.price,
+          'amount': t.amount,
+          'leverage': t.leverage,
         }).toList() ?? [],
       };
 
