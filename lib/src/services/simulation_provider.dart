@@ -23,7 +23,6 @@ class SimulationProvider with ChangeNotifier {
   bool _inPosition = false;
   double _entryPrice = 0.0;
   double _positionSize = 0.0;
-  int _entryCandleIndex = 0;
   double _stopLossPrice = 0.0;
   double _takeProfitPrice = 0.0;
   
@@ -73,7 +72,6 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
-    _entryCandleIndex = 0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
     
@@ -106,7 +104,7 @@ class SimulationProvider with ChangeNotifier {
     _currentCandleIndex++;
     final currentCandle = _historicalData[_currentCandleIndex];
     
-    debugPrint('🔥 SimulationProvider: Procesando vela ${_currentCandleIndex}: ${currentCandle.timestamp} - Precio: ${currentCandle.close}');
+    debugPrint('🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}');
     
     // Check if we need to close position due to stop loss or take profit
     if (_inPosition) {
@@ -191,7 +189,6 @@ class SimulationProvider with ChangeNotifier {
     
     _inPosition = true;
     _entryPrice = price;
-    _entryCandleIndex = _currentCandleIndex;
     
     // Calculate position size based on setup
     final riskAmount = _currentBalance * (_currentSetup!.stopLossPercent / 100);
@@ -239,7 +236,6 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
-    _entryCandleIndex = 0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
     
@@ -269,7 +265,7 @@ class SimulationProvider with ChangeNotifier {
         if (openTrade.type == 'buy') {
           pnl = (closeTrade.price - openTrade.price) * quantity;
         } else {
-          pnl = (openTrade.price - openTrade.price) * quantity;
+          pnl = (closeTrade.price - openTrade.price) * quantity;
         }
         
         closeTrade.pnl = pnl;
@@ -338,7 +334,6 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
-    _entryCandleIndex = 0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
     notifyListeners();
@@ -379,7 +374,7 @@ class SimulationProvider with ChangeNotifier {
     _currentCandleIndex++;
     final currentCandle = _historicalData[_currentCandleIndex];
     
-    debugPrint('🔥 SimulationProvider: Procesando vela ${_currentCandleIndex}: ${currentCandle.timestamp} - Precio: ${currentCandle.close}');
+    debugPrint('🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}');
     
     // Check if we need to close position due to stop loss or take profit
     if (_inPosition) {
@@ -444,16 +439,11 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = true;
     _entryPrice = price;
     _positionSize = positionSize;
-    _entryCandleIndex = _currentCandleIndex;
     _manualMargin = margin;
-    _manualAmount = amount;
-    _manualLeverage = leverage;
     notifyListeners();
   }
 
   double _manualMargin = 0.0;
-  double _manualAmount = 0.0;
-  int _manualLeverage = 1;
 
   void closeManualPosition(double exitPrice) {
     if (!_inPosition) return;
@@ -479,10 +469,7 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
-    _entryCandleIndex = 0;
     _manualMargin = 0.0;
-    _manualAmount = 0.0;
-    _manualLeverage = 1;
     notifyListeners();
   }
 } 
