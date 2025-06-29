@@ -17,6 +17,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
   final double _initialBalance = 10000.0;
   double _selectedAmount = 100.0;
   int _selectedLeverage = 1;
+  bool _showOrderContainerInline = false;
+  bool _isBuyOrder = true;
+  bool _showSLTPContainer = false;
 
   @override
   void initState() {
@@ -36,196 +39,17 @@ class _SimulationScreenState extends State<SimulationScreen> {
     super.dispose();
   }
 
-  void _showOrderModal(BuildContext context, SimulationProvider simulationProvider, bool isBuy) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: Color(0xFF1E1E1E),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[600],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isBuy ? 'Comprar' : 'Vender',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Amount Selection
-                    Text(
-                      'Monto',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [100, 400, 1000, 1500, 3000].map((amount) {
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedAmount = amount.toDouble();
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _selectedAmount == amount
-                                  ? const Color(0xFF21CE99)
-                                  : const Color(0xFF2C2C2C),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: _selectedAmount == amount
-                                    ? const Color(0xFF21CE99)
-                                    : Colors.grey[700]!,
-                              ),
-                            ),
-                            child: Text(
-                              '\$${amount.toString()}',
-                              style: TextStyle(
-                                color: _selectedAmount == amount
-                                    ? Colors.white
-                                    : Colors.grey[300],
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Leverage Selection
-                    Text(
-                      'Apalancamiento',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [1, 5, 10, 20, 30, 50].map((leverage) {
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedLeverage = leverage;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _selectedLeverage == leverage
-                                  ? const Color(0xFF21CE99)
-                                  : const Color(0xFF2C2C2C),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: _selectedLeverage == leverage
-                                    ? const Color(0xFF21CE99)
-                                    : Colors.grey[700]!,
-                              ),
-                            ),
-                            child: Text(
-                              '${leverage}x',
-                              style: TextStyle(
-                                color: _selectedLeverage == leverage
-                                    ? Colors.white
-                                    : Colors.grey[300],
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    
-                    // Confirm Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          simulationProvider.executeManualTrade(
-                            type: isBuy ? 'buy' : 'sell',
-                            amount: _selectedAmount,
-                            leverage: _selectedLeverage,
-                          );
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isBuy ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          isBuy ? 'Comprar' : 'Vender',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Inter',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _showOrderContainer(BuildContext context, SimulationProvider simulationProvider, bool isBuy) {
+    setState(() {
+      _showOrderContainerInline = true;
+      _isBuyOrder = isBuy;
+    });
   }
 
-  void _showManageSLTPModal(BuildContext context, SimulationProvider simulationProvider) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => _ManageSLTPModal(simulationProvider: simulationProvider),
-    );
+  void _showManageSLTPContainer(BuildContext context, SimulationProvider simulationProvider) {
+    setState(() {
+      _showSLTPContainer = true;
+    });
   }
 
   @override
@@ -246,6 +70,47 @@ class _SimulationScreenState extends State<SimulationScreen> {
             backgroundColor: const Color(0xFF1E1E1E),
             foregroundColor: Colors.white,
             actions: [
+              // Balance y P&L en el AppBar
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '\$${simulationProvider.currentBalance.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  Text(
+                    'P&L: \$${simulationProvider.totalPnL.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: simulationProvider.totalPnL >= 0 
+                          ? const Color(0xFF21CE99) 
+                          : const Color(0xFFFF6B6B),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  if (simulationProvider.inPosition && simulationProvider.unrealizedPnL != 0) ...[
+                    Text(
+                      'Flotante: \$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: simulationProvider.unrealizedPnL >= 0 
+                            ? const Color(0xFF21CE99) 
+                            : const Color(0xFFFF6B6B),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(width: 16),
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () {
@@ -259,9 +124,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
             color: const Color(0xFF1E1E1E),
             child: Column(
               children: [
-                // Chart Section (70% of screen)
+                // Chart Section (60% of screen)
                 Expanded(
-                  flex: 7,
+                  flex: 6,
                   child: Container(
                     margin: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -290,62 +155,201 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   ),
                 ),
                 
-                // Controls Section (30% of screen)
+                // Controls Section (40% of screen)
                 Expanded(
-                  flex: 3,
+                  flex: 4,
                   child: Container(
                     padding: const EdgeInsets.all(16),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          // Balance Row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Balance: \$${simulationProvider.currentBalance.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Inter',
-                                ),
+                    child: Column(
+                      children: [
+                        // Order Container (when active)
+                        if (_showOrderContainerInline) ...[
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2C2C2C),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[700]!),
                               ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        _isBuyOrder ? 'Comprar' : 'Vender',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                        onPressed: () {
+                                          setState(() {
+                                            _showOrderContainerInline = false;
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  
+                                  // Amount Selection
                                   Text(
-                                    'P&L: \$${simulationProvider.totalPnL.toStringAsFixed(2)}',
+                                    'Monto',
                                     style: TextStyle(
-                                      color: simulationProvider.totalPnL >= 0 
-                                          ? const Color(0xFF21CE99) 
-                                          : const Color(0xFFFF6B6B),
-                                      fontSize: 16,
+                                      color: Colors.grey[400],
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                       fontFamily: 'Inter',
                                     ),
                                   ),
-                                  if (simulationProvider.inPosition && simulationProvider.unrealizedPnL != 0) ...[
-                                    Text(
-                                      'Flotante: \$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        color: simulationProvider.unrealizedPnL >= 0 
-                                            ? const Color(0xFF21CE99) 
-                                            : const Color(0xFFFF6B6B),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily: 'Inter',
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [100, 400, 1000, 1500, 3000].map((amount) {
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedAmount = amount.toDouble();
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: _selectedAmount == amount
+                                                ? const Color(0xFF21CE99)
+                                                : const Color(0xFF1E1E1E),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: _selectedAmount == amount
+                                                  ? const Color(0xFF21CE99)
+                                                  : Colors.grey[700]!,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '\$${amount.toString()}',
+                                            style: TextStyle(
+                                              color: _selectedAmount == amount
+                                                  ? Colors.white
+                                                  : Colors.grey[300],
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  
+                                  const SizedBox(height: 12),
+                                  
+                                  // Leverage Selection
+                                  Text(
+                                    'Apalancamiento',
+                                    style: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [1, 5, 10, 20, 30, 50].map((leverage) {
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedLeverage = leverage;
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: _selectedLeverage == leverage
+                                                ? const Color(0xFF21CE99)
+                                                : const Color(0xFF1E1E1E),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: _selectedLeverage == leverage
+                                                  ? const Color(0xFF21CE99)
+                                                  : Colors.grey[700]!,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${leverage}x',
+                                            style: TextStyle(
+                                              color: _selectedLeverage == leverage
+                                                  ? Colors.white
+                                                  : Colors.grey[300],
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  
+                                  const Spacer(),
+                                  
+                                  // Confirm Button
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        simulationProvider.executeManualTrade(
+                                          type: _isBuyOrder ? 'buy' : 'sell',
+                                          amount: _selectedAmount,
+                                          leverage: _selectedLeverage,
+                                        );
+                                        setState(() {
+                                          _showOrderContainerInline = false;
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _isBuyOrder ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _isBuyOrder ? 'Comprar' : 'Vender',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Inter',
+                                        ),
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
-                          
-                          const SizedBox(height: 16),
-                          
-                          // Manual Controls
+                        ] else if (_showSLTPContainer) ...[
+                          // SL/TP Container (when active)
+                          Expanded(
+                            child: _ManageSLTPContainer(simulationProvider: simulationProvider, onClose: () {
+                              setState(() {
+                                _showSLTPContainer = false;
+                              });
+                            }),
+                          ),
+                        ] else ...[
+                          // Normal Controls (when no container is active)
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -394,7 +398,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     Expanded(
                                       child: ElevatedButton.icon(
                                         onPressed: !simulationProvider.inPosition 
-                                            ? () => _showOrderModal(context, simulationProvider, true)
+                                            ? () => _showOrderContainer(context, simulationProvider, true)
                                             : null,
                                         icon: const Icon(Icons.trending_up),
                                         label: const Text('Comprar'),
@@ -412,7 +416,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     Expanded(
                                       child: ElevatedButton.icon(
                                         onPressed: !simulationProvider.inPosition 
-                                            ? () => _showOrderModal(context, simulationProvider, false)
+                                            ? () => _showOrderContainer(context, simulationProvider, false)
                                             : null,
                                         icon: const Icon(Icons.trending_down),
                                         label: const Text('Vender'),
@@ -456,7 +460,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       Expanded(
                                         child: ElevatedButton.icon(
                                           onPressed: () {
-                                            _showManageSLTPModal(context, simulationProvider);
+                                            _showManageSLTPContainer(context, simulationProvider);
                                           },
                                           icon: const Icon(Icons.tune),
                                           label: const Text('Gestionar SL/TP'),
@@ -477,7 +481,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -490,16 +494,20 @@ class _SimulationScreenState extends State<SimulationScreen> {
   }
 }
 
-// Widget del modal avanzado
-class _ManageSLTPModal extends StatefulWidget {
+// Widget del container inline para SL/TP
+class _ManageSLTPContainer extends StatefulWidget {
   final SimulationProvider simulationProvider;
-  const _ManageSLTPModal({required this.simulationProvider});
+  final VoidCallback onClose;
+  const _ManageSLTPContainer({
+    required this.simulationProvider,
+    required this.onClose,
+  });
 
   @override
-  State<_ManageSLTPModal> createState() => _ManageSLTPModalState();
+  State<_ManageSLTPContainer> createState() => _ManageSLTPContainerState();
 }
 
-class _ManageSLTPModalState extends State<_ManageSLTPModal> {
+class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
   double? _takeProfitPercent;
   double? _stopLossPercent;
   double? _partialClosePercent;
@@ -507,9 +515,9 @@ class _ManageSLTPModalState extends State<_ManageSLTPModal> {
   @override
   void initState() {
     super.initState();
-    // Valores iniciales (ejemplo: 6% TP, 2.5% SL, 0% parcial)
-    _takeProfitPercent = 6.0;
-    _stopLossPercent = 2.5;
+    // Usar valores actuales o valores por defecto
+    _takeProfitPercent = widget.simulationProvider.manualTakeProfitPercent ?? 6.0;
+    _stopLossPercent = widget.simulationProvider.manualStopLossPercent ?? 2.5;
     _partialClosePercent = 0.0;
   }
 
@@ -524,102 +532,115 @@ class _ManageSLTPModalState extends State<_ManageSLTPModal> {
     final partialValue = amount * (_partialClosePercent! / 100);
 
     return Container(
-      padding: EdgeInsets.only(
-        left: 16, right: 16,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2C2C2C),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[700]!),
       ),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const SizedBox(width: 40),
-              const Text(
-                'Gestión Avanzada',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Take Profit
-          Text('Tomar beneficio:  +\$${tpValue.toStringAsFixed(0)}  |  +${_takeProfitPercent!.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 16)),
-          Slider(
-            value: _takeProfitPercent!,
-            min: 0,
-            max: 20,
-            divisions: 40,
-            label: '+${_takeProfitPercent!.toStringAsFixed(1)}%',
-            activeColor: Colors.green,
-            inactiveColor: Colors.green.withOpacity(0.2),
-            onChanged: (v) => setState(() => _takeProfitPercent = v),
-          ),
-          const SizedBox(height: 8),
-          // Stop Loss
-          Text('Cerrar pérdida:  -\$${slValue.toStringAsFixed(0)}  |  -${_stopLossPercent!.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 16)),
-          Slider(
-            value: _stopLossPercent!,
-            min: 0,
-            max: 10,
-            divisions: 40,
-            label: '-${_stopLossPercent!.toStringAsFixed(1)}%',
-            activeColor: Colors.red,
-            inactiveColor: Colors.red.withOpacity(0.2),
-            onChanged: (v) => setState(() => _stopLossPercent = v),
-          ),
-          const SizedBox(height: 8),
-          // Partial Close
-          Text('Cerrar parcialmente:  \$${partialValue.toStringAsFixed(0)}  |  ${_partialClosePercent!.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w600, fontSize: 16)),
-          Slider(
-            value: _partialClosePercent!,
-            min: 0,
-            max: 100,
-            divisions: 100,
-            label: '${_partialClosePercent!.toStringAsFixed(1)}%',
-            activeColor: Colors.blue,
-            inactiveColor: Colors.blue.withOpacity(0.2),
-            onChanged: (v) => setState(() => _partialClosePercent = v),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Lógica real: aplicar SL/TP y cierre parcial
-                    if (_partialClosePercent != null && _partialClosePercent! > 0) {
-                      widget.simulationProvider.closePartialPosition(_partialClosePercent!);
-                    }
-                    widget.simulationProvider.setManualSLTP(
-                      stopLossPercent: _stopLossPercent,
-                      takeProfitPercent: _takeProfitPercent,
-                    );
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('HECHO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Gestión Avanzada',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                 ),
-              ),
-            ],
-          ),
-        ],
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                  onPressed: widget.onClose,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Take Profit
+            Text('TP: +\$${tpValue.toStringAsFixed(0)} (+${_takeProfitPercent!.toStringAsFixed(1)}%)', 
+                 style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12)),
+            Slider(
+              value: _takeProfitPercent!,
+              min: 0,
+              max: 20,
+              divisions: 40,
+              label: '+${_takeProfitPercent!.toStringAsFixed(1)}%',
+              activeColor: Colors.green,
+              inactiveColor: Colors.green.withOpacity(0.2),
+              onChanged: (v) {
+                setState(() => _takeProfitPercent = v);
+                // Actualizar en tiempo real
+                widget.simulationProvider.setManualSLTP(takeProfitPercent: v);
+              },
+            ),
+            const SizedBox(height: 6),
+            
+            // Stop Loss
+            Text('SL: -\$${slValue.toStringAsFixed(0)} (-${_stopLossPercent!.toStringAsFixed(1)}%)', 
+                 style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 12)),
+            Slider(
+              value: _stopLossPercent!,
+              min: 0,
+              max: 10,
+              divisions: 40,
+              label: '-${_stopLossPercent!.toStringAsFixed(1)}%',
+              activeColor: Colors.red,
+              inactiveColor: Colors.red.withOpacity(0.2),
+              onChanged: (v) {
+                setState(() => _stopLossPercent = v);
+                // Actualizar en tiempo real
+                widget.simulationProvider.setManualSLTP(stopLossPercent: v);
+              },
+            ),
+            const SizedBox(height: 6),
+            
+            // Partial Close
+            Text('Parcial: \$${partialValue.toStringAsFixed(0)} (${_partialClosePercent!.toStringAsFixed(1)}%)', 
+                 style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w600, fontSize: 12)),
+            Slider(
+              value: _partialClosePercent!,
+              min: 0,
+              max: 100,
+              divisions: 100,
+              label: '${_partialClosePercent!.toStringAsFixed(1)}%',
+              activeColor: Colors.blue,
+              inactiveColor: Colors.blue.withOpacity(0.2),
+              onChanged: (v) => setState(() => _partialClosePercent = v),
+            ),
+            const SizedBox(height: 12),
+            
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Lógica real: aplicar SL/TP y cierre parcial
+                      if (_partialClosePercent != null && _partialClosePercent! > 0) {
+                        widget.simulationProvider.closePartialPosition(_partialClosePercent!);
+                      }
+                      widget.simulationProvider.setManualSLTP(
+                        stopLossPercent: _stopLossPercent,
+                        takeProfitPercent: _takeProfitPercent,
+                      );
+                      // Cerrar el container
+                      widget.onClose();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('HECHO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
