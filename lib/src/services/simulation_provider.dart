@@ -47,6 +47,26 @@ class SimulationProvider with ChangeNotifier {
   SimulationMode get simulationMode => _simulationMode;
   double get simulationSpeed => _simulationSpeed;
 
+  // Calcula el P&L flotante basado en el precio actual
+  double get unrealizedPnL {
+    if (!_inPosition || _currentTrades.isEmpty) return 0.0;
+    
+    final lastTrade = _currentTrades.last;
+    final currentPrice = _historicalData[_currentCandleIndex].close;
+    
+    if (lastTrade.type == 'buy') {
+      return (currentPrice - lastTrade.price) * lastTrade.quantity * lastTrade.leverage!;
+    } else {
+      return (lastTrade.price - currentPrice) * lastTrade.quantity * lastTrade.leverage!;
+    }
+  }
+
+  // P&L total (realizado + flotante)
+  double get totalPnL {
+    double realizedPnL = _currentBalance - 10000.0; // Balance inicial
+    return realizedPnL + unrealizedPnL;
+  }
+
   void setHistoricalData(List<Candle> data) {
     debugPrint('🔥 SimulationProvider: setHistoricalData() - Datos recibidos: ${data.length} velas');
     if (data.isNotEmpty) {

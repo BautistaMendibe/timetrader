@@ -294,16 +294,34 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   fontFamily: 'Inter',
                                 ),
                               ),
-                              Text(
-                                'P&L: \$${(simulationProvider.currentBalance - _initialBalance).toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  color: (simulationProvider.currentBalance - _initialBalance) >= 0 
-                                      ? const Color(0xFF21CE99) 
-                                      : const Color(0xFFFF6B6B),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'Inter',
-                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'P&L: \$${simulationProvider.totalPnL.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      color: simulationProvider.totalPnL >= 0 
+                                          ? const Color(0xFF21CE99) 
+                                          : const Color(0xFFFF6B6B),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  if (simulationProvider.inPosition && simulationProvider.unrealizedPnL != 0) ...[
+                                    Text(
+                                      'Flotante: \$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        color: simulationProvider.unrealizedPnL >= 0 
+                                            ? const Color(0xFF21CE99) 
+                                            : const Color(0xFFFF6B6B),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ),
