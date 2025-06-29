@@ -25,6 +25,7 @@ class SimulationProvider with ChangeNotifier {
   double _positionSize = 0.0;
   double _stopLossPrice = 0.0;
   double _takeProfitPrice = 0.0;
+  String _manualPositionType = 'buy'; // 'buy' or 'sell'
   
   // Simulation mode
   SimulationMode _simulationMode = SimulationMode.manual;
@@ -55,14 +56,27 @@ class SimulationProvider with ChangeNotifier {
   double? get manualStopLossPrice {
     if (!_inPosition || _manualStopLossPercent == null) return null;
     final entry = _entryPrice;
-    final sl = entry * (1 - _manualStopLossPercent! / 100);
-    return sl;
+    
+    if (_manualPositionType == 'buy') {
+      // Para compra: SL por debajo del precio de entrada
+      return entry * (1 - _manualStopLossPercent! / 100);
+    } else {
+      // Para venta: SL por encima del precio de entrada
+      return entry * (1 + _manualStopLossPercent! / 100);
+    }
   }
+  
   double? get manualTakeProfitPrice {
     if (!_inPosition || _manualTakeProfitPercent == null) return null;
     final entry = _entryPrice;
-    final tp = entry * (1 + _manualTakeProfitPercent! / 100);
-    return tp;
+    
+    if (_manualPositionType == 'buy') {
+      // Para compra: TP por encima del precio de entrada
+      return entry * (1 + _manualTakeProfitPercent! / 100);
+    } else {
+      // Para venta: TP por debajo del precio de entrada
+      return entry * (1 - _manualTakeProfitPercent! / 100);
+    }
   }
 
   // Calcula el P&L flotante basado en el precio actual
@@ -503,6 +517,7 @@ class SimulationProvider with ChangeNotifier {
     _entryPrice = price;
     _positionSize = positionSize;
     _manualMargin = margin;
+    _manualPositionType = type; // Guardar el tipo de operación
     
     // Inicializar SL/TP con valores por defecto si no están definidos
     if (_manualStopLossPercent == null) {
@@ -542,6 +557,7 @@ class SimulationProvider with ChangeNotifier {
     _entryPrice = 0.0;
     _positionSize = 0.0;
     _manualMargin = 0.0;
+    _manualPositionType = 'buy'; // Resetear el tipo de operación
     
     // Resetear percentiles de SL/TP al cerrar la posición
     _manualStopLossPercent = null;
@@ -589,6 +605,7 @@ class SimulationProvider with ChangeNotifier {
       _entryPrice = 0.0;
       _positionSize = 0.0;
       _manualMargin = 0.0;
+      _manualPositionType = 'buy'; // Resetear el tipo de operación
       
       // Resetear percentiles de SL/TP al cerrar completamente la posición
       _manualStopLossPercent = null;
