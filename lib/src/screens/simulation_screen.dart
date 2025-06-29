@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../services/simulation_provider.dart';
 import '../widgets/trading_view_chart.dart';
 import '../routes.dart';
+import '../models/simulation_result.dart';
+import 'package:tuple/tuple.dart';
 
 class SimulationScreen extends StatefulWidget {
   const SimulationScreen({super.key});
@@ -260,12 +262,16 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Selector<SimulationProvider, int>(
-                        selector: (context, provider) => provider.currentCandleIndex,
-                        builder: (context, currentIndex, child) {
+                      child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
+                        selector: (context, provider) => Tuple2(
+                          provider.currentTrades,
+                          provider.currentCandleIndex,
+                        ),
+                        builder: (context, data, child) {
                           return TradingViewChart(
-                            candles: simulationProvider.historicalData.take(currentIndex + 1).toList(),
-                            trades: simulationProvider.currentTrades,
+                            candles: simulationProvider.historicalData,
+                            trades: data.item1,
+                            currentCandleIndex: data.item2,
                           );
                         },
                       ),

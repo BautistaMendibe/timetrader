@@ -7,10 +7,12 @@ import '../models/simulation_result.dart';
 class TradingViewChart extends StatefulWidget {
   final List<Candle> candles;
   final List<Trade>? trades;
+  final int? currentCandleIndex;
   
   const TradingViewChart({
     required this.candles,
     this.trades,
+    this.currentCandleIndex,
     super.key,
   });
 
@@ -69,7 +71,9 @@ class _TradingViewChartState extends State<TradingViewChart> {
   void didUpdateWidget(covariant TradingViewChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_isWebViewReady && 
-        (oldWidget.candles != widget.candles || oldWidget.trades != widget.trades)) {
+        (oldWidget.candles != widget.candles || 
+         oldWidget.trades != widget.trades ||
+         oldWidget.currentCandleIndex != widget.currentCandleIndex)) {
       _sendDataToWebView();
     }
   }
@@ -85,11 +89,19 @@ class _TradingViewChartState extends State<TradingViewChart> {
     }
 
     try {
-      setState(() => _status = 'Renderizando gráfico...');
+      // Show "Renderizando gráfico" message on first load
+      if (_status.contains('Enviando datos')) {
+        setState(() => _status = 'Renderizando gráfico...');
+      }
+      
+      // Determine which candles to show
+      final candlesToShow = widget.currentCandleIndex != null 
+          ? widget.candles.take(widget.currentCandleIndex! + 1).toList()
+          : widget.candles;
       
       // Prepare data structure
       final data = {
-        'candles': widget.candles.map((c) => {
+        'candles': candlesToShow.map((c) => {
           'time': c.timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to seconds since epoch
           'open': c.open,
           'high': c.high,
@@ -116,7 +128,11 @@ class _TradingViewChartState extends State<TradingViewChart> {
       }
       
       await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
-      setState(() => _status = 'Gráfico listo');
+      
+      // Update status to "Gráfico listo" on first load
+      if (_status == 'Renderizando gráfico...') {
+        setState(() => _status = 'Gráfico listo');
+      }
     } catch (e) {
       setState(() => _status = 'Error: $e');
     }
