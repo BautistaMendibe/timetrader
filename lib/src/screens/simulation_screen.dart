@@ -140,6 +140,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
             body: Container(
               color: const Color(0xFF1E1E1E),
               child: TabBarView(
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
                   // Tab 1: Trading
                   _buildTradingTab(simulationProvider),
