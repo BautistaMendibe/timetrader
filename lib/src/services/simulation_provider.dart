@@ -544,12 +544,8 @@ class SimulationProvider with ChangeNotifier {
     _manualPositionType = type; // Guardar el tipo de operación
     
     // Inicializar SL/TP con valores por defecto si no están definidos
-    if (_manualStopLossPercent == null) {
-      _manualStopLossPercent = 2.5; // 2.5% por defecto
-    }
-    if (_manualTakeProfitPercent == null) {
-      _manualTakeProfitPercent = 6.0; // 6% por defecto
-    }
+    _manualStopLossPercent ??= 2.5; // 2.5% por defecto
+    _manualTakeProfitPercent ??= 6.0; // 6% por defecto
     
     notifyListeners();
   }
@@ -603,7 +599,7 @@ class SimulationProvider with ChangeNotifier {
     final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
     final currentPrice = _historicalData[_currentCandleIndex].close;
     final qtyToClose = lastTrade.quantity * (percent / 100);
-    final marginToReturn = (_manualMargin ?? 0.0) * (percent / 100);
+    final marginToReturn = _manualMargin * (percent / 100);
     final pnl = lastTrade.type == 'buy'
         ? (currentPrice - lastTrade.price) * qtyToClose * (lastTrade.leverage ?? 1)
         : (lastTrade.price - currentPrice) * qtyToClose * (lastTrade.leverage ?? 1);
@@ -637,7 +633,7 @@ class SimulationProvider with ChangeNotifier {
     } else {
       // Si queda posición, actualizar cantidad y margen
       _positionSize = newQty;
-      _manualMargin = (_manualMargin ?? 0.0) * (1 - percent / 100);
+      _manualMargin = _manualMargin * (1 - percent / 100);
     }
     notifyListeners();
   }

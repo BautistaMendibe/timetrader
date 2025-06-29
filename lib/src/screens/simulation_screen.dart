@@ -14,7 +14,6 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
-  final double _initialBalance = 10000.0;
   double _selectedAmount = 100.0;
   int _selectedLeverage = 1;
   bool _showOrderContainerInline = false;
@@ -529,13 +528,15 @@ class _SimulationScreenState extends State<SimulationScreen> {
   Widget _buildStatisticsTab(SimulationProvider simulationProvider) {
     final trades = simulationProvider.currentTrades;
     final totalTrades = trades.length;
-    final winningTrades = trades.where((t) => t.pnl != null && t.pnl! > 0).length;
-    final losingTrades = trades.where((t) => t.pnl != null && t.pnl! < 0).length;
-    final winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0.0;
     
-    final totalPnL = trades.where((t) => t.pnl != null).fold(0.0, (sum, t) => sum + t.pnl!);
-    final maxProfit = trades.where((t) => t.pnl != null).fold(0.0, (max, t) => t.pnl! > max ? t.pnl! : max);
-    final maxLoss = trades.where((t) => t.pnl != null).fold(0.0, (min, t) => t.pnl! < min ? t.pnl! : min);
+    // Todos los trades tienen pnl válido
+    final completedTrades = trades;
+    final winningTrades = completedTrades.where((t) => t.pnl > 0).length;
+    final losingTrades = completedTrades.where((t) => t.pnl < 0).length;
+    final winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0.0;
+    final totalPnL = completedTrades.fold(0.0, (sum, t) => sum + t.pnl);
+    final maxProfit = completedTrades.fold(0.0, (max, t) => t.pnl > max ? t.pnl : max);
+    final maxLoss = completedTrades.fold(0.0, (min, t) => t.pnl < min ? t.pnl : min);
     
     final isSimulationComplete = simulationProvider.currentCandleIndex >= simulationProvider.historicalData.length - 1;
 
@@ -709,7 +710,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      ...trades.take(5).map((trade) => _buildTradeItem(trade)).toList(),
+                      ...trades.take(5).map((trade) => _buildTradeItem(trade)),
                       
                       if (trades.length > 5) ...[
                         const SizedBox(height: 8),
@@ -734,7 +735,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
             if (isSimulationComplete) ...[
               const SizedBox(height: 16),
               Card(
-                color: const Color(0xFF21CE99).withOpacity(0.1),
+                color: const Color(0xFF21CE99).withValues(alpha: 0.1),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -761,7 +762,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '¡Excelente trabajo! Has completado la simulación con ${totalTrades} trades y un P&L total de \$${totalPnL.toStringAsFixed(2)}.',
+                        '¡Excelente trabajo! Has completado la simulación con $totalTrades trades y un P&L total de \$${totalPnL.toStringAsFixed(2)}.',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -785,7 +786,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -848,8 +849,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: trade.type == 'buy' 
-              ? Colors.green.withOpacity(0.3) 
-              : Colors.red.withOpacity(0.3),
+              ? Colors.green.withValues(alpha: 0.3) 
+              : Colors.red.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -873,15 +874,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     fontFamily: 'Inter',
                   ),
                 ),
-                if (trade.pnl != null)
-                  Text(
-                    'P&L: \$${trade.pnl!.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      color: trade.pnl! >= 0 ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                    ),
+                Text(
+                  'P&L: \$${trade.pnl.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: trade.pnl >= 0 ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
+                    fontSize: 10,
+                    fontFamily: 'Inter',
                   ),
+                ),
               ],
             ),
           ),
@@ -920,13 +920,12 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
 
   @override
   Widget build(BuildContext context) {
-    final balance = widget.simulationProvider.currentBalance;
     final entryPrice = widget.simulationProvider.entryPrice;
     final positionSize = widget.simulationProvider.positionSize;
     final amount = positionSize * entryPrice;
-    final tpValue = amount * (_takeProfitPercent! / 100);
-    final slValue = amount * (_stopLossPercent! / 100);
-    final partialValue = amount * (_partialClosePercent! / 100);
+    final tpValue = amount * (_takeProfitPercent ?? 0 / 100);
+    final slValue = amount * (_stopLossPercent ?? 0 / 100);
+    final partialValue = amount * (_partialClosePercent ?? 0 / 100);
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -957,19 +956,25 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
             // Take Profit
             Text('TP: +\$${tpValue.toStringAsFixed(0)} (+${_takeProfitPercent!.toStringAsFixed(1)}%)', 
                  style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12)),
-            Slider(
-              value: _takeProfitPercent!,
-              min: 0,
-              max: 20,
-              divisions: 40,
-              label: '+${_takeProfitPercent!.toStringAsFixed(1)}%',
-              activeColor: Colors.green,
-              inactiveColor: Colors.green.withOpacity(0.2),
-              onChanged: (v) {
-                setState(() => _takeProfitPercent = v);
-                // Actualizar en tiempo real
-                widget.simulationProvider.setManualSLTP(takeProfitPercent: v);
-              },
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: Colors.green,
+                inactiveTrackColor: Colors.green.withValues(alpha: 0.2),
+                thumbColor: Colors.green,
+                overlayColor: Colors.green.withValues(alpha: 0.1),
+              ),
+              child: Slider(
+                value: _takeProfitPercent ?? 0,
+                min: 0.1,
+                max: 20.0,
+                divisions: 199,
+                onChanged: (value) {
+                  setState(() {
+                    _takeProfitPercent = value;
+                  });
+                  widget.simulationProvider.setManualSLTP(takeProfitPercent: value);
+                },
+              ),
             ),
             const SizedBox(height: 6),
             
@@ -977,13 +982,13 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
             Text('SL: -\$${slValue.toStringAsFixed(0)} (-${_stopLossPercent!.toStringAsFixed(1)}%)', 
                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 12)),
             Slider(
-              value: _stopLossPercent!,
+              value: _stopLossPercent ?? 0,
               min: 0,
               max: 10,
               divisions: 40,
               label: '-${_stopLossPercent!.toStringAsFixed(1)}%',
               activeColor: Colors.red,
-              inactiveColor: Colors.red.withOpacity(0.2),
+              inactiveColor: Colors.red.withValues(alpha: 0.2),
               onChanged: (v) {
                 setState(() => _stopLossPercent = v);
                 // Actualizar en tiempo real
@@ -996,13 +1001,13 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
             Text('Parcial: \$${partialValue.toStringAsFixed(0)} (${_partialClosePercent!.toStringAsFixed(1)}%)', 
                  style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w600, fontSize: 12)),
             Slider(
-              value: _partialClosePercent!,
+              value: _partialClosePercent ?? 0,
               min: 0,
               max: 100,
               divisions: 100,
               label: '${_partialClosePercent!.toStringAsFixed(1)}%',
               activeColor: Colors.blue,
-              inactiveColor: Colors.blue.withOpacity(0.2),
+              inactiveColor: Colors.blue.withValues(alpha: 0.2),
               onChanged: (v) => setState(() => _partialClosePercent = v),
             ),
             const SizedBox(height: 12),
@@ -1013,8 +1018,8 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                   child: ElevatedButton(
                     onPressed: () {
                       // Lógica real: aplicar SL/TP y cierre parcial
-                      if (_partialClosePercent != null && _partialClosePercent! > 0) {
-                        widget.simulationProvider.closePartialPosition(_partialClosePercent!);
+                      if ((_partialClosePercent ?? 0) > 0) {
+                        widget.simulationProvider.closePartialPosition(_partialClosePercent ?? 0);
                       }
                       widget.simulationProvider.setManualSLTP(
                         stopLossPercent: _stopLossPercent,
