@@ -58,6 +58,9 @@ dependencies:
   # Utilities
   flutter_dotenv: ^5.1.0
 
+  # New dependency
+  tuple: ^2.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

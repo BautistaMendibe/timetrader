@@ -173,12 +173,17 @@
                         }
                         const amount = trade.amount ? `$${trade.amount}` : '';
                         const lev = trade.leverage ? `x${trade.leverage}` : '';
+                        let text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
+                        if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
+                            const pnl = parseFloat(trade.pnl).toFixed(2);
+                            text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
+                        }
                         return {
                             time: formattedTime,
                             position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
                             color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
                             shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
-                            text: `${trade.type.toUpperCase()} ${amount} ${lev}`.trim(),
+                            text: text,
                             size: 1,
                         };
                     }).filter(marker => marker !== null);

@@ -28,7 +28,7 @@ class SimulationProvider with ChangeNotifier {
   double _takeProfitPrice = 0.0;
   
   // Simulation mode
-  SimulationMode _simulationMode = SimulationMode.automatic;
+  SimulationMode _simulationMode = SimulationMode.manual;
   double _simulationSpeed = 1.0; // candles per second
 
   SimulationResult? get currentSimulation => _currentSimulation;
@@ -426,7 +426,8 @@ class SimulationProvider with ChangeNotifier {
   }) {
     final candle = _historicalData[_currentCandleIndex];
     final price = candle.close;
-    final positionSize = (amount * leverage) / price;
+    final margin = amount / leverage;
+    final positionSize = amount / price;
     final trade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       timestamp: candle.timestamp,
@@ -439,8 +440,49 @@ class SimulationProvider with ChangeNotifier {
       leverage: leverage,
     );
     _currentTrades.add(trade);
-    // Ajustar balance simulado (solo ejemplo, puedes ajustar la lógica de riesgo aquí)
-    _currentBalance -= amount;
+    _currentBalance -= margin;
+    _inPosition = true;
+    _entryPrice = price;
+    _positionSize = positionSize;
+    _entryCandleIndex = _currentCandleIndex;
+    _manualMargin = margin;
+    _manualAmount = amount;
+    _manualLeverage = leverage;
+    notifyListeners();
+  }
+
+  double _manualMargin = 0.0;
+  double _manualAmount = 0.0;
+  int _manualLeverage = 1;
+
+  void closeManualPosition(double exitPrice) {
+    if (!_inPosition) return;
+    final lastTrade = _currentTrades.last;
+    final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
+    final pnl = lastTrade.type == 'buy'
+        ? (exitPrice - lastTrade.price) * lastTrade.quantity * lastTrade.leverage!
+        : (lastTrade.price - exitPrice) * lastTrade.quantity * lastTrade.leverage!;
+    final closeTrade = Trade(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      type: closeType,
+      price: exitPrice,
+      quantity: lastTrade.quantity,
+      candleIndex: _currentCandleIndex,
+      reason: 'Manual Close',
+      amount: lastTrade.amount,
+      leverage: lastTrade.leverage,
+      pnl: pnl,
+    );
+    _currentTrades.add(closeTrade);
+    _currentBalance += _manualMargin + pnl;
+    _inPosition = false;
+    _entryPrice = 0.0;
+    _positionSize = 0.0;
+    _entryCandleIndex = 0;
+    _manualMargin = 0.0;
+    _manualAmount = 0.0;
+    _manualLeverage = 1;
     notifyListeners();
   }
 } 

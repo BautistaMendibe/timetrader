@@ -18,7 +18,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
   String? _selectedAsset;
   DateTime? _selectedDate;
   Setup? _selectedSetup;
-  double _selectedSpeed = 1.0;
+  // double _selectedSpeed = 1.0; // Comentado - no se usa en modo manual
   double _initialBalance = 10000.0; // Default initial balance
   bool _isLoading = false;
   bool _isInitialized = false;
@@ -90,7 +90,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
       
       // Set data and start simulation
       simulationProvider.setHistoricalData(data);
-      simulationProvider.startSimulation(_selectedSetup!, _selectedDate!, _selectedSpeed, _initialBalance);
+      simulationProvider.startSimulation(_selectedSetup!, _selectedDate!, 1.0, _initialBalance); // Velocidad fija en 1.0
       
       if (mounted) {
         Navigator.pushNamed(context, AppRoutes.simulation);
@@ -362,67 +362,67 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Speed Selection
-            Card(
-              color: const Color(0xFF2C2C2C),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Velocidad de Simulación',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Slider(
-                            value: _selectedSpeed,
-                            min: 0.1,
-                            max: 5.0,
-                            divisions: 49,
-                            activeColor: const Color(0xFF21CE99),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedSpeed = value;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          '${_selectedSpeed.toStringAsFixed(1)}x',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '0.1x',
-                          style: TextStyle(color: Colors.grey[400]),
-                        ),
-                        Text(
-                          '5.0x',
-                          style: TextStyle(color: Colors.grey[400]),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+            // Speed Selection - OCULTO para modo manual
+            // Card(
+            //   color: const Color(0xFF2C2C2C),
+            //   child: Padding(
+            //     padding: const EdgeInsets.all(16.0),
+            //     child: Column(
+            //       crossAxisAlignment: CrossAxisAlignment.start,
+            //       children: [
+            //         Text(
+            //           'Velocidad de Simulación',
+            //           style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            //             color: Colors.white,
+            //             fontWeight: FontWeight.w600,
+            //           ),
+            //         ),
+            //         const SizedBox(height: 12),
+            //         Row(
+            //           children: [
+            //             Expanded(
+            //               child: Slider(
+            //                 value: _selectedSpeed,
+            //                 min: 0.1,
+            //                 max: 5.0,
+            //                 divisions: 49,
+            //                 activeColor: const Color(0xFF21CE99),
+            //                 onChanged: (value) {
+            //                   setState(() {
+            //                     _selectedSpeed = value;
+            //                   });
+            //                 },
+            //               ),
+            //             ),
+            //             const SizedBox(width: 16),
+            //             Text(
+            //               '${_selectedSpeed.toStringAsFixed(1)}x',
+            //               style: const TextStyle(
+            //                 color: Colors.white,
+            //                 fontSize: 16,
+            //                 fontWeight: FontWeight.w600,
+            //               ),
+            //             ),
+            //           ],
+            //         ),
+            //         Row(
+            //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //           children: [
+            //             Text(
+            //               '0.1x',
+            //               style: TextStyle(color: Colors.grey[400]),
+            //             ),
+            //             Text(
+            //               '5.0x',
+            //               style: TextStyle(color: Colors.grey[400]),
+            //             ),
+            //           ],
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(height: 16),
 
             // Initial Balance Selection
             Card(

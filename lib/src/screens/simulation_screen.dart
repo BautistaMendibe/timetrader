@@ -7,6 +7,8 @@ import '../models/simulation_result.dart';
 import '../widgets/trading_view_chart.dart';
 import '../routes.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:collection/collection.dart';
+import 'package:tuple/tuple.dart';
 
 class SimulationScreen extends StatefulWidget {
   const SimulationScreen({super.key});
@@ -488,65 +490,65 @@ class _SimulationScreenState extends State<SimulationScreen> {
             foregroundColor: Colors.white,
             actions: [
               // Simulation Mode Toggle
-              PopupMenuButton<SimulationMode>(
-                icon: Icon(
-                  simulationProvider.simulationMode == SimulationMode.automatic 
-                    ? Icons.speed 
-                    : Icons.touch_app,
-                ),
-                onSelected: (mode) {
-                  simulationProvider.setSimulationMode(mode);
-                  if (mode == SimulationMode.automatic && simulationProvider.isSimulationRunning) {
-                    _startSimulationTimer();
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: SimulationMode.automatic,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.speed,
-                          color: simulationProvider.simulationMode == SimulationMode.automatic 
-                            ? const Color(0xFF21CE99) 
-                            : Colors.grey,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Automático',
-                          style: TextStyle(
-                            color: simulationProvider.simulationMode == SimulationMode.automatic 
-                              ? const Color(0xFF21CE99) 
-                              : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: SimulationMode.manual,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.touch_app,
-                          color: simulationProvider.simulationMode == SimulationMode.manual 
-                            ? const Color(0xFF21CE99) 
-                            : Colors.grey,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Manual',
-                          style: TextStyle(
-                            color: simulationProvider.simulationMode == SimulationMode.manual 
-                              ? const Color(0xFF21CE99) 
-                              : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              // PopupMenuButton<SimulationMode>(
+              //   icon: Icon(
+              //     simulationProvider.simulationMode == SimulationMode.automatic 
+              //       ? Icons.speed 
+              //       : Icons.touch_app,
+              //   ),
+              //   onSelected: (mode) {
+              //     simulationProvider.setSimulationMode(mode);
+              //     if (mode == SimulationMode.automatic && simulationProvider.isSimulationRunning) {
+              //       _startSimulationTimer();
+              //     }
+              //   },
+              //   itemBuilder: (context) => [
+              //     PopupMenuItem(
+              //       value: SimulationMode.automatic,
+              //       child: Row(
+              //         children: [
+              //           Icon(
+              //             Icons.speed,
+              //             color: simulationProvider.simulationMode == SimulationMode.automatic 
+              //               ? const Color(0xFF21CE99) 
+              //               : Colors.grey,
+              //           ),
+              //           const SizedBox(width: 8),
+              //           Text(
+              //             'Automático',
+              //             style: TextStyle(
+              //               color: simulationProvider.simulationMode == SimulationMode.automatic 
+              //                 ? const Color(0xFF21CE99) 
+              //                 : Colors.grey,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ),
+              //     PopupMenuItem(
+              //       value: SimulationMode.manual,
+              //       child: Row(
+              //         children: [
+              //           Icon(
+              //             Icons.touch_app,
+              //             color: simulationProvider.simulationMode == SimulationMode.manual 
+              //               ? const Color(0xFF21CE99) 
+              //               : Colors.grey,
+              //           ),
+              //           const SizedBox(width: 8),
+              //           Text(
+              //             'Manual',
+              //             style: TextStyle(
+              //               color: simulationProvider.simulationMode == SimulationMode.manual 
+              //                 ? const Color(0xFF21CE99) 
+              //                 : Colors.grey,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ),
+              //   ],
+              // ),
               IconButton(
                 icon: Icon(
                   simulationProvider.isSimulationRunning ? Icons.pause : Icons.play_arrow,
@@ -578,38 +580,38 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 child: Column(
                   children: [
                     // Mode Indicator
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: simulationProvider.simulationMode == SimulationMode.automatic 
-                          ? const Color(0xFF21CE99) 
-                          : const Color(0xFFFFA726),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            simulationProvider.simulationMode == SimulationMode.automatic 
-                              ? Icons.speed 
-                              : Icons.touch_app,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            simulationProvider.simulationMode == SimulationMode.automatic ? 'AUTOMÁTICO' : 'MANUAL',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    // Container(
+                    //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    //   decoration: BoxDecoration(
+                    //     color: simulationProvider.simulationMode == SimulationMode.automatic 
+                    //       ? const Color(0xFF21CE99) 
+                    //       : const Color(0xFFFFA726),
+                    //     borderRadius: BorderRadius.circular(16),
+                    //   ),
+                    //   child: Row(
+                    //     mainAxisSize: MainAxisSize.min,
+                    //     children: [
+                    //       Icon(
+                    //         simulationProvider.simulationMode == SimulationMode.automatic 
+                    //           ? Icons.speed 
+                    //           : Icons.touch_app,
+                    //         color: Colors.white,
+                    //         size: 16,
+                    //       ),
+                    //       const SizedBox(width: 4),
+                    //       Text(
+                    //         simulationProvider.simulationMode == SimulationMode.automatic ? 'AUTOMÁTICO' : 'MANUAL',
+                    //         style: const TextStyle(
+                    //           color: Colors.white,
+                    //           fontSize: 12,
+                    //           fontWeight: FontWeight.bold,
+                    //           fontFamily: 'Inter',
+                    //         ),
+                    //       ),
+                    //     ],
+                    //   ),
+                    // ),
+                    // const SizedBox(height: 12),
                     // Balance Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -730,83 +732,93 @@ class _SimulationScreenState extends State<SimulationScreen> {
               
               // Chart Area - 70% of available height
               Expanded(
-                flex: 7, // 70% of the space
-                child: Container(
-                  margin: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                flex: 7,
+                child: Selector<SimulationProvider, Tuple2<List<Candle>, List<Trade>>>(
+                  selector: (_, provider) => Tuple2(
+                    List<Candle>.from(provider.historicalData.take(provider.currentCandleIndex + 1)),
+                    List<Trade>.from(provider.currentTrades),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Chart Header
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Precio Actual',
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '\$${currentCandle.close.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            // Candle Info
-                            Row(
+                  shouldRebuild: (prev, next) => !const DeepCollectionEquality().equals(prev, next),
+                  builder: (context, data, _) {
+                    return Container(
+                      margin: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Chart Header
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: _buildCandleInfo('Apertura', currentCandle.open, Colors.blue),
+                                Text(
+                                  'Precio Actual',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 14,
+                                    fontFamily: 'Inter',
+                                  ),
                                 ),
-                                Expanded(
-                                  child: _buildCandleInfo('Máximo', currentCandle.high, const Color(0xFF21CE99)),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '\$${data.item1!.isNotEmpty ? data.item1!.last.close.toStringAsFixed(2) : ''}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Inter',
+                                  ),
                                 ),
-                                Expanded(
-                                  child: _buildCandleInfo('Mínimo', currentCandle.low, const Color(0xFFFF5A5F)),
-                                ),
-                                Expanded(
-                                  child: _buildCandleInfo('Cierre', currentCandle.close, 
-                                    currentCandle.close >= currentCandle.open ? const Color(0xFF21CE99) : const Color(0xFFFF5A5F)),
-                                ),
+                                const SizedBox(height: 16),
+                                // Candle Info
+                                if (data.item1!.isNotEmpty)
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildCandleInfo('Apertura', data.item1!.last.open, Colors.blue),
+                                      ),
+                                      Expanded(
+                                        child: _buildCandleInfo('Máximo', data.item1!.last.high, const Color(0xFF21CE99)),
+                                      ),
+                                      Expanded(
+                                        child: _buildCandleInfo('Mínimo', data.item1!.last.low, const Color(0xFFFF5A5F)),
+                                      ),
+                                      Expanded(
+                                        child: _buildCandleInfo('Cierre', data.item1!.last.close, 
+                                          data.item1!.last.close >= data.item1!.last.open ? const Color(0xFF21CE99) : const Color(0xFFFF5A5F)),
+                                      ),
+                                    ],
+                                  ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                          // Chart Divider
+                          Container(
+                            height: 1,
+                            color: Colors.grey[800],
+                          ),
+                          // Professional Chart
+                          Expanded(
+                            child: TradingViewChart(
+                              candles: data.item1!,
+                              trades: data.item2!,
+                            ),
+                          ),
+                        ],
                       ),
-                      
-                      // Chart Divider
-                      Container(
-                        height: 1,
-                        color: Colors.grey[800],
-                      ),
-                      
-                      // Professional Chart
-                      Expanded(
-                        child: _buildChartWithTradeMarkers(simulationProvider.historicalData.take(simulationProvider.currentCandleIndex + 1).toList(), simulationProvider.currentTrades),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
               
@@ -855,6 +867,34 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ),
               const SizedBox(height: 8),
               
+              // Botón para cerrar posición manualmente
+              if (simulationProvider.inPosition)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        final provider = context.read<SimulationProvider>();
+                        final currentCandle = simulationProvider.historicalData[simulationProvider.currentCandleIndex];
+                        provider.closeManualPosition(currentCandle.close);
+                      },
+                      child: const Text(
+                        'CERRAR POSICIÓN',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              
               // Controls Area - 30% of available height
               Expanded(
                 flex: 3, // 30% of the space
@@ -863,150 +903,150 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   child: Column(
                     children: [
                       // Speed Control (only show in automatic mode)
-                      if (simulationProvider.simulationMode == SimulationMode.automatic)
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2C2C2C),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[700]!),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Velocidad de Simulación',
-                                    style: TextStyle(
-                                      color: Colors.grey[400],
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${simulationProvider.simulationSpeed.toStringAsFixed(1)}x',
-                                    style: const TextStyle(
-                                      color: Color(0xFF21CE99),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Slider(
-                                value: simulationProvider.simulationSpeed,
-                                min: 0.1,
-                                max: 5.0,
-                                divisions: 49,
-                                activeColor: const Color(0xFF21CE99),
-                                inactiveColor: Colors.grey[700],
-                                onChanged: (value) {
-                                  simulationProvider.setSimulationSpeed(value);
-                                },
-                              ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '0.1x',
-                                    style: TextStyle(
-                                      color: Colors.grey[400],
-                                      fontSize: 12,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                  Text(
-                                    '5.0x',
-                                    style: TextStyle(
-                                      color: Colors.grey[400],
-                                      fontSize: 12,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                      // if (simulationProvider.simulationMode == SimulationMode.automatic)
+                      //   Container(
+                      //     padding: const EdgeInsets.all(16),
+                      //     decoration: BoxDecoration(
+                      //       color: const Color(0xFF2C2C2C),
+                      //       borderRadius: BorderRadius.circular(12),
+                      //       border: Border.all(color: Colors.grey[700]!),
+                      //     ),
+                      //     child: Column(
+                      //       children: [
+                      //         Row(
+                      //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      //           children: [
+                      //             Text(
+                      //               'Velocidad de Simulación',
+                      //               style: TextStyle(
+                      //                 color: Colors.grey[400],
+                      //                 fontSize: 14,
+                      //                 fontFamily: 'Inter',
+                      //                 fontWeight: FontWeight.w600,
+                      //               ),
+                      //             ),
+                      //             Text(
+                      //               '${simulationProvider.simulationSpeed.toStringAsFixed(1)}x',
+                      //               style: const TextStyle(
+                      //                 color: Color(0xFF21CE99),
+                      //                 fontSize: 16,
+                      //                 fontWeight: FontWeight.bold,
+                      //                 fontFamily: 'Inter',
+                      //               ),
+                      //             ),
+                      //           ],
+                      //         ),
+                      //         const SizedBox(height: 8),
+                      //         Slider(
+                      //           value: simulationProvider.simulationSpeed,
+                      //           min: 0.1,
+                      //           max: 5.0,
+                      //           divisions: 49,
+                      //           activeColor: const Color(0xFF21CE99),
+                      //           inactiveColor: Colors.grey[700],
+                      //           onChanged: (value) {
+                      //             simulationProvider.setSimulationSpeed(value);
+                      //           },
+                      //         ),
+                      //         Row(
+                      //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      //           children: [
+                      //             Text(
+                      //               '0.1x',
+                      //               style: TextStyle(
+                      //                 color: Colors.grey[400],
+                      //                 fontSize: 12,
+                      //                 fontFamily: 'Inter',
+                      //               ),
+                      //             ),
+                      //             Text(
+                      //               '5.0x',
+                      //               style: TextStyle(
+                      //                 color: Colors.grey[400],
+                      //                 fontSize: 12,
+                      //                 fontFamily: 'Inter',
+                      //               ),
+                      //             ),
+                      //           ],
+                      //         ),
+                      //       ],
+                      //     ),
+                      //   ),
                       
                       const SizedBox(height: 16),
                       
                       // Manual Controls (only show in manual mode)
-                      if (simulationProvider.simulationMode == SimulationMode.manual)
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2C2C2C),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[700]!),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Controles Manuales',
-                                style: TextStyle(
-                                  color: Colors.grey[400],
-                                  fontSize: 14,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: simulationProvider.currentCandleIndex > 0
-                                          ? () => simulationProvider.goToCandle(simulationProvider.currentCandleIndex - 1)
-                                          : null,
-                                      icon: const Icon(Icons.skip_previous),
-                                      label: const Text('Anterior'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.grey[700],
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: simulationProvider.currentCandleIndex < simulationProvider.historicalData.length - 1
-                                          ? () => simulationProvider.advanceCandle()
-                                          : null,
-                                      icon: const Icon(Icons.skip_next),
-                                      label: const Text('Siguiente'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF21CE99),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Vela ${simulationProvider.currentCandleIndex + 1} de ${simulationProvider.historicalData.length}',
-                                style: TextStyle(
-                                  color: Colors.grey[400],
-                                  fontSize: 12,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                            ],
-                          ),
+                      // if (simulationProvider.simulationMode == SimulationMode.manual)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2C2C2C),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[700]!),
                         ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Controles Manuales',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 14,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: simulationProvider.currentCandleIndex > 0
+                                        ? () => simulationProvider.goToCandle(simulationProvider.currentCandleIndex - 1)
+                                        : null,
+                                    icon: const Icon(Icons.skip_previous),
+                                    label: const Text('Anterior'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.grey[700],
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: simulationProvider.currentCandleIndex < simulationProvider.historicalData.length - 1
+                                        ? () => simulationProvider.advanceCandle()
+                                        : null,
+                                    icon: const Icon(Icons.skip_next),
+                                    label: const Text('Siguiente'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF21CE99),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Vela ${simulationProvider.currentCandleIndex + 1} de ${simulationProvider.historicalData.length}',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 12,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       
                       const SizedBox(height: 16),
                       
@@ -1198,26 +1238,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildChartWithTradeMarkers(List<Candle> candles, List<Trade> trades) {
-    debugPrint('🔥 SimulationScreen: _buildChartWithTradeMarkers() - Candles: ${candles.length}, Trades: ${trades.length}');
-    
-    if (candles.isEmpty) {
-      debugPrint('🔥 SimulationScreen: No hay datos de velas disponibles');
-      return const Center(
-        child: Text(
-          'No hay datos disponibles',
-          style: TextStyle(color: Colors.grey),
-        ),
-      );
-    }
-
-    debugPrint('🔥 SimulationScreen: Construyendo TradingViewChart con ${candles.length} velas');
-    return TradingViewChart(
-      candles: candles,
-      trades: trades,
     );
   }
 
