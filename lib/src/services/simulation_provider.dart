@@ -376,17 +376,8 @@ class SimulationProvider with ChangeNotifier {
     
     debugPrint('🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}');
     
-    // Check if we need to close position due to stop loss or take profit
-    if (_inPosition) {
-      _checkStopLossAndTakeProfit(currentCandle);
-    }
-    
-    // Check for new entry signals
-    if (!_inPosition) {
-      _checkEntrySignals(currentCandle);
-    }
-    
-    // Update equity curve
+    // En modo manual, NO ejecutar lógica automática de stop loss/take profit ni señales de entrada
+    // Solo actualizar la equity curve
     _equityCurve.add(_currentBalance);
     notifyListeners();
   }

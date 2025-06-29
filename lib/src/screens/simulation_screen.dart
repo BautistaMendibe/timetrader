@@ -274,93 +274,72 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 ),
                 
                 // Controls Section (30% of screen)
-                Container(
-                  height: MediaQuery.of(context).size.height * 0.3,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      // Balance Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    child: SingleChildScrollView(
+                      child: Column(
                         children: [
-                          Text(
-                            'Balance: \$${simulationProvider.currentBalance.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                          Text(
-                            'P&L: \$${(simulationProvider.currentBalance - _initialBalance).toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: (simulationProvider.currentBalance - _initialBalance) >= 0 
-                                  ? const Color(0xFF21CE99) 
-                                  : const Color(0xFFFF6B6B),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Manual Controls
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2C2C2C),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[700]!),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Controles Manuales',
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            // Manual Advance Button
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: simulationProvider.currentCandleIndex < simulationProvider.historicalData.length - 1
-                                    ? () => simulationProvider.advanceCandle()
-                                    : null,
-                                icon: const Icon(Icons.arrow_forward),
-                                label: const Text('Siguiente Vela'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF21CE99),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                          // Balance Row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Balance: \$${simulationProvider.currentBalance.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Inter',
                                 ),
                               ),
+                              Text(
+                                'P&L: \$${(simulationProvider.currentBalance - _initialBalance).toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: (simulationProvider.currentBalance - _initialBalance) >= 0 
+                                      ? const Color(0xFF21CE99) 
+                                      : const Color(0xFFFF6B6B),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          // Manual Controls
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2C2C2C),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[700]!),
                             ),
-                            
-                            const SizedBox(height: 12),
-                            
-                            // Trading Buttons Row
-                            Row(
+                            child: Column(
                               children: [
-                                Expanded(
+                                Text(
+                                  'Controles Manuales',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                
+                                // Manual Advance Button
+                                SizedBox(
+                                  width: double.infinity,
                                   child: ElevatedButton.icon(
-                                    onPressed: !simulationProvider.inPosition 
-                                        ? () => _showOrderModal(context, simulationProvider, true)
+                                    onPressed: simulationProvider.currentCandleIndex < simulationProvider.historicalData.length - 1
+                                        ? () => simulationProvider.advanceCandle()
                                         : null,
-                                    icon: const Icon(Icons.trending_up),
-                                    label: const Text('Comprar'),
+                                    icon: const Icon(Icons.arrow_forward),
+                                    label: const Text('Siguiente Vela'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF21CE99),
                                       foregroundColor: Colors.white,
@@ -371,54 +350,79 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: !simulationProvider.inPosition 
-                                        ? () => _showOrderModal(context, simulationProvider, false)
-                                        : null,
-                                    icon: const Icon(Icons.trending_down),
-                                    label: const Text('Vender'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFFF6B6B),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                
+                                const SizedBox(height: 12),
+                                
+                                // Trading Buttons Row
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: !simulationProvider.inPosition 
+                                            ? () => _showOrderModal(context, simulationProvider, true)
+                                            : null,
+                                        icon: const Icon(Icons.trending_up),
+                                        label: const Text('Comprar'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF21CE99),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: !simulationProvider.inPosition 
+                                            ? () => _showOrderModal(context, simulationProvider, false)
+                                            : null,
+                                        icon: const Icon(Icons.trending_down),
+                                        label: const Text('Vender'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFFFF6B6B),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                
+                                // Close Position Button (only show if position is open)
+                                if (simulationProvider.inPosition) ...[
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        final currentCandle = simulationProvider.historicalData[simulationProvider.currentCandleIndex];
+                                        simulationProvider.closeManualPosition(currentCandle.close);
+                                      },
+                                      icon: const Icon(Icons.close),
+                                      label: const Text('Cerrar Posición'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.orange,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
-                            
-                            // Close Position Button (only show if position is open)
-                            if (simulationProvider.inPosition) ...[
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    final currentCandle = simulationProvider.historicalData[simulationProvider.currentCandleIndex];
-                                    simulationProvider.closeManualPosition(currentCandle.close);
-                                  },
-                                  icon: const Icon(Icons.close),
-                                  label: const Text('Cerrar Posición'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
