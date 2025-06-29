@@ -448,18 +448,42 @@ class SimulationProvider with ChangeNotifier {
     
     // Verificar Stop Loss manual
     final slPrice = manualStopLossPrice;
-    if (slPrice != null && candle.low <= slPrice) {
-      shouldClose = true;
-      closeReason = 'Stop Loss Manual';
-      exitPrice = slPrice; // Usar el precio exacto del SL
+    if (slPrice != null) {
+      if (_manualPositionType == 'buy') {
+        // Para compra: SL se activa cuando el precio baja
+        if (candle.low <= slPrice) {
+          shouldClose = true;
+          closeReason = 'Stop Loss Manual';
+          exitPrice = slPrice;
+        }
+      } else {
+        // Para venta: SL se activa cuando el precio sube
+        if (candle.high >= slPrice) {
+          shouldClose = true;
+          closeReason = 'Stop Loss Manual';
+          exitPrice = slPrice;
+        }
+      }
     }
     
     // Verificar Take Profit manual
     final tpPrice = manualTakeProfitPrice;
-    if (tpPrice != null && candle.high >= tpPrice) {
-      shouldClose = true;
-      closeReason = 'Take Profit Manual';
-      exitPrice = tpPrice; // Usar el precio exacto del TP
+    if (tpPrice != null) {
+      if (_manualPositionType == 'buy') {
+        // Para compra: TP se activa cuando el precio sube
+        if (candle.high >= tpPrice) {
+          shouldClose = true;
+          closeReason = 'Take Profit Manual';
+          exitPrice = tpPrice;
+        }
+      } else {
+        // Para venta: TP se activa cuando el precio baja
+        if (candle.low <= tpPrice) {
+          shouldClose = true;
+          closeReason = 'Take Profit Manual';
+          exitPrice = tpPrice;
+        }
+      }
     }
     
     if (shouldClose) {
