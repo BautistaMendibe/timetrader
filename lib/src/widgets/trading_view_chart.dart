@@ -77,7 +77,9 @@ class _TradingViewChartState extends State<TradingViewChart> {
     if (_isWebViewReady && 
         (oldWidget.candles != widget.candles || 
          oldWidget.trades != widget.trades ||
-         oldWidget.currentCandleIndex != widget.currentCandleIndex)) {
+         oldWidget.currentCandleIndex != widget.currentCandleIndex ||
+         oldWidget.stopLoss != widget.stopLoss ||
+         oldWidget.takeProfit != widget.takeProfit)) {
       _sendDataToWebView();
     }
   }
