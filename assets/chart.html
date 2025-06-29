@@ -43,6 +43,8 @@
     <script>
         let chart, candlestickSeries;
         let isInitialized = false;
+        let slPriceLine = null;
+        let tpPriceLine = null;
 
         function checkLightweightCharts() {
             if (typeof LightweightCharts === 'undefined') {
@@ -195,7 +197,47 @@
 
                 // Fit content to view using official API
                 chart.timeScale().fitContent();
-                
+
+                // Remove previous price lines
+                if (slPriceLine) {
+                    candlestickSeries.removePriceLine(slPriceLine);
+                    slPriceLine = null;
+                }
+                if (tpPriceLine) {
+                    candlestickSeries.removePriceLine(tpPriceLine);
+                    tpPriceLine = null;
+                }
+                // Draw SL/TP price lines if present
+                if (typeof data.stopLoss === 'number') {
+                    slPriceLine = candlestickSeries.createPriceLine({
+                        price: data.stopLoss,
+                        color: '#FF5A5F',
+                        lineWidth: 2,
+                        lineStyle: LightweightCharts.LineStyle.Dotted,
+                        axisLabelVisible: true,
+                        title: 'SL',
+                        labelVisible: true,
+                        text: 'SL',
+                        axisLabelColor: '#fff',
+                        axisLabelTextColor: '#fff',
+                        axisLabelBackgroundColor: '#FF5A5F',
+                    });
+                }
+                if (typeof data.takeProfit === 'number') {
+                    tpPriceLine = candlestickSeries.createPriceLine({
+                        price: data.takeProfit,
+                        color: '#21CE99',
+                        lineWidth: 2,
+                        lineStyle: LightweightCharts.LineStyle.Dotted,
+                        axisLabelVisible: true,
+                        title: 'TP',
+                        labelVisible: true,
+                        text: 'TP',
+                        axisLabelColor: '#fff',
+                        axisLabelTextColor: '#fff',
+                        axisLabelBackgroundColor: '#21CE99',
+                    });
+                }
             } catch (error) {
                 console.error('Error rendering chart:', error);
             }

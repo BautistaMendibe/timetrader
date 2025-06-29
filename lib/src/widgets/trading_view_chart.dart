@@ -8,11 +8,15 @@ class TradingViewChart extends StatefulWidget {
   final List<Candle> candles;
   final List<Trade>? trades;
   final int? currentCandleIndex;
+  final double? stopLoss;
+  final double? takeProfit;
   
   const TradingViewChart({
     required this.candles,
     this.trades,
     this.currentCandleIndex,
+    this.stopLoss,
+    this.takeProfit,
     super.key,
   });
 
@@ -116,6 +120,8 @@ class _TradingViewChartState extends State<TradingViewChart> {
           'amount': t.amount,
           'leverage': t.leverage,
         }).toList() ?? [],
+        'stopLoss': widget.stopLoss,
+        'takeProfit': widget.takeProfit,
       };
 
       final jsonData = jsonEncode(data);

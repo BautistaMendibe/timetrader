@@ -30,6 +30,9 @@ class SimulationProvider with ChangeNotifier {
   SimulationMode _simulationMode = SimulationMode.manual;
   double _simulationSpeed = 1.0; // candles per second
 
+  double? _manualStopLossPercent;
+  double? _manualTakeProfitPercent;
+
   SimulationResult? get currentSimulation => _currentSimulation;
   List<SimulationResult> get simulationHistory => _simulationHistory;
   List<Candle> get historicalData => _historicalData;
@@ -46,6 +49,21 @@ class SimulationProvider with ChangeNotifier {
   Setup? get currentSetup => _currentSetup;
   SimulationMode get simulationMode => _simulationMode;
   double get simulationSpeed => _simulationSpeed;
+  double? get manualStopLossPercent => _manualStopLossPercent;
+  double? get manualTakeProfitPercent => _manualTakeProfitPercent;
+
+  double? get manualStopLossPrice {
+    if (!_inPosition || _manualStopLossPercent == null) return null;
+    final entry = _entryPrice;
+    final sl = entry * (1 - _manualStopLossPercent! / 100);
+    return sl;
+  }
+  double? get manualTakeProfitPrice {
+    if (!_inPosition || _manualTakeProfitPercent == null) return null;
+    final entry = _entryPrice;
+    final tp = entry * (1 + _manualTakeProfitPercent! / 100);
+    return tp;
+  }
 
   // Calcula el P&L flotante basado en el precio actual
   double get unrealizedPnL {
@@ -396,10 +414,44 @@ class SimulationProvider with ChangeNotifier {
     
     debugPrint('🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}');
     
+    // Verificar SL/TP manuales si hay posición abierta
+    if (_inPosition) {
+      _checkManualStopLossAndTakeProfit(currentCandle);
+    }
+    
     // En modo manual, NO ejecutar lógica automática de stop loss/take profit ni señales de entrada
     // Solo actualizar la equity curve
     _equityCurve.add(_currentBalance);
     notifyListeners();
+  }
+
+  void _checkManualStopLossAndTakeProfit(Candle candle) {
+    if (!_inPosition) return;
+    
+    bool shouldClose = false;
+    String closeReason = '';
+    double exitPrice = candle.close;
+    
+    // Verificar Stop Loss manual
+    final slPrice = manualStopLossPrice;
+    if (slPrice != null && candle.low <= slPrice) {
+      shouldClose = true;
+      closeReason = 'Stop Loss Manual';
+      exitPrice = slPrice; // Usar el precio exacto del SL
+    }
+    
+    // Verificar Take Profit manual
+    final tpPrice = manualTakeProfitPrice;
+    if (tpPrice != null && candle.high >= tpPrice) {
+      shouldClose = true;
+      closeReason = 'Take Profit Manual';
+      exitPrice = tpPrice; // Usar el precio exacto del TP
+    }
+    
+    if (shouldClose) {
+      closeManualPosition(exitPrice);
+      debugPrint('🔥 SimulationProvider: Posición cerrada por $closeReason - Precio: $exitPrice');
+    }
   }
 
   void goToCandle(int index) {
@@ -451,6 +503,15 @@ class SimulationProvider with ChangeNotifier {
     _entryPrice = price;
     _positionSize = positionSize;
     _manualMargin = margin;
+    
+    // Inicializar SL/TP con valores por defecto si no están definidos
+    if (_manualStopLossPercent == null) {
+      _manualStopLossPercent = 2.5; // 2.5% por defecto
+    }
+    if (_manualTakeProfitPercent == null) {
+      _manualTakeProfitPercent = 6.0; // 6% por defecto
+    }
+    
     notifyListeners();
   }
 
@@ -481,6 +542,62 @@ class SimulationProvider with ChangeNotifier {
     _entryPrice = 0.0;
     _positionSize = 0.0;
     _manualMargin = 0.0;
+    
+    // Resetear percentiles de SL/TP al cerrar la posición
+    _manualStopLossPercent = null;
+    _manualTakeProfitPercent = null;
+    
+    notifyListeners();
+  }
+
+  void setManualSLTP({double? stopLossPercent, double? takeProfitPercent}) {
+    if (stopLossPercent != null) _manualStopLossPercent = stopLossPercent;
+    if (takeProfitPercent != null) _manualTakeProfitPercent = takeProfitPercent;
+    notifyListeners();
+  }
+
+  // Cierre parcial de la posición abierta
+  void closePartialPosition(double percent) {
+    if (!_inPosition || percent <= 0 || percent > 100) return;
+    final lastTrade = _currentTrades.last;
+    final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
+    final currentPrice = _historicalData[_currentCandleIndex].close;
+    final qtyToClose = lastTrade.quantity * (percent / 100);
+    final marginToReturn = (_manualMargin ?? 0.0) * (percent / 100);
+    final pnl = lastTrade.type == 'buy'
+        ? (currentPrice - lastTrade.price) * qtyToClose * (lastTrade.leverage ?? 1)
+        : (lastTrade.price - currentPrice) * qtyToClose * (lastTrade.leverage ?? 1);
+    final closeTrade = Trade(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      type: closeType,
+      price: currentPrice,
+      quantity: qtyToClose,
+      candleIndex: _currentCandleIndex,
+      reason: 'Cierre Parcial',
+      amount: lastTrade.amount != null ? lastTrade.amount! * (percent / 100) : null,
+      leverage: lastTrade.leverage,
+      pnl: pnl,
+    );
+    _currentTrades.add(closeTrade);
+    _currentBalance += marginToReturn + pnl;
+    // Reducir la posición abierta
+    final newQty = lastTrade.quantity - qtyToClose;
+    if (newQty <= 0.00001) {
+      // Si se cerró todo, marcar como cerrada
+      _inPosition = false;
+      _entryPrice = 0.0;
+      _positionSize = 0.0;
+      _manualMargin = 0.0;
+      
+      // Resetear percentiles de SL/TP al cerrar completamente la posición
+      _manualStopLossPercent = null;
+      _manualTakeProfitPercent = null;
+    } else {
+      // Si queda posición, actualizar cantidad y margen
+      _positionSize = newQty;
+      _manualMargin = (_manualMargin ?? 0.0) * (1 - percent / 100);
+    }
     notifyListeners();
   }
 } 
