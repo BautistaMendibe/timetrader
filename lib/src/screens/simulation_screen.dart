@@ -236,169 +236,171 @@ class _SimulationScreenState extends State<SimulationScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey[700]!),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _isBuyOrder ? 'Comprar' : 'Vender',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Inter',
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _isBuyOrder ? 'Comprar' : 'Vender',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
+                                    ),
                                   ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                    onPressed: () {
+                                      setState(() {
+                                        _showOrderContainerInline = false;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                              
+                              // Amount Selection
+                              Text(
+                                'Monto',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Inter',
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [100, 400, 1000, 1500, 3000].map((amount) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedAmount = amount.toDouble();
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: _selectedAmount == amount
+                                            ? const Color(0xFF21CE99)
+                                            : const Color(0xFF1E1E1E),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: _selectedAmount == amount
+                                              ? const Color(0xFF21CE99)
+                                              : Colors.grey[700]!,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '\$${amount.toString()}',
+                                        style: TextStyle(
+                                          color: _selectedAmount == amount
+                                              ? Colors.white
+                                              : Colors.grey[300],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              
+                              const SizedBox(height: 10),
+                              
+                              // Leverage Selection
+                              Text(
+                                'Apalancamiento',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [1, 5, 10, 20, 30, 50].map((leverage) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedLeverage = leverage;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: _selectedLeverage == leverage
+                                            ? const Color(0xFF21CE99)
+                                            : const Color(0xFF1E1E1E),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: _selectedLeverage == leverage
+                                              ? const Color(0xFF21CE99)
+                                              : Colors.grey[700]!,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '${leverage}x',
+                                        style: TextStyle(
+                                          color: _selectedLeverage == leverage
+                                              ? Colors.white
+                                              : Colors.grey[300],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              
+                              const SizedBox(height: 20),
+                              
+                              // Confirm Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
                                   onPressed: () {
+                                    simulationProvider.executeManualTrade(
+                                      type: _isBuyOrder ? 'buy' : 'sell',
+                                      amount: _selectedAmount,
+                                      leverage: _selectedLeverage,
+                                    );
                                     setState(() {
                                       _showOrderContainerInline = false;
                                     });
                                   },
-                                ),
-                              ],
-                            ),
-                            
-                            // Amount Selection
-                            Text(
-                              'Monto',
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [100, 400, 1000, 1500, 3000].map((amount) {
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedAmount = amount.toDouble();
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: _selectedAmount == amount
-                                          ? const Color(0xFF21CE99)
-                                          : const Color(0xFF1E1E1E),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: _selectedAmount == amount
-                                            ? const Color(0xFF21CE99)
-                                            : Colors.grey[700]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      '\$${amount.toString()}',
-                                      style: TextStyle(
-                                        color: _selectedAmount == amount
-                                            ? Colors.white
-                                            : Colors.grey[300],
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Inter',
-                                      ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isBuyOrder ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                );
-                              }).toList(),
-                            ),
-                            
-                            const SizedBox(height: 10),
-                            
-                            // Leverage Selection
-                            Text(
-                              'Apalancamiento',
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [1, 5, 10, 20, 30, 50].map((leverage) {
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedLeverage = leverage;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: _selectedLeverage == leverage
-                                          ? const Color(0xFF21CE99)
-                                          : const Color(0xFF1E1E1E),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: _selectedLeverage == leverage
-                                            ? const Color(0xFF21CE99)
-                                            : Colors.grey[700]!,
-                                      ),
+                                  child: Text(
+                                    _isBuyOrder ? 'Comprar' : 'Vender',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
                                     ),
-                                    child: Text(
-                                      '${leverage}x',
-                                      style: TextStyle(
-                                        color: _selectedLeverage == leverage
-                                            ? Colors.white
-                                            : Colors.grey[300],
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            
-                            const SizedBox(height: 20),
-                            
-                            // Confirm Button
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  simulationProvider.executeManualTrade(
-                                    type: _isBuyOrder ? 'buy' : 'sell',
-                                    amount: _selectedAmount,
-                                    leverage: _selectedLeverage,
-                                  );
-                                  setState(() {
-                                    _showOrderContainerInline = false;
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isBuyOrder ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  _isBuyOrder ? 'Comprar' : 'Vender',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Inter',
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
