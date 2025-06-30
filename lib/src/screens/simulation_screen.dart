@@ -193,11 +193,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
             flex: 6,
             child: Container(
               margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2C2C2C),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[700]!),
-              ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
@@ -1199,7 +1194,7 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
               divisions: _tpPercents.length,
               label: _takeProfitIndex != null ? '+${_tpPercents[_takeProfitIndex!].toStringAsFixed(1)}%' : 'No definido',
               activeColor: Colors.green,
-              inactiveColor: Colors.green.withOpacity(0.2),
+              inactiveColor: Colors.green.withValues(alpha: 0.2),
               onChanged: (v) {
                 setState(() {
                   _takeProfitIndex = v.round() == -1 ? null : v.round();
@@ -1223,7 +1218,7 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
               divisions: _slPercents.length,
               label: _stopLossIndex != null ? '-${_slPercents[_stopLossIndex!].toStringAsFixed(1)}%' : 'No definido',
               activeColor: Colors.red,
-              inactiveColor: Colors.red.withOpacity(0.2),
+              inactiveColor: Colors.red.withValues(alpha: 0.2),
               onChanged: (v) {
                 setState(() {
                   _stopLossIndex = v.round() == -1 ? null : v.round();
