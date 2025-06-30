@@ -403,6 +403,7 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                   _useAdvancedRules = value;
                   if (!value) {
                     _selectedRules.clear();
+                    _showRulesSelector = false;
                   }
                 });
               },

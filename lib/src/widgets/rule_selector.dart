@@ -54,12 +54,13 @@ class _RuleSelectorState extends State<RuleSelector>
             child: TabBarView(
               controller: _tabController,
               children: [
-                ...RuleType.values.map((type) => _buildRulesList(type)),
                 _buildCustomRulesTab(),
+                ...RuleType.values.map((type) => _buildRulesList(type)),
               ],
             ),
           ),
         ),
+        const SizedBox(height: 32), // Más espacio al final para facilitar el scroll
       ],
     );
   }
@@ -84,11 +85,11 @@ class _RuleSelectorState extends State<RuleSelector>
         isScrollable: true,
         labelPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         tabs: [
+          _buildTab(Icons.rule, 'Mis Reglas'),
           _buildTab(Icons.trending_up, 'Indicadores'),
           _buildTab(Icons.candlestick_chart, 'Patrones'),
           _buildTab(Icons.schedule, 'Horarios'),
           _buildTab(Icons.settings, 'Otros'),
-          _buildTab(Icons.rule, 'Mis Reglas'),
         ],
       ),
     );
@@ -192,136 +193,125 @@ class _RuleSelectorState extends State<RuleSelector>
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          // Header con botón de agregar
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF21CE99).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFF21CE99).withOpacity(0.3),
+          // Header compacto con botón y cantidad
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Icon(Icons.rule, color: Color(0xFF21CE99), size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Mis Reglas: ',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF21CE99).withOpacity(0.2),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.grey[800],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${customRules.length}',
+                  style: const TextStyle(
+                    color: Color(0xFF21CE99),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: () => _showCustomRuleForm(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Nueva'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF21CE99),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  minimumSize: const Size(0, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.rule,
-                    color: Color(0xFF21CE99),
-                    size: 20,
-                  ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Mis Reglas Personalizadas',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${customRules.length} regla${customRules.length != 1 ? 's' : ''} creada${customRules.length != 1 ? 's' : ''}',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _showCustomRuleForm(context),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Nueva'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF21CE99),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           // Lista de reglas personalizadas
-          Expanded(
-            child: customRules.isEmpty
-                ? Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[800],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.rule_outlined,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            'No tienes reglas personalizadas',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            'Crea tu primera regla personalizada\ntocando el botón "Nueva"',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
+          Flexible(
+            fit: FlexFit.loose,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 350),
+              child: customRules.isEmpty
+                  ? Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: customRules.length,
-                    itemBuilder: (context, index) {
-                      final rule = customRules[index];
-                      final isSelected = widget.selectedRules
-                          .any((selectedRule) => selectedRule.id == rule.id);
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: RuleCard(
-                          rule: rule,
-                          isSelected: isSelected,
-                          showDeleteButton: true,
-                          onTap: () {
-                            if (isSelected) {
-                              widget.onRuleDeselected(rule);
-                            } else {
-                              widget.onRuleSelected(rule);
-                            }
-                          },
-                          onDelete: () => _showDeleteCustomRuleDialog(context, rule),
+                      child: const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.rule_outlined,
+                              size: 48,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 12),
+                            Text(
+                              'No tienes reglas personalizadas',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'Crea tu primera regla personalizada\ntocando el botón "Nueva"',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: customRules.length,
+                      itemBuilder: (context, index) {
+                        final rule = customRules[index];
+                        final isSelected = widget.selectedRules
+                            .any((selectedRule) => selectedRule.id == rule.id);
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: RuleCard(
+                            rule: rule,
+                            isSelected: isSelected,
+                            showDeleteButton: true,
+                            onTap: () {
+                              if (isSelected) {
+                                widget.onRuleDeselected(rule);
+                              } else {
+                                widget.onRuleSelected(rule);
+                              }
+                            },
+                            onDelete: () => _showDeleteCustomRuleDialog(context, rule),
+                          ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),

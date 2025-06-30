@@ -26,7 +26,7 @@ class RuleCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
           child: Row(
             children: [
               _buildRuleIcon(),
