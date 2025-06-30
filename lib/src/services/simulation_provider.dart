@@ -539,17 +539,14 @@ class SimulationProvider with ChangeNotifier {
       leverage: leverage,
     );
     _currentTrades.add(trade);
-    _currentBalance -= margin;
     _inPosition = true;
     _entryPrice = price;
     _positionSize = positionSize;
     _manualMargin = margin;
     _manualPositionType = type; // Guardar el tipo de operación
-    
     // Inicializar SL/TP con valores por defecto si no están definidos
     _manualStopLossPercent ??= 2.5; // 2.5% por defecto
     _manualTakeProfitPercent ??= 6.0; // 6% por defecto
-    
     notifyListeners();
   }
 
@@ -575,20 +572,17 @@ class SimulationProvider with ChangeNotifier {
       pnl: pnl,
     );
     _currentTrades.add(closeTrade);
-    _currentBalance += _manualMargin + pnl;
+    _currentBalance += pnl; // Solo sumar el P&L realizado
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
     _manualMargin = 0.0;
     _manualPositionType = 'buy'; // Resetear el tipo de operación
-    
     // Resetear percentiles de SL/TP al cerrar la posición
     _manualStopLossPercent = null;
     _manualTakeProfitPercent = null;
-    
     // Mover el trade al historial de trades completados
     _completedTrades.add(closeTrade);
-    
     notifyListeners();
   }
 
@@ -605,7 +599,6 @@ class SimulationProvider with ChangeNotifier {
     final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
     final currentPrice = _historicalData[_currentCandleIndex].close;
     final qtyToClose = lastTrade.quantity * (percent / 100);
-    final marginToReturn = _manualMargin * (percent / 100);
     final pnl = lastTrade.type == 'buy'
         ? (currentPrice - lastTrade.price) * qtyToClose * (lastTrade.leverage ?? 1)
         : (lastTrade.price - currentPrice) * qtyToClose * (lastTrade.leverage ?? 1);
@@ -622,7 +615,7 @@ class SimulationProvider with ChangeNotifier {
       pnl: pnl,
     );
     _currentTrades.add(closeTrade);
-    _currentBalance += marginToReturn + pnl;
+    _currentBalance += pnl; // Solo sumar el P&L realizado
     // Reducir la posición abierta
     final newQty = lastTrade.quantity - qtyToClose;
     if (newQty <= 0.00001) {
@@ -632,11 +625,9 @@ class SimulationProvider with ChangeNotifier {
       _positionSize = 0.0;
       _manualMargin = 0.0;
       _manualPositionType = 'buy'; // Resetear el tipo de operación
-      
       // Resetear percentiles de SL/TP al cerrar completamente la posición
       _manualStopLossPercent = null;
       _manualTakeProfitPercent = null;
-      
       // Mover el trade al historial de trades completados
       _completedTrades.add(closeTrade);
     } else {
