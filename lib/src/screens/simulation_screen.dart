@@ -223,7 +223,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
           Expanded(
             flex: 4,
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(5),
               child: Column(
                 children: [
                   // Order Container (when active)
@@ -261,7 +261,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
                             
                             // Amount Selection
                             Text(
@@ -313,7 +312,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               }).toList(),
                             ),
                             
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
                             
                             // Leverage Selection
                             Text(
@@ -365,7 +364,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               }).toList(),
                             ),
                             
-                            const Spacer(),
+                            const SizedBox(height: 20),
                             
                             // Confirm Button
                             SizedBox(
