@@ -193,23 +193,20 @@ class _SimulationScreenState extends State<SimulationScreen> {
             flex: 6,
             child: Container(
               margin: const EdgeInsets.all(16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
-                  selector: (context, provider) => Tuple2(
-                    allTrades,
-                    provider.currentCandleIndex,
-                  ),
-                  builder: (context, data, child) {
-                    return TradingViewChart(
-                      candles: simulationProvider.historicalData,
-                      trades: data.item1,
-                      currentCandleIndex: data.item2,
-                      stopLoss: simulationProvider.manualStopLossPrice,
-                      takeProfit: simulationProvider.manualTakeProfitPrice,
-                    );
-                  },
+              child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
+                selector: (context, provider) => Tuple2(
+                  allTrades,
+                  provider.currentCandleIndex,
                 ),
+                builder: (context, data, child) {
+                  return TradingViewChart(
+                    candles: simulationProvider.historicalData,
+                    trades: data.item1,
+                    currentCandleIndex: data.item2,
+                    stopLoss: simulationProvider.manualStopLossPrice,
+                    takeProfit: simulationProvider.manualTakeProfitPrice,
+                  );
+                },
               ),
             ),
           ),
@@ -1152,8 +1149,14 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
     final entryPrice = widget.simulationProvider.entryPrice;
     final positionSize = widget.simulationProvider.positionSize;
     final amount = positionSize * entryPrice;
-    final tpValue = _takeProfitIndex != null ? amount * (_tpPercents[_takeProfitIndex!] / 100) : 0;
-    final slValue = _stopLossIndex != null ? amount * (_slPercents[_stopLossIndex!] / 100) : 0;
+    
+    // Calcular el P&L esperado basado en el movimiento del precio
+    final tpValue = _takeProfitIndex != null 
+        ? positionSize * entryPrice * (_tpPercents[_takeProfitIndex!] / 100) * (widget.simulationProvider.currentTrades.last.leverage ?? 1)
+        : 0;
+    final slValue = _stopLossIndex != null 
+        ? positionSize * entryPrice * (_slPercents[_stopLossIndex!] / 100) * (widget.simulationProvider.currentTrades.last.leverage ?? 1)
+        : 0;
     final partialValue = amount * (_partialClosePercent ?? 0 / 100);
 
     return Container(
