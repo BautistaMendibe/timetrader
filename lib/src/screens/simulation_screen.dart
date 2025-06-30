@@ -1130,16 +1130,24 @@ class _ManageSLTPContainer extends StatefulWidget {
 }
 
 class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
-  double? _takeProfitPercent;
-  double? _stopLossPercent;
+  // Escala personalizada para SL y TP
+  static const List<double> _slPercents = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 7, 10];
+  static const List<double> _tpPercents = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 7, 10, 15, 20];
+
+  int? _takeProfitIndex;
+  int? _stopLossIndex;
   double? _partialClosePercent;
 
   @override
   void initState() {
     super.initState();
-    // Usar valores actuales o valores por defecto
-    _takeProfitPercent = widget.simulationProvider.manualTakeProfitPercent ?? 6.0;
-    _stopLossPercent = widget.simulationProvider.manualStopLossPercent ?? 2.5;
+    // Si hay valor, buscar el índice correspondiente, si no, null
+    _takeProfitIndex = widget.simulationProvider.manualTakeProfitPercent != null
+        ? _tpPercents.indexWhere((v) => v == widget.simulationProvider.manualTakeProfitPercent)
+        : null;
+    _stopLossIndex = widget.simulationProvider.manualStopLossPercent != null
+        ? _slPercents.indexWhere((v) => v == widget.simulationProvider.manualStopLossPercent)
+        : null;
     _partialClosePercent = 0.0;
   }
 
@@ -1148,8 +1156,8 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
     final entryPrice = widget.simulationProvider.entryPrice;
     final positionSize = widget.simulationProvider.positionSize;
     final amount = positionSize * entryPrice;
-    final tpValue = amount * (_takeProfitPercent ?? 0 / 100);
-    final slValue = amount * (_stopLossPercent ?? 0 / 100);
+    final tpValue = _takeProfitIndex != null ? amount * (_tpPercents[_takeProfitIndex!] / 100) : 0;
+    final slValue = _stopLossIndex != null ? amount * (_slPercents[_stopLossIndex!] / 100) : 0;
     final partialValue = amount * (_partialClosePercent ?? 0 / 100);
 
     return Container(
@@ -1177,66 +1185,54 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
               ],
             ),
             const SizedBox(height: 12),
-            
             // Take Profit
-            Text('TP: +\$${tpValue.toStringAsFixed(0)} (+${_takeProfitPercent!.toStringAsFixed(1)}%)', 
-                 style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12)),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: Colors.green,
-                inactiveTrackColor: Colors.green.withValues(alpha: 0.2),
-                thumbColor: Colors.green,
-                overlayColor: Colors.green.withValues(alpha: 0.1),
-              ),
-              child: Slider(
-                value: _takeProfitPercent ?? 0,
-                min: 0.1,
-                max: 20.0,
-                divisions: 199,
-                onChanged: (value) {
-                  setState(() {
-                    _takeProfitPercent = value;
-                  });
-                  widget.simulationProvider.setManualSLTP(takeProfitPercent: value);
-                },
-              ),
-            ),
-            const SizedBox(height: 6),
-            
-            // Stop Loss
-            Text('SL: -\$${slValue.toStringAsFixed(0)} (-${_stopLossPercent!.toStringAsFixed(1)}%)', 
-                 style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 12)),
+            Text(
+              _takeProfitIndex != null
+                  ? 'TP: +\$${tpValue.toStringAsFixed(0)} (+${_tpPercents[_takeProfitIndex!].toStringAsFixed(1)}%)'
+                  : 'TP: No definido',
+              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12)),
             Slider(
-              value: _stopLossPercent ?? 0,
-              min: 0,
-              max: 10,
-              divisions: 40,
-              label: '-${_stopLossPercent!.toStringAsFixed(1)}%',
-              activeColor: Colors.red,
-              inactiveColor: Colors.red.withValues(alpha: 0.2),
+              value: (_takeProfitIndex ?? -1).toDouble(),
+              min: -1,
+              max: (_tpPercents.length - 1).toDouble(),
+              divisions: _tpPercents.length,
+              label: _takeProfitIndex != null ? '+${_tpPercents[_takeProfitIndex!].toStringAsFixed(1)}%' : 'No definido',
+              activeColor: Colors.green,
+              inactiveColor: Colors.green.withOpacity(0.2),
               onChanged: (v) {
-                setState(() => _stopLossPercent = v);
-                // Actualizar en tiempo real
-                widget.simulationProvider.setManualSLTP(stopLossPercent: v);
+                setState(() {
+                  _takeProfitIndex = v.round() == -1 ? null : v.round();
+                });
+                widget.simulationProvider.setManualSLTP(
+                  takeProfitPercent: _takeProfitIndex != null ? _tpPercents[_takeProfitIndex!] : null,
+                );
               },
             ),
             const SizedBox(height: 6),
-            
-            // Partial Close
-            Text('Parcial: \$${partialValue.toStringAsFixed(0)} (${_partialClosePercent!.toStringAsFixed(1)}%)', 
-                 style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w600, fontSize: 12)),
+            // Stop Loss
+            Text(
+              _stopLossIndex != null
+                  ? 'SL: -\$${slValue.toStringAsFixed(0)} (-${_slPercents[_stopLossIndex!].toStringAsFixed(1)}%)'
+                  : 'SL: No definido',
+              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 12)),
             Slider(
-              value: _partialClosePercent ?? 0,
-              min: 0,
-              max: 100,
-              divisions: 100,
-              label: '${_partialClosePercent!.toStringAsFixed(1)}%',
-              activeColor: Colors.blue,
-              inactiveColor: Colors.blue.withValues(alpha: 0.2),
-              onChanged: (v) => setState(() => _partialClosePercent = v),
+              value: (_stopLossIndex ?? -1).toDouble(),
+              min: -1,
+              max: (_slPercents.length - 1).toDouble(),
+              divisions: _slPercents.length,
+              label: _stopLossIndex != null ? '-${_slPercents[_stopLossIndex!].toStringAsFixed(1)}%' : 'No definido',
+              activeColor: Colors.red,
+              inactiveColor: Colors.red.withOpacity(0.2),
+              onChanged: (v) {
+                setState(() {
+                  _stopLossIndex = v.round() == -1 ? null : v.round();
+                });
+                widget.simulationProvider.setManualSLTP(
+                  stopLossPercent: _stopLossIndex != null ? _slPercents[_stopLossIndex!] : null,
+                );
+              },
             ),
             const SizedBox(height: 12),
-            
             Row(
               children: [
                 Expanded(
@@ -1247,8 +1243,8 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                         widget.simulationProvider.closePartialPosition(_partialClosePercent ?? 0);
                       }
                       widget.simulationProvider.setManualSLTP(
-                        stopLossPercent: _stopLossPercent,
-                        takeProfitPercent: _takeProfitPercent,
+                        stopLossPercent: _stopLossIndex != null ? _slPercents[_stopLossIndex!] : null,
+                        takeProfitPercent: _takeProfitIndex != null ? _tpPercents[_takeProfitIndex!] : null,
                       );
                       // Cerrar el container
                       widget.onClose();

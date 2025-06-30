@@ -531,9 +531,6 @@ class SimulationProvider with ChangeNotifier {
     _positionSize = positionSize;
     _manualMargin = margin;
     _manualPositionType = type; // Guardar el tipo de operación
-    // Inicializar SL/TP con valores por defecto si no están definidos
-    _manualStopLossPercent ??= 2.5; // 2.5% por defecto
-    _manualTakeProfitPercent ??= 6.0; // 6% por defecto
     notifyListeners();
   }
 
