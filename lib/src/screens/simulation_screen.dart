@@ -529,14 +529,18 @@ class _SimulationScreenState extends State<SimulationScreen> {
     final trades = simulationProvider.currentTrades;
     final totalTrades = trades.length;
     
-    // Todos los trades tienen pnl válido
-    final completedTrades = trades;
-    final winningTrades = completedTrades.where((t) => t.pnl > 0).length;
-    final losingTrades = completedTrades.where((t) => t.pnl < 0).length;
-    final winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0.0;
-    final totalPnL = completedTrades.fold(0.0, (sum, t) => sum + t.pnl);
-    final maxProfit = completedTrades.fold(0.0, (max, t) => t.pnl > max ? t.pnl : max);
-    final maxLoss = completedTrades.fold(0.0, (min, t) => t.pnl < min ? t.pnl : min);
+    // Ahora solo tenemos trades abiertos en el historial
+    // Los trades cerrados se eliminan automáticamente
+    final openTrades = trades;
+    final completedTrades = <Trade>[]; // No hay trades completados en el historial
+    
+    // Para las estadísticas de P&L, usamos el balance actual vs inicial
+    final totalPnL = simulationProvider.currentBalance - 10000.0; // Balance inicial
+    final winRate = 0.0; // No hay trades completados para calcular win rate
+    final winningTrades = 0;
+    final losingTrades = 0;
+    final maxProfit = 0.0; // No hay trades completados
+    final maxLoss = 0.0; // No hay trades completados
     
     final isSimulationComplete = simulationProvider.currentCandleIndex >= simulationProvider.historicalData.length - 1;
 
@@ -613,19 +617,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       children: [
                         Expanded(
                           child: _buildMetricCard(
-                            'Total Trades',
-                            totalTrades.toString(),
-                            Icons.trending_up,
-                            Colors.blue,
+                            'Trades Abiertos',
+                            openTrades.length.toString(),
+                            Icons.pending,
+                            Colors.orange,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildMetricCard(
-                            'Win Rate',
-                            '${winRate.toStringAsFixed(1)}%',
-                            Icons.check_circle,
-                            winRate >= 50 ? Colors.green : Colors.orange,
+                            'P&L Total',
+                            '\$${totalPnL.toStringAsFixed(2)}',
+                            Icons.trending_up,
+                            totalPnL >= 0 ? Colors.green : Colors.red,
                           ),
                         ),
                       ],
@@ -635,19 +639,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       children: [
                         Expanded(
                           child: _buildMetricCard(
-                            'Ganadores',
-                            winningTrades.toString(),
-                            Icons.trending_up,
-                            Colors.green,
+                            'Balance Actual',
+                            '\$${simulationProvider.currentBalance.toStringAsFixed(2)}',
+                            Icons.account_balance_wallet,
+                            Colors.blue,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildMetricCard(
-                            'Perdedores',
-                            losingTrades.toString(),
-                            Icons.trending_down,
-                            Colors.red,
+                            'Total Trades',
+                            totalTrades.toString(),
+                            Icons.list,
+                            Colors.grey,
                           ),
                         ),
                       ],
@@ -667,7 +671,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Análisis de P&L',
+                      'Información de Trading',
                       style: TextStyle(
                         color: Colors.grey[400],
                         fontSize: 16,
@@ -679,11 +683,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     
                     _buildPnLMetric('P&L Total', totalPnL),
                     const SizedBox(height: 8),
-                    _buildPnLMetric('Mayor Ganancia', maxProfit),
+                    _buildPnLMetric('Balance Inicial', 10000.0),
                     const SizedBox(height: 8),
-                    _buildPnLMetric('Mayor Pérdida', maxLoss),
+                    _buildPnLMetric('Balance Actual', simulationProvider.currentBalance),
                     const SizedBox(height: 8),
-                    _buildPnLMetric('P&L Promedio', totalTrades > 0 ? totalPnL / totalTrades : 0.0),
+                    _buildPnLMetric('P&L Flotante', simulationProvider.unrealizedPnL),
                   ],
                 ),
               ),
@@ -841,6 +845,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
   }
 
   Widget _buildTradeItem(Trade trade) {
+    // Todos los trades en el historial ahora son abiertos
+    final isOpen = true;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
@@ -875,13 +882,22 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   ),
                 ),
                 Text(
-                  'P&L: \$${trade.pnl.toStringAsFixed(2)}',
+                  'Cantidad: ${trade.quantity.toStringAsFixed(4)}',
                   style: TextStyle(
-                    color: trade.pnl >= 0 ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
+                    color: Colors.grey[400],
                     fontSize: 10,
                     fontFamily: 'Inter',
                   ),
                 ),
+                if (trade.leverage != null)
+                  Text(
+                    'Apalancamiento: ${trade.leverage}x',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 10,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
               ],
             ),
           ),
