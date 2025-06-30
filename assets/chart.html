@@ -176,10 +176,15 @@
                         }
                         const amount = trade.amount ? `$${trade.amount}` : '';
                         const lev = trade.leverage ? `x${trade.leverage}` : '';
-                        let text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
-                        if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
-                            const pnl = parseFloat(trade.pnl).toFixed(2);
-                            text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
+                        let text;
+                        if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
+                            text = `CLOSE`;
+                            if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
+                                const pnl = parseFloat(trade.pnl).toFixed(2);
+                                text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
+                            }
+                        } else {
+                            text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
                         }
                         return {
                             time: formattedTime,

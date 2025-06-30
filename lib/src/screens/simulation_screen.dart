@@ -179,6 +179,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
   }
 
   Widget _buildTradingTab(SimulationProvider simulationProvider) {
+    // Unir trades abiertos y completados para el gráfico
+    final allTrades = [
+      ...simulationProvider.completedTrades,
+      ...simulationProvider.currentTrades,
+    ];
     return Container(
       color: const Color(0xFF1E1E1E),
       child: Column(
@@ -197,7 +202,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 borderRadius: BorderRadius.circular(12),
                 child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
                   selector: (context, provider) => Tuple2(
-                    provider.currentTrades,
+                    allTrades,
                     provider.currentCandleIndex,
                   ),
                   builder: (context, data, child) {

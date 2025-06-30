@@ -267,17 +267,11 @@ class SimulationProvider with ChangeNotifier {
 
   void _closePosition(double price, String reason) {
     if (!_inPosition) return;
-    
-    // Determine trade type for closing
     final lastTrade = _currentTrades.last;
     final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
-    
-    // Calcular P&L
     final pnl = lastTrade.type == 'buy'
         ? (price - lastTrade.price) * lastTrade.quantity * (lastTrade.leverage ?? 1)
         : (lastTrade.price - price) * lastTrade.quantity * (lastTrade.leverage ?? 1);
-    
-    // Ejecutar trade de cierre con P&L calculado
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       timestamp: _historicalData[_currentCandleIndex].timestamp,
@@ -291,23 +285,18 @@ class SimulationProvider with ChangeNotifier {
       pnl: pnl, // Asignar el P&L calculado
     );
     _currentTrades.add(closeTrade);
-    
-    // Actualizar balance
     _currentBalance += pnl;
-    
-    // Reset position state
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
-    
-    // Limpiar la lista de trades abiertos
+    // Mover trade de entrada y cierre a completedTrades
+    if (_currentTrades.length >= 2) {
+      _completedTrades.add(_currentTrades[_currentTrades.length - 2]); // entrada
+    }
+    _completedTrades.add(closeTrade); // cierre
     _currentTrades.clear();
-    
-    // Mover el trade al historial de trades completados
-    _completedTrades.add(closeTrade);
-    
     debugPrint('🔥 SimulationProvider: Posición cerrada - Precio: $price, Razón: $reason, P&L: $pnl');
     notifyListeners();
   }
@@ -570,19 +559,20 @@ class SimulationProvider with ChangeNotifier {
       pnl: pnl,
     );
     _currentTrades.add(closeTrade);
-    _currentBalance += pnl; // Solo sumar el P&L realizado
+    _currentBalance += pnl;
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
     _manualMargin = 0.0;
-    _manualPositionType = 'buy'; // Resetear el tipo de operación
-    // Resetear percentiles de SL/TP al cerrar la posición
+    _manualPositionType = 'buy';
     _manualStopLossPercent = null;
     _manualTakeProfitPercent = null;
-    // Limpiar la lista de trades abiertos
+    // Mover trade de entrada y cierre a completedTrades
+    if (_currentTrades.length >= 2) {
+      _completedTrades.add(_currentTrades[_currentTrades.length - 2]); // entrada
+    }
+    _completedTrades.add(closeTrade); // cierre
     _currentTrades.clear();
-    // Mover el trade al historial de trades completados
-    _completedTrades.add(closeTrade);
     notifyListeners();
   }
 
@@ -615,25 +605,23 @@ class SimulationProvider with ChangeNotifier {
       pnl: pnl,
     );
     _currentTrades.add(closeTrade);
-    _currentBalance += pnl; // Solo sumar el P&L realizado
-    // Reducir la posición abierta
+    _currentBalance += pnl;
     final newQty = lastTrade.quantity - qtyToClose;
     if (newQty <= 0.00001) {
-      // Si se cerró todo, marcar como cerrada
       _inPosition = false;
       _entryPrice = 0.0;
       _positionSize = 0.0;
       _manualMargin = 0.0;
-      _manualPositionType = 'buy'; // Resetear el tipo de operación
-      // Resetear percentiles de SL/TP al cerrar completamente la posición
+      _manualPositionType = 'buy';
       _manualStopLossPercent = null;
       _manualTakeProfitPercent = null;
-      // Limpiar la lista de trades abiertos
+      // Mover trade de entrada y cierre a completedTrades
+      if (_currentTrades.length >= 2) {
+        _completedTrades.add(_currentTrades[_currentTrades.length - 2]); // entrada
+      }
+      _completedTrades.add(closeTrade); // cierre
       _currentTrades.clear();
-      // Mover el trade al historial de trades completados
-      _completedTrades.add(closeTrade);
     } else {
-      // Si queda posición, actualizar cantidad y margen
       _positionSize = newQty;
       _manualMargin = _manualMargin * (1 - percent / 100);
     }
