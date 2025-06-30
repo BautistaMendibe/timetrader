@@ -67,6 +67,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
           length: 2,
           child: Scaffold(
             appBar: AppBar(
+              automaticallyImplyLeading: false,
               title: const Text('Simulación'),
               backgroundColor: const Color(0xFF1E1E1E),
               foregroundColor: Colors.white,
@@ -114,9 +115,32 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 const SizedBox(width: 16),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: () {
-                    simulationProvider.stopSimulation();
-                    Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+                  onPressed: () async {
+                    final shouldExit = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('¿Salir de la simulación?'),
+                        content: const Text('¿Estás seguro que quieres salir? Se perderá el progreso de la simulación actual.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancelar'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF21CE99),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Salir'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (shouldExit == true) {
+                      simulationProvider.stopSimulation();
+                      Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+                    }
                   },
                 ),
               ],
@@ -394,16 +418,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                       child: Column(
                         children: [
-                          Text(
-                            'Controles Manuales',
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 5),
                           
                           // Manual Advance Button
                           SizedBox(
