@@ -16,6 +16,7 @@ class SimulationProvider with ChangeNotifier {
   int _currentCandleIndex = 0;
   double _currentBalance = 10000.0;
   List<Trade> _currentTrades = [];
+  List<Trade> _completedTrades = []; // Nueva lista para trades completados
   List<double> _equityCurve = [];
   Setup? _currentSetup;
   
@@ -41,6 +42,7 @@ class SimulationProvider with ChangeNotifier {
   int get currentCandleIndex => _currentCandleIndex;
   double get currentBalance => _currentBalance;
   List<Trade> get currentTrades => _currentTrades;
+  List<Trade> get completedTrades => _completedTrades; // Getter para trades completados
   List<double> get equityCurve => _equityCurve;
   bool get inPosition => _inPosition;
   double get entryPrice => _entryPrice;
@@ -115,6 +117,7 @@ class SimulationProvider with ChangeNotifier {
     _currentCandleIndex = 0;
     _currentBalance = initialBalance;
     _currentTrades = [];
+    _completedTrades = []; // Limpiar trades completados
     _equityCurve = [initialBalance];
     _isSimulationRunning = true;
     _currentSetup = setup;
@@ -304,6 +307,9 @@ class SimulationProvider with ChangeNotifier {
       _currentTrades.removeRange(_currentTrades.length - 2, _currentTrades.length);
     }
     
+    // Mover el trade al historial de trades completados
+    _completedTrades.add(closeTrade);
+    
     debugPrint('🔥 SimulationProvider: Posición cerrada - Precio: $price, Razón: $reason, P&L: $pnl');
     notifyListeners();
   }
@@ -327,10 +333,8 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void _finalizeSimulation() {
-    if (_currentTrades.isEmpty) return;
-
-    // Filtrar trades completados (con P&L diferente de 0)
-    final completedTrades = _currentTrades.where((t) => t.pnl != 0.0).toList();
+    // Usar trades completados para las estadísticas
+    final completedTrades = _completedTrades;
     final winningTrades = completedTrades.where((t) => t.pnl > 0).length;
     final winRate = completedTrades.isNotEmpty ? winningTrades / completedTrades.length : 0.0;
     
@@ -348,7 +352,7 @@ class SimulationProvider with ChangeNotifier {
       maxDrawdown: maxDrawdown,
       totalTrades: completedTrades.length, // Solo trades completados
       winningTrades: winningTrades,
-      trades: _currentTrades,
+      trades: completedTrades, // Usar trades completados
       equityCurve: _equityCurve,
     );
 
@@ -379,6 +383,7 @@ class SimulationProvider with ChangeNotifier {
     _currentCandleIndex = 0;
     _currentBalance = 10000.0;
     _currentTrades = [];
+    _completedTrades = []; // Limpiar trades completados
     _equityCurve = [];
     _isSimulationRunning = false;
     _inPosition = false;
@@ -581,10 +586,8 @@ class SimulationProvider with ChangeNotifier {
     _manualStopLossPercent = null;
     _manualTakeProfitPercent = null;
     
-    // Eliminar los trades del historial (entrada y cierre)
-    if (_currentTrades.length >= 2) {
-      _currentTrades.removeRange(_currentTrades.length - 2, _currentTrades.length);
-    }
+    // Mover el trade al historial de trades completados
+    _completedTrades.add(closeTrade);
     
     notifyListeners();
   }
@@ -634,10 +637,8 @@ class SimulationProvider with ChangeNotifier {
       _manualStopLossPercent = null;
       _manualTakeProfitPercent = null;
       
-      // Eliminar los trades del historial (entrada y cierre)
-      if (_currentTrades.length >= 2) {
-        _currentTrades.removeRange(_currentTrades.length - 2, _currentTrades.length);
-      }
+      // Mover el trade al historial de trades completados
+      _completedTrades.add(closeTrade);
     } else {
       // Si queda posición, actualizar cantidad y margen
       _positionSize = newQty;

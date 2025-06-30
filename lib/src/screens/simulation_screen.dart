@@ -527,20 +527,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
   Widget _buildStatisticsTab(SimulationProvider simulationProvider) {
     final trades = simulationProvider.currentTrades;
+    final completedTrades = simulationProvider.completedTrades;
     final totalTrades = trades.length;
     
-    // Ahora solo tenemos trades abiertos en el historial
-    // Los trades cerrados se eliminan automáticamente
-    final openTrades = trades;
-    final completedTrades = <Trade>[]; // No hay trades completados en el historial
+    // Calcular estadísticas de trades completados
+    final totalCompletedTrades = completedTrades.length;
+    final winningTrades = completedTrades.where((t) => t.pnl > 0).length;
+    final losingTrades = completedTrades.where((t) => t.pnl < 0).length;
+    final winRate = totalCompletedTrades > 0 ? winningTrades / totalCompletedTrades : 0.0;
     
-    // Para las estadísticas de P&L, usamos el balance actual vs inicial
-    final totalPnL = simulationProvider.currentBalance - 10000.0; // Balance inicial
-    final winRate = 0.0; // No hay trades completados para calcular win rate
-    final winningTrades = 0;
-    final losingTrades = 0;
-    final maxProfit = 0.0; // No hay trades completados
-    final maxLoss = 0.0; // No hay trades completados
+    // Calcular P&L total de trades completados
+    final totalPnL = completedTrades.fold(0.0, (sum, trade) => sum + trade.pnl);
+    final maxProfit = completedTrades.isNotEmpty ? completedTrades.map((t) => t.pnl).reduce((a, b) => a > b ? a : b) : 0.0;
+    final maxLoss = completedTrades.isNotEmpty ? completedTrades.map((t) => t.pnl).reduce((a, b) => a < b ? a : b) : 0.0;
     
     final isSimulationComplete = simulationProvider.currentCandleIndex >= simulationProvider.historicalData.length - 1;
 
@@ -618,9 +617,31 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         Expanded(
                           child: _buildMetricCard(
                             'Trades Abiertos',
-                            openTrades.length.toString(),
+                            trades.length.toString(),
                             Icons.pending,
                             Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildMetricCard(
+                            'Win Rate',
+                            '${(winRate * 100).toStringAsFixed(1)}%',
+                            Icons.trending_up,
+                            winRate >= 0.5 ? Colors.green : Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetricCard(
+                            'Trades Completados',
+                            totalCompletedTrades.toString(),
+                            Icons.check_circle,
+                            Colors.blue,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -639,6 +660,28 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       children: [
                         Expanded(
                           child: _buildMetricCard(
+                            'Ganancia Máx',
+                            '\$${maxProfit.toStringAsFixed(2)}',
+                            Icons.trending_up,
+                            Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildMetricCard(
+                            'Pérdida Máx',
+                            '\$${maxLoss.toStringAsFixed(2)}',
+                            Icons.trending_down,
+                            Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetricCard(
                             'Balance Actual',
                             '\$${simulationProvider.currentBalance.toStringAsFixed(2)}',
                             Icons.account_balance_wallet,
@@ -648,10 +691,10 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildMetricCard(
-                            'Total Trades',
-                            totalTrades.toString(),
-                            Icons.list,
-                            Colors.grey,
+                            'P&L Flotante',
+                            '\$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
+                            Icons.pending,
+                            simulationProvider.unrealizedPnL >= 0 ? Colors.green : Colors.red,
                           ),
                         ),
                       ],
@@ -733,6 +776,62 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+            ],
+
+            // Completed Trades History
+            if (completedTrades.isNotEmpty) ...[
+              Card(
+                color: const Color(0xFF2C2C2C),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Historial de Trades Completados',
+                            style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                          Text(
+                            '$winningTrades/$totalCompletedTrades ganadores',
+                            style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      ...completedTrades.take(10).map((trade) => _buildCompletedTradeItem(trade)),
+                      
+                      if (completedTrades.length > 10) ...[
+                        const SizedBox(height: 8),
+                        Center(
+                          child: Text(
+                            '... y ${completedTrades.length - 10} trades más',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
 
             // Final Summary (when simulation is complete)
@@ -900,6 +999,96 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompletedTradeItem(Trade trade) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: trade.pnl >= 0 
+              ? Colors.green.withValues(alpha: 0.3) 
+              : Colors.red.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            trade.pnl >= 0 ? Icons.trending_up : Icons.trending_down,
+            color: trade.pnl >= 0 ? Colors.green : Colors.red,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${trade.type.toUpperCase()} \$${trade.price.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                Text(
+                  'Cantidad: ${trade.quantity.toStringAsFixed(4)}',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 10,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                if (trade.leverage != null)
+                  Text(
+                    'Apalancamiento: ${trade.leverage}x',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 10,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                if (trade.reason != null)
+                  Text(
+                    'Razón: ${trade.reason}',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 10,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '\$${trade.pnl.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: trade.pnl >= 0 ? Colors.green : Colors.red,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              Text(
+                trade.timestamp.toString().substring(11, 16), // Solo hora:minuto
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 10,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
           ),
         ],
       ),
