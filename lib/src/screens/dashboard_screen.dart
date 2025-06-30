@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import '../routes.dart';
+import '../services/simulation_provider.dart';
+import '../models/simulation_result.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -49,16 +52,13 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
             ],
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: CircleAvatar(
-                backgroundColor: const Color(0xFF21CE99),
-                child: Text(
-                  user?.email?.substring(0, 1).toUpperCase() ?? 'U',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+            child: CircleAvatar(
+              backgroundColor: const Color(0xFF21CE99),
+              child: Text(
+                user?.email?.substring(0, 1).toUpperCase() ?? 'U',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -98,39 +98,68 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Last Simulation Card
-            Card(
-              color: const Color(0xFF2C2C2C),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            Consumer<SimulationProvider>(
+              builder: (context, simulationProvider, child) {
+                final history = simulationProvider.simulationHistory;
+                
+                return Card(
+                  color: const Color(0xFF2C2C2C),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.history,
-                          color: Color(0xFF21CE99),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.history,
+                              color: Color(0xFF21CE99),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Últimas Simulaciones',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Última Simulación',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
+                        const SizedBox(height: 12),
+                        if (history.isEmpty)
+                          Text(
+                            'No hay simulaciones recientes',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey[400],
+                            ),
+                          )
+                        else
+                          Column(
+                            children: history.reversed.take(3).map((simulation) {
+                              return _buildSimulationHistoryItem(context, simulation);
+                            }).toList(),
                           ),
-                        ),
+                        if (history.length > 3)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: TextButton(
+                              onPressed: () {
+                                // TODO: Navigate to full history screen
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Historial completo próximamente')),
+                                );
+                              },
+                              child: Text(
+                                'Ver todas (${history.length})',
+                                style: const TextStyle(color: Color(0xFF21CE99)),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No hay simulaciones recientes',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[400],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 16),
 
@@ -200,6 +229,47 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ],
             ),
+
+            // Test Chart Button (Temporary)
+            Card(
+              color: const Color(0xFF2C2C2C),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.bug_report,
+                          color: Color(0xFFFF5A5F),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Debug - Test Chart',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, AppRoutes.testChart);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF5A5F),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Probar Gráfico TradingView'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -209,6 +279,80 @@ class DashboardScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.play_arrow),
         label: const Text('Nueva Simulación'),
+      ),
+    );
+  }
+
+  Widget _buildSimulationHistoryItem(BuildContext context, SimulationResult simulation) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: () {
+          // Navigate to simulation summary
+          Navigator.pushNamed(context, AppRoutes.simulationSummary);
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: simulation.netPnL >= 0 ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                simulation.netPnL >= 0 ? Icons.trending_up : Icons.trending_down,
+                color: simulation.netPnL >= 0 ? Colors.green : Colors.red,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${simulation.startDate.day}/${simulation.startDate.month}/${simulation.startDate.year}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      '${simulation.totalTrades} trades • ${(simulation.winRate * 100).toStringAsFixed(1)}% win rate',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '\$${simulation.netPnL.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: simulation.netPnL >= 0 ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    '${(simulation.maxDrawdown * 100).toStringAsFixed(1)}% DD',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

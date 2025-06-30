@@ -8,6 +8,45 @@ class SetupProvider with ChangeNotifier {
   List<Setup> get setups => _setups;
   Setup? get selectedSetup => _selectedSetup;
 
+  SetupProvider() {
+    _initializeSampleSetups();
+  }
+
+  void _initializeSampleSetups() {
+    _setups.addAll([
+      Setup(
+        id: '1',
+        name: 'Scalping BTC',
+        asset: 'BTC/USD',
+        positionSize: 100.0,
+        stopLossPercent: 2.0,
+        takeProfitPercent: 4.0,
+        useAdvancedRules: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 5)),
+      ),
+      Setup(
+        id: '2',
+        name: 'Swing Trading EUR/USD',
+        asset: 'EUR/USD',
+        positionSize: 500.0,
+        stopLossPercent: 1.5,
+        takeProfitPercent: 3.0,
+        useAdvancedRules: true,
+        createdAt: DateTime.now().subtract(const Duration(days: 3)),
+      ),
+      Setup(
+        id: '3',
+        name: 'Day Trading S&P500',
+        asset: 'S&P500',
+        positionSize: 1000.0,
+        stopLossPercent: 1.0,
+        takeProfitPercent: 2.5,
+        useAdvancedRules: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+    ]);
+  }
+
   void addSetup(Setup setup) {
     _setups.add(setup);
     notifyListeners();

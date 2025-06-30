@@ -72,6 +72,10 @@ class Trade {
   final String type; // 'buy' or 'sell'
   final double price;
   final double quantity;
+  final int candleIndex; // Índice de la vela donde se ejecutó el trade
+  final String? reason; // Razón por la que se ejecutó el trade
+  final double? amount; // Monto de la operación
+  final int? leverage; // Apalancamiento
   double pnl;
 
   Trade({
@@ -80,6 +84,10 @@ class Trade {
     required this.type,
     required this.price,
     required this.quantity,
+    required this.candleIndex,
+    this.reason,
+    this.amount,
+    this.leverage,
     this.pnl = 0.0,
   });
 
@@ -90,6 +98,10 @@ class Trade {
       'type': type,
       'price': price,
       'quantity': quantity,
+      'candleIndex': candleIndex,
+      'reason': reason,
+      'amount': amount,
+      'leverage': leverage,
       'pnl': pnl,
     };
   }
@@ -101,6 +113,10 @@ class Trade {
       type: json['type'],
       price: json['price'].toDouble(),
       quantity: json['quantity'].toDouble(),
+      candleIndex: json['candleIndex'] ?? 0,
+      reason: json['reason'],
+      amount: json['amount']?.toDouble(),
+      leverage: json['leverage'],
       pnl: json['pnl']?.toDouble() ?? 0.0,
     );
   }
