@@ -302,10 +302,8 @@ class SimulationProvider with ChangeNotifier {
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
     
-    // Eliminar los trades del historial (entrada y cierre)
-    if (_currentTrades.length >= 2) {
-      _currentTrades.removeRange(_currentTrades.length - 2, _currentTrades.length);
-    }
+    // Limpiar la lista de trades abiertos
+    _currentTrades.clear();
     
     // Mover el trade al historial de trades completados
     _completedTrades.add(closeTrade);
@@ -581,6 +579,8 @@ class SimulationProvider with ChangeNotifier {
     // Resetear percentiles de SL/TP al cerrar la posición
     _manualStopLossPercent = null;
     _manualTakeProfitPercent = null;
+    // Limpiar la lista de trades abiertos
+    _currentTrades.clear();
     // Mover el trade al historial de trades completados
     _completedTrades.add(closeTrade);
     notifyListeners();
@@ -628,6 +628,8 @@ class SimulationProvider with ChangeNotifier {
       // Resetear percentiles de SL/TP al cerrar completamente la posición
       _manualStopLossPercent = null;
       _manualTakeProfitPercent = null;
+      // Limpiar la lista de trades abiertos
+      _currentTrades.clear();
       // Mover el trade al historial de trades completados
       _completedTrades.add(closeTrade);
     } else {
