@@ -540,19 +540,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
   Widget _buildStatisticsTab(SimulationProvider simulationProvider) {
     final trades = simulationProvider.currentTrades;
-    final completedTrades = simulationProvider.completedTrades;
+    final completedOperations = simulationProvider.completedOperations;
     final totalTrades = trades.length;
     
-    // Calcular estadísticas de trades completados
-    final totalCompletedTrades = completedTrades.length;
-    final winningTrades = completedTrades.where((t) => t.pnl > 0).length;
-    final losingTrades = completedTrades.where((t) => t.pnl < 0).length;
-    final winRate = totalCompletedTrades > 0 ? winningTrades / totalCompletedTrades : 0.0;
+    // Calcular estadísticas de operaciones completadas
+    final totalCompletedOperations = completedOperations.length;
+    final winningTrades = completedOperations.where((t) => t.totalPnL > 0).length;
+    final losingTrades = completedOperations.where((t) => t.totalPnL < 0).length;
+    final winRate = totalCompletedOperations > 0 ? winningTrades / totalCompletedOperations : 0.0;
     
-    // Calcular P&L total de trades completados
-    final totalPnL = completedTrades.fold(0.0, (sum, trade) => sum + trade.pnl);
-    final maxProfit = completedTrades.isNotEmpty ? completedTrades.map((t) => t.pnl).reduce((a, b) => a > b ? a : b) : 0.0;
-    final maxLoss = completedTrades.isNotEmpty ? completedTrades.map((t) => t.pnl).reduce((a, b) => a < b ? a : b) : 0.0;
+    // Calcular P&L total de operaciones completadas
+    final totalPnL = completedOperations.fold(0.0, (sum, operation) => sum + operation.totalPnL);
+    final maxProfit = completedOperations.isNotEmpty ? completedOperations.map((t) => t.totalPnL).reduce((a, b) => a > b ? a : b) : 0.0;
+    final maxLoss = completedOperations.isNotEmpty ? completedOperations.map((t) => t.totalPnL).reduce((a, b) => a < b ? a : b) : 0.0;
     
     final isSimulationComplete = simulationProvider.currentCandleIndex >= simulationProvider.historicalData.length - 1;
 
@@ -651,8 +651,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       children: [
                         Expanded(
                           child: _buildMetricCard(
-                            'Trades Completados',
-                            totalCompletedTrades.toString(),
+                            'Operaciones Completadas',
+                            totalCompletedOperations.toString(),
                             Icons.check_circle,
                             Colors.blue,
                           ),
@@ -792,8 +792,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Completed Trades History
-            if (completedTrades.isNotEmpty) ...[
+            // Completed Operations History
+            if (completedOperations.isNotEmpty) ...[
               Card(
                 color: const Color(0xFF2C2C2C),
                 child: Padding(
@@ -801,11 +801,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Historial de Trades Completados',
+                            'Historial de Operaciones Completadas',
                             style: TextStyle(
                               color: Colors.grey[400],
                               fontSize: 16,
@@ -814,7 +814,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             ),
                           ),
                           Text(
-                            '$winningTrades/$totalCompletedTrades ganadores',
+                            '$winningTrades/$totalCompletedOperations ganadores',
                             style: TextStyle(
                               color: Colors.grey[400],
                               fontSize: 12,
@@ -825,13 +825,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      ...completedTrades.take(10).map((trade) => _buildCompletedTradeItem(trade)),
+                      ...completedOperations.take(10).map((operation) => _buildCompletedOperationItem(operation)),
                       
-                      if (completedTrades.length > 10) ...[
+                      if (completedOperations.length > 10) ...[
                         const SizedBox(height: 8),
                         Center(
                           child: Text(
-                            '... y ${completedTrades.length - 10} trades más',
+                            '... y ${completedOperations.length - 10} operaciones más',
                             style: TextStyle(
                               color: Colors.grey[500],
                               fontSize: 12,
@@ -920,6 +920,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
           const SizedBox(height: 4),
           Text(
             title,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey[400],
               fontSize: 12,
@@ -1018,83 +1019,137 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  Widget _buildCompletedTradeItem(Trade trade) {
+  Widget _buildCompletedOperationItem(CompletedTrade operation) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: trade.pnl >= 0 
+          color: operation.totalPnL >= 0 
               ? Colors.green.withValues(alpha: 0.3) 
               : Colors.red.withValues(alpha: 0.3),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            trade.pnl >= 0 ? Icons.trending_up : Icons.trending_down,
-            color: trade.pnl >= 0 ? Colors.green : Colors.red,
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${trade.type.toUpperCase()} \$${trade.price.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
+          // Header con tipo de operación y P&L
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    operation.totalPnL >= 0 ? Icons.trending_up : Icons.trending_down,
+                    color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
+                    size: 16,
                   ),
+                  const SizedBox(width: 8),
+                  Text(
+                    operation.operationType.toUpperCase(),
+                    style: TextStyle(
+                      color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '\$${operation.totalPnL.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          // Precios de entrada y salida
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Entrada: \$${operation.entryPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    Text(
+                      operation.entryTime.toString().substring(11, 16), // Solo hora:minuto
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 10,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Salida: \$${operation.exitPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    Text(
+                      operation.exitTime.toString().substring(11, 16), // Solo hora:minuto
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 10,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          
+          // Información adicional
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Cantidad: ${operation.quantity.toStringAsFixed(4)}',
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 10,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              if (operation.leverage != null)
                 Text(
-                  'Cantidad: ${trade.quantity.toStringAsFixed(4)}',
+                  'Apalancamiento: ${operation.leverage}x',
                   style: TextStyle(
                     color: Colors.grey[400],
                     fontSize: 10,
                     fontFamily: 'Inter',
                   ),
                 ),
-                if (trade.leverage != null)
-                  Text(
-                    'Apalancamiento: ${trade.leverage}x',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                if (trade.reason != null)
-                  Text(
-                    'Razón: ${trade.reason}',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
               Text(
-                '\$${trade.pnl.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: trade.pnl >= 0 ? Colors.green : Colors.red,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              Text(
-                trade.timestamp.toString().substring(11, 16), // Solo hora:minuto
+                'Duración: ${operation.durationFormatted}',
                 style: TextStyle(
                   color: Colors.grey[400],
                   fontSize: 10,
@@ -1103,6 +1158,17 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ),
             ],
           ),
+          if (operation.reason != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Razón: ${operation.reason}',
+              style: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 10,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ],
         ],
       ),
     );

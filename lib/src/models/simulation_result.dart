@@ -77,6 +77,7 @@ class Trade {
   final double? amount; // Monto de la operación
   final int? leverage; // Apalancamiento
   double pnl;
+  final String? tradeGroupId; // ID para agrupar trades relacionados (entrada/salida)
 
   Trade({
     required this.id,
@@ -89,6 +90,7 @@ class Trade {
     this.amount,
     this.leverage,
     this.pnl = 0.0,
+    this.tradeGroupId,
   });
 
   Map<String, dynamic> toJson() {
@@ -103,6 +105,7 @@ class Trade {
       'amount': amount,
       'leverage': leverage,
       'pnl': pnl,
+      'tradeGroupId': tradeGroupId,
     };
   }
 
@@ -118,6 +121,85 @@ class Trade {
       amount: json['amount']?.toDouble(),
       leverage: json['leverage'],
       pnl: json['pnl']?.toDouble() ?? 0.0,
+      tradeGroupId: json['tradeGroupId'],
+    );
+  }
+}
+
+// Nueva clase para representar una operación completa
+class CompletedTrade {
+  final String id;
+  final Trade entryTrade; // Trade de entrada (compra o venta)
+  final Trade exitTrade;  // Trade de salida (venta o compra)
+  final double totalPnL;  // P&L total de la operación
+  final DateTime entryTime;
+  final DateTime exitTime;
+  final double entryPrice;
+  final double exitPrice;
+  final double quantity;
+  final int? leverage;
+  final String? reason;
+
+  CompletedTrade({
+    required this.id,
+    required this.entryTrade,
+    required this.exitTrade,
+    required this.totalPnL,
+    required this.entryTime,
+    required this.exitTime,
+    required this.entryPrice,
+    required this.exitPrice,
+    required this.quantity,
+    this.leverage,
+    this.reason,
+  });
+
+  // Método de conveniencia para obtener el tipo de operación
+  String get operationType => entryTrade.type; // 'buy' para long, 'sell' para short
+
+  // Método para obtener la duración de la operación
+  Duration get duration => exitTime.difference(entryTime);
+
+  // Método para formatear la duración
+  String get durationFormatted {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    } else {
+      return '${minutes}m';
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'entryTrade': entryTrade.toJson(),
+      'exitTrade': exitTrade.toJson(),
+      'totalPnL': totalPnL,
+      'entryTime': entryTime.toIso8601String(),
+      'exitTime': exitTime.toIso8601String(),
+      'entryPrice': entryPrice,
+      'exitPrice': exitPrice,
+      'quantity': quantity,
+      'leverage': leverage,
+      'reason': reason,
+    };
+  }
+
+  factory CompletedTrade.fromJson(Map<String, dynamic> json) {
+    return CompletedTrade(
+      id: json['id'],
+      entryTrade: Trade.fromJson(json['entryTrade']),
+      exitTrade: Trade.fromJson(json['exitTrade']),
+      totalPnL: json['totalPnL'].toDouble(),
+      entryTime: DateTime.parse(json['entryTime']),
+      exitTime: DateTime.parse(json['exitTime']),
+      entryPrice: json['entryPrice'].toDouble(),
+      exitPrice: json['exitPrice'].toDouble(),
+      quantity: json['quantity'].toDouble(),
+      leverage: json['leverage'],
+      reason: json['reason'],
     );
   }
 } 
