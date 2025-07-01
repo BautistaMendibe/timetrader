@@ -36,9 +36,11 @@
 </head>
 <body>
     <div id="chart"></div>
+    <!--
     <div id="attribution">
         Powered by <a href="https://www.tradingview.com" target="_blank">Lightweight Charts™</a>
     </div>
+    -->
 
     <script>
         let chart, candlestickSeries;
@@ -216,8 +218,8 @@
                     candlestickSeries.removePriceLine(tpPriceLine);
                     tpPriceLine = null;
                 }
-                // Draw SL/TP price lines if present
-                if (typeof data.stopLoss === 'number') {
+                // Draw SL/TP price lines if present and valid (not 0 or null)
+                if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
                     slPriceLine = candlestickSeries.createPriceLine({
                         price: data.stopLoss,
                         color: '#FF5A5F',
@@ -232,7 +234,7 @@
                         axisLabelBackgroundColor: '#FF5A5F',
                     });
                 }
-                if (typeof data.takeProfit === 'number') {
+                if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
                     tpPriceLine = candlestickSeries.createPriceLine({
                         price: data.takeProfit,
                         color: '#21CE99',

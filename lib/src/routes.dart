@@ -8,6 +8,7 @@ import 'screens/simulation_setup_screen.dart';
 import 'screens/simulation_screen.dart';
 import 'screens/simulation_summary_screen.dart';
 import 'screens/test_chart_screen.dart';
+import 'models/setup.dart';
 
 class AppRoutes {
   static const String login = '/login';
@@ -26,7 +27,11 @@ class AppRoutes {
       dashboard: (context) => const DashboardScreen(),
       setupsList: (context) => const SetupsListScreen(),
       setupDetail: (context) => const SetupDetailScreen(),
-      setupForm: (context) => const SetupFormScreen(),
+      setupForm: (context) {
+        final args = ModalRoute.of(context)?.settings.arguments;
+        final setupToEdit = args is Setup ? args : null;
+        return SetupFormScreen(setupToEdit: setupToEdit);
+      },
       simulationSetup: (context) => const SimulationSetupScreen(),
       simulation: (context) => const SimulationScreen(),
       simulationSummary: (context) => const SimulationSummaryScreen(),

@@ -16,7 +16,8 @@ class SimulationProvider with ChangeNotifier {
   int _currentCandleIndex = 0;
   double _currentBalance = 10000.0;
   List<Trade> _currentTrades = [];
-  List<Trade> _completedTrades = []; // Nueva lista para trades completados
+  List<Trade> _completedTrades = []; // Lista de trades individuales (para compatibilidad)
+  List<CompletedTrade> _completedOperations = []; // Nueva lista para operaciones completas
   List<double> _equityCurve = [];
   Setup? _currentSetup;
   
@@ -43,6 +44,7 @@ class SimulationProvider with ChangeNotifier {
   double get currentBalance => _currentBalance;
   List<Trade> get currentTrades => _currentTrades;
   List<Trade> get completedTrades => _completedTrades; // Getter para trades completados
+  List<CompletedTrade> get completedOperations => _completedOperations; // Getter para operaciones completas
   List<double> get equityCurve => _equityCurve;
   bool get inPosition => _inPosition;
   double get entryPrice => _entryPrice;
@@ -118,6 +120,7 @@ class SimulationProvider with ChangeNotifier {
     _currentBalance = initialBalance;
     _currentTrades = [];
     _completedTrades = []; // Limpiar trades completados
+    _completedOperations = []; // Limpiar operaciones completas
     _equityCurve = [initialBalance];
     _isSimulationRunning = true;
     _currentSetup = setup;
@@ -182,14 +185,14 @@ class SimulationProvider with ChangeNotifier {
     bool shouldClose = false;
     String closeReason = '';
     
-    // Check stop loss
-    if (candle.low <= _stopLossPrice) {
+    // Check stop loss (only if it's greater than 0)
+    if (_stopLossPrice > 0 && candle.low <= _stopLossPrice) {
       shouldClose = true;
       closeReason = 'Stop Loss';
     }
     
-    // Check take profit
-    if (candle.high >= _takeProfitPrice) {
+    // Check take profit (only if it's greater than 0)
+    if (_takeProfitPrice > 0 && candle.high >= _takeProfitPrice) {
       shouldClose = true;
       closeReason = 'Take Profit';
     }
@@ -250,13 +253,13 @@ class SimulationProvider with ChangeNotifier {
     final stopLossDistance = price * (_currentSetup!.stopLossPercent / 100);
     _positionSize = riskAmount / stopLossDistance;
     
-    // Set stop loss and take profit
+    // Set stop loss and take profit (only if percentages are greater than 0)
     if (type == 'buy') {
-      _stopLossPrice = price - stopLossDistance;
-      _takeProfitPrice = price + (price * _currentSetup!.takeProfitPercent / 100);
+      _stopLossPrice = _currentSetup!.stopLossPercent > 0 ? price - stopLossDistance : 0.0;
+      _takeProfitPrice = _currentSetup!.takeProfitPercent > 0 ? price + (price * _currentSetup!.takeProfitPercent / 100) : 0.0;
     } else {
-      _stopLossPrice = price + stopLossDistance;
-      _takeProfitPrice = price - (price * _currentSetup!.takeProfitPercent / 100);
+      _stopLossPrice = _currentSetup!.stopLossPercent > 0 ? price + stopLossDistance : 0.0;
+      _takeProfitPrice = _currentSetup!.takeProfitPercent > 0 ? price - (price * _currentSetup!.takeProfitPercent / 100) : 0.0;
     }
     
     // Execute trade
@@ -272,6 +275,10 @@ class SimulationProvider with ChangeNotifier {
     final pnl = lastTrade.type == 'buy'
         ? (price - lastTrade.price) * lastTrade.quantity * (lastTrade.leverage ?? 1)
         : (lastTrade.price - price) * lastTrade.quantity * (lastTrade.leverage ?? 1);
+    
+    final tradeGroupId = DateTime.now().millisecondsSinceEpoch.toString();
+    
+    // Crear trade de cierre con el mismo tradeGroupId
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       timestamp: _historicalData[_currentCandleIndex].timestamp,
@@ -282,21 +289,56 @@ class SimulationProvider with ChangeNotifier {
       reason: reason,
       amount: lastTrade.amount,
       leverage: lastTrade.leverage,
-      pnl: pnl, // Asignar el P&L calculado
+      pnl: pnl,
+      tradeGroupId: tradeGroupId,
     );
+    
+    // Actualizar el trade de entrada con el mismo tradeGroupId
+    final entryTrade = Trade(
+      id: lastTrade.id,
+      timestamp: lastTrade.timestamp,
+      type: lastTrade.type,
+      price: lastTrade.price,
+      quantity: lastTrade.quantity,
+      candleIndex: lastTrade.candleIndex,
+      reason: lastTrade.reason,
+      amount: lastTrade.amount,
+      leverage: lastTrade.leverage,
+      pnl: 0.0, // El P&L se calcula en el trade de salida
+      tradeGroupId: tradeGroupId,
+    );
+    
     _currentTrades.add(closeTrade);
     _currentBalance += pnl;
+    
+    // Crear la operación completa
+    final completedOperation = CompletedTrade(
+      id: tradeGroupId,
+      entryTrade: entryTrade,
+      exitTrade: closeTrade,
+      totalPnL: pnl,
+      entryTime: entryTrade.timestamp,
+      exitTime: closeTrade.timestamp,
+      entryPrice: entryTrade.price,
+      exitPrice: closeTrade.price,
+      quantity: entryTrade.quantity,
+      leverage: entryTrade.leverage,
+      reason: reason,
+    );
+    
+    _completedOperations.add(completedOperation);
+    
+    // Mantener compatibilidad con la lista anterior
+    _completedTrades.add(entryTrade);
+    _completedTrades.add(closeTrade);
+    
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
-    // Mover trade de entrada y cierre a completedTrades
-    if (_currentTrades.length >= 2) {
-      _completedTrades.add(_currentTrades[_currentTrades.length - 2]); // entrada
-    }
-    _completedTrades.add(closeTrade); // cierre
     _currentTrades.clear();
+    
     debugPrint('🔥 SimulationProvider: Posición cerrada - Precio: $price, Razón: $reason, P&L: $pnl');
     notifyListeners();
   }
@@ -320,10 +362,10 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void _finalizeSimulation() {
-    // Usar trades completados para las estadísticas
-    final completedTrades = _completedTrades;
-    final winningTrades = completedTrades.where((t) => t.pnl > 0).length;
-    final winRate = completedTrades.isNotEmpty ? winningTrades / completedTrades.length : 0.0;
+    // Usar operaciones completas para las estadísticas
+    final completedOperations = _completedOperations;
+    final winningTrades = completedOperations.where((t) => t.totalPnL > 0).length;
+    final winRate = completedOperations.isNotEmpty ? winningTrades / completedOperations.length : 0.0;
     
     final maxDrawdown = _calculateMaxDrawdown();
     
@@ -337,9 +379,9 @@ class SimulationProvider with ChangeNotifier {
       netPnL: _currentBalance - 10000.0,
       winRate: winRate,
       maxDrawdown: maxDrawdown,
-      totalTrades: completedTrades.length, // Solo trades completados
+      totalTrades: completedOperations.length, // Solo operaciones completas
       winningTrades: winningTrades,
-      trades: completedTrades, // Usar trades completados
+      trades: _completedTrades, // Mantener compatibilidad
       equityCurve: _equityCurve,
     );
 
@@ -371,6 +413,7 @@ class SimulationProvider with ChangeNotifier {
     _currentBalance = 10000.0;
     _currentTrades = [];
     _completedTrades = []; // Limpiar trades completados
+    _completedOperations = []; // Limpiar operaciones completas
     _equityCurve = [];
     _isSimulationRunning = false;
     _inPosition = false;
@@ -531,9 +574,6 @@ class SimulationProvider with ChangeNotifier {
     _positionSize = positionSize;
     _manualMargin = margin;
     _manualPositionType = type; // Guardar el tipo de operación
-    // Inicializar SL/TP con valores por defecto si no están definidos
-    _manualStopLossPercent ??= 2.5; // 2.5% por defecto
-    _manualTakeProfitPercent ??= 6.0; // 6% por defecto
     notifyListeners();
   }
 
@@ -546,6 +586,9 @@ class SimulationProvider with ChangeNotifier {
     final pnl = lastTrade.type == 'buy'
         ? (exitPrice - lastTrade.price) * lastTrade.quantity * lastTrade.leverage!
         : (lastTrade.price - exitPrice) * lastTrade.quantity * lastTrade.leverage!;
+    
+    final tradeGroupId = DateTime.now().millisecondsSinceEpoch.toString();
+    
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       timestamp: _historicalData[_currentCandleIndex].timestamp,
@@ -557,9 +600,48 @@ class SimulationProvider with ChangeNotifier {
       amount: lastTrade.amount,
       leverage: lastTrade.leverage,
       pnl: pnl,
+      tradeGroupId: tradeGroupId,
     );
+    
+    // Actualizar el trade de entrada con el mismo tradeGroupId
+    final entryTrade = Trade(
+      id: lastTrade.id,
+      timestamp: lastTrade.timestamp,
+      type: lastTrade.type,
+      price: lastTrade.price,
+      quantity: lastTrade.quantity,
+      candleIndex: lastTrade.candleIndex,
+      reason: lastTrade.reason,
+      amount: lastTrade.amount,
+      leverage: lastTrade.leverage,
+      pnl: 0.0,
+      tradeGroupId: tradeGroupId,
+    );
+    
     _currentTrades.add(closeTrade);
     _currentBalance += pnl;
+    
+    // Crear la operación completa
+    final completedOperation = CompletedTrade(
+      id: tradeGroupId,
+      entryTrade: entryTrade,
+      exitTrade: closeTrade,
+      totalPnL: pnl,
+      entryTime: entryTrade.timestamp,
+      exitTime: closeTrade.timestamp,
+      entryPrice: entryTrade.price,
+      exitPrice: closeTrade.price,
+      quantity: entryTrade.quantity,
+      leverage: entryTrade.leverage,
+      reason: 'Manual Close',
+    );
+    
+    _completedOperations.add(completedOperation);
+    
+    // Mantener compatibilidad con la lista anterior
+    _completedTrades.add(entryTrade);
+    _completedTrades.add(closeTrade);
+    
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
@@ -567,18 +649,51 @@ class SimulationProvider with ChangeNotifier {
     _manualPositionType = 'buy';
     _manualStopLossPercent = null;
     _manualTakeProfitPercent = null;
-    // Mover trade de entrada y cierre a completedTrades
-    if (_currentTrades.length >= 2) {
-      _completedTrades.add(_currentTrades[_currentTrades.length - 2]); // entrada
-    }
-    _completedTrades.add(closeTrade); // cierre
     _currentTrades.clear();
     notifyListeners();
   }
 
   void setManualSLTP({double? stopLossPercent, double? takeProfitPercent}) {
-    if (stopLossPercent != null) _manualStopLossPercent = stopLossPercent;
-    if (takeProfitPercent != null) _manualTakeProfitPercent = takeProfitPercent;
+    // Si se pasa null explícitamente, limpiar el valor
+    if (stopLossPercent == null) {
+      _manualStopLossPercent = null;
+    } else if (stopLossPercent > 0) {
+      _manualStopLossPercent = stopLossPercent;
+    } else {
+      _manualStopLossPercent = null;
+    }
+    
+    if (takeProfitPercent == null) {
+      _manualTakeProfitPercent = null;
+    } else if (takeProfitPercent > 0) {
+      _manualTakeProfitPercent = takeProfitPercent;
+    } else {
+      _manualTakeProfitPercent = null;
+    }
+    
+    notifyListeners();
+  }
+
+  // Métodos separados para manejar SL y TP de forma independiente
+  void setManualStopLoss(double? stopLossPercent) {
+    if (stopLossPercent == null) {
+      _manualStopLossPercent = null;
+    } else if (stopLossPercent > 0) {
+      _manualStopLossPercent = stopLossPercent;
+    } else {
+      _manualStopLossPercent = null;
+    }
+    notifyListeners();
+  }
+
+  void setManualTakeProfit(double? takeProfitPercent) {
+    if (takeProfitPercent == null) {
+      _manualTakeProfitPercent = null;
+    } else if (takeProfitPercent > 0) {
+      _manualTakeProfitPercent = takeProfitPercent;
+    } else {
+      _manualTakeProfitPercent = null;
+    }
     notifyListeners();
   }
 
@@ -592,6 +707,9 @@ class SimulationProvider with ChangeNotifier {
     final pnl = lastTrade.type == 'buy'
         ? (currentPrice - lastTrade.price) * qtyToClose * (lastTrade.leverage ?? 1)
         : (lastTrade.price - currentPrice) * qtyToClose * (lastTrade.leverage ?? 1);
+    
+    final tradeGroupId = DateTime.now().millisecondsSinceEpoch.toString();
+    
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       timestamp: _historicalData[_currentCandleIndex].timestamp,
@@ -603,11 +721,50 @@ class SimulationProvider with ChangeNotifier {
       amount: lastTrade.amount != null ? lastTrade.amount! * (percent / 100) : null,
       leverage: lastTrade.leverage,
       pnl: pnl,
+      tradeGroupId: tradeGroupId,
     );
+    
     _currentTrades.add(closeTrade);
     _currentBalance += pnl;
     final newQty = lastTrade.quantity - qtyToClose;
+    
     if (newQty <= 0.00001) {
+      // Si se cierra completamente la posición, crear la operación completa
+      final entryTrade = Trade(
+        id: lastTrade.id,
+        timestamp: lastTrade.timestamp,
+        type: lastTrade.type,
+        price: lastTrade.price,
+        quantity: lastTrade.quantity,
+        candleIndex: lastTrade.candleIndex,
+        reason: lastTrade.reason,
+        amount: lastTrade.amount,
+        leverage: lastTrade.leverage,
+        pnl: 0.0,
+        tradeGroupId: tradeGroupId,
+      );
+      
+      // Crear la operación completa
+      final completedOperation = CompletedTrade(
+        id: tradeGroupId,
+        entryTrade: entryTrade,
+        exitTrade: closeTrade,
+        totalPnL: pnl,
+        entryTime: entryTrade.timestamp,
+        exitTime: closeTrade.timestamp,
+        entryPrice: entryTrade.price,
+        exitPrice: closeTrade.price,
+        quantity: entryTrade.quantity,
+        leverage: entryTrade.leverage,
+        reason: 'Cierre Parcial',
+      );
+      
+      _completedOperations.add(completedOperation);
+      
+      // Mantener compatibilidad con la lista anterior
+      _completedTrades.add(entryTrade);
+      _completedTrades.add(closeTrade);
+      
       _inPosition = false;
       _entryPrice = 0.0;
       _positionSize = 0.0;
@@ -615,11 +772,6 @@ class SimulationProvider with ChangeNotifier {
       _manualPositionType = 'buy';
       _manualStopLossPercent = null;
       _manualTakeProfitPercent = null;
-      // Mover trade de entrada y cierre a completedTrades
-      if (_currentTrades.length >= 2) {
-        _completedTrades.add(_currentTrades[_currentTrades.length - 2]); // entrada
-      }
-      _completedTrades.add(closeTrade); // cierre
       _currentTrades.clear();
     } else {
       _positionSize = newQty;

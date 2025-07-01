@@ -193,28 +193,20 @@ class _SimulationScreenState extends State<SimulationScreen> {
             flex: 6,
             child: Container(
               margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2C2C2C),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[700]!),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
-                  selector: (context, provider) => Tuple2(
-                    allTrades,
-                    provider.currentCandleIndex,
-                  ),
-                  builder: (context, data, child) {
-                    return TradingViewChart(
-                      candles: simulationProvider.historicalData,
-                      trades: data.item1,
-                      currentCandleIndex: data.item2,
-                      stopLoss: simulationProvider.manualStopLossPrice,
-                      takeProfit: simulationProvider.manualTakeProfitPrice,
-                    );
-                  },
+              child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
+                selector: (context, provider) => Tuple2(
+                  allTrades,
+                  provider.currentCandleIndex,
                 ),
+                builder: (context, data, child) {
+                  return TradingViewChart(
+                    candles: simulationProvider.historicalData,
+                    trades: data.item1,
+                    currentCandleIndex: data.item2,
+                    stopLoss: simulationProvider.manualStopLossPrice,
+                    takeProfit: simulationProvider.manualTakeProfitPrice,
+                  );
+                },
               ),
             ),
           ),
@@ -223,7 +215,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
           Expanded(
             flex: 4,
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(5),
               child: Column(
                 children: [
                   // Order Container (when active)
@@ -236,170 +228,171 @@ class _SimulationScreenState extends State<SimulationScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey[700]!),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _isBuyOrder ? 'Comprar' : 'Vender',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Inter',
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _isBuyOrder ? 'Comprar' : 'Vender',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
+                                    ),
                                   ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                    onPressed: () {
+                                      setState(() {
+                                        _showOrderContainerInline = false;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                              
+                              // Amount Selection
+                              Text(
+                                'Monto',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Inter',
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [100, 400, 1000, 1500, 3000].map((amount) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedAmount = amount.toDouble();
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: _selectedAmount == amount
+                                            ? const Color(0xFF21CE99)
+                                            : const Color(0xFF1E1E1E),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: _selectedAmount == amount
+                                              ? const Color(0xFF21CE99)
+                                              : Colors.grey[700]!,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '\$${amount.toString()}',
+                                        style: TextStyle(
+                                          color: _selectedAmount == amount
+                                              ? Colors.white
+                                              : Colors.grey[300],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              
+                              const SizedBox(height: 10),
+                              
+                              // Leverage Selection
+                              Text(
+                                'Apalancamiento',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [1, 5, 10, 20, 30, 50].map((leverage) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedLeverage = leverage;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: _selectedLeverage == leverage
+                                            ? const Color(0xFF21CE99)
+                                            : const Color(0xFF1E1E1E),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: _selectedLeverage == leverage
+                                              ? const Color(0xFF21CE99)
+                                              : Colors.grey[700]!,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '${leverage}x',
+                                        style: TextStyle(
+                                          color: _selectedLeverage == leverage
+                                              ? Colors.white
+                                              : Colors.grey[300],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              
+                              const SizedBox(height: 20),
+                              
+                              // Confirm Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
                                   onPressed: () {
+                                    simulationProvider.executeManualTrade(
+                                      type: _isBuyOrder ? 'buy' : 'sell',
+                                      amount: _selectedAmount,
+                                      leverage: _selectedLeverage,
+                                    );
                                     setState(() {
                                       _showOrderContainerInline = false;
                                     });
                                   },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            
-                            // Amount Selection
-                            Text(
-                              'Monto',
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [100, 400, 1000, 1500, 3000].map((amount) {
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedAmount = amount.toDouble();
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: _selectedAmount == amount
-                                          ? const Color(0xFF21CE99)
-                                          : const Color(0xFF1E1E1E),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: _selectedAmount == amount
-                                            ? const Color(0xFF21CE99)
-                                            : Colors.grey[700]!,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      '\$${amount.toString()}',
-                                      style: TextStyle(
-                                        color: _selectedAmount == amount
-                                            ? Colors.white
-                                            : Colors.grey[300],
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Inter',
-                                      ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isBuyOrder ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                );
-                              }).toList(),
-                            ),
-                            
-                            const SizedBox(height: 12),
-                            
-                            // Leverage Selection
-                            Text(
-                              'Apalancamiento',
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [1, 5, 10, 20, 30, 50].map((leverage) {
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedLeverage = leverage;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: _selectedLeverage == leverage
-                                          ? const Color(0xFF21CE99)
-                                          : const Color(0xFF1E1E1E),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: _selectedLeverage == leverage
-                                            ? const Color(0xFF21CE99)
-                                            : Colors.grey[700]!,
-                                      ),
+                                  child: Text(
+                                    _isBuyOrder ? 'Comprar' : 'Vender',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
                                     ),
-                                    child: Text(
-                                      '${leverage}x',
-                                      style: TextStyle(
-                                        color: _selectedLeverage == leverage
-                                            ? Colors.white
-                                            : Colors.grey[300],
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            
-                            const Spacer(),
-                            
-                            // Confirm Button
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  simulationProvider.executeManualTrade(
-                                    type: _isBuyOrder ? 'buy' : 'sell',
-                                    amount: _selectedAmount,
-                                    leverage: _selectedLeverage,
-                                  );
-                                  setState(() {
-                                    _showOrderContainerInline = false;
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isBuyOrder ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  _isBuyOrder ? 'Comprar' : 'Vender',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Inter',
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -547,19 +540,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
   Widget _buildStatisticsTab(SimulationProvider simulationProvider) {
     final trades = simulationProvider.currentTrades;
-    final completedTrades = simulationProvider.completedTrades;
+    final completedOperations = simulationProvider.completedOperations;
     final totalTrades = trades.length;
     
-    // Calcular estadísticas de trades completados
-    final totalCompletedTrades = completedTrades.length;
-    final winningTrades = completedTrades.where((t) => t.pnl > 0).length;
-    final losingTrades = completedTrades.where((t) => t.pnl < 0).length;
-    final winRate = totalCompletedTrades > 0 ? winningTrades / totalCompletedTrades : 0.0;
+    // Calcular estadísticas de operaciones completadas
+    final totalCompletedOperations = completedOperations.length;
+    final winningTrades = completedOperations.where((t) => t.totalPnL > 0).length;
+    final losingTrades = completedOperations.where((t) => t.totalPnL < 0).length;
+    final winRate = totalCompletedOperations > 0 ? winningTrades / totalCompletedOperations : 0.0;
     
-    // Calcular P&L total de trades completados
-    final totalPnL = completedTrades.fold(0.0, (sum, trade) => sum + trade.pnl);
-    final maxProfit = completedTrades.isNotEmpty ? completedTrades.map((t) => t.pnl).reduce((a, b) => a > b ? a : b) : 0.0;
-    final maxLoss = completedTrades.isNotEmpty ? completedTrades.map((t) => t.pnl).reduce((a, b) => a < b ? a : b) : 0.0;
+    // Calcular P&L total de operaciones completadas
+    final totalPnL = completedOperations.fold(0.0, (sum, operation) => sum + operation.totalPnL);
+    final maxProfit = completedOperations.isNotEmpty ? completedOperations.map((t) => t.totalPnL).reduce((a, b) => a > b ? a : b) : 0.0;
+    final maxLoss = completedOperations.isNotEmpty ? completedOperations.map((t) => t.totalPnL).reduce((a, b) => a < b ? a : b) : 0.0;
     
     final isSimulationComplete = simulationProvider.currentCandleIndex >= simulationProvider.historicalData.length - 1;
 
@@ -658,8 +651,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       children: [
                         Expanded(
                           child: _buildMetricCard(
-                            'Trades Completados',
-                            totalCompletedTrades.toString(),
+                            'Operaciones Completadas',
+                            totalCompletedOperations.toString(),
                             Icons.check_circle,
                             Colors.blue,
                           ),
@@ -799,8 +792,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Completed Trades History
-            if (completedTrades.isNotEmpty) ...[
+            // Completed Operations History
+            if (completedOperations.isNotEmpty) ...[
               Card(
                 color: const Color(0xFF2C2C2C),
                 child: Padding(
@@ -808,11 +801,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Historial de Trades Completados',
+                            'Historial de Operaciones Completadas',
                             style: TextStyle(
                               color: Colors.grey[400],
                               fontSize: 16,
@@ -821,7 +814,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             ),
                           ),
                           Text(
-                            '$winningTrades/$totalCompletedTrades ganadores',
+                            '$winningTrades/$totalCompletedOperations ganadores',
                             style: TextStyle(
                               color: Colors.grey[400],
                               fontSize: 12,
@@ -832,13 +825,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      ...completedTrades.take(10).map((trade) => _buildCompletedTradeItem(trade)),
+                      ...completedOperations.take(10).map((operation) => _buildCompletedOperationItem(operation)),
                       
-                      if (completedTrades.length > 10) ...[
+                      if (completedOperations.length > 10) ...[
                         const SizedBox(height: 8),
                         Center(
                           child: Text(
-                            '... y ${completedTrades.length - 10} trades más',
+                            '... y ${completedOperations.length - 10} operaciones más',
                             style: TextStyle(
                               color: Colors.grey[500],
                               fontSize: 12,
@@ -927,6 +920,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
           const SizedBox(height: 4),
           Text(
             title,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey[400],
               fontSize: 12,
@@ -1025,83 +1019,137 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  Widget _buildCompletedTradeItem(Trade trade) {
+  Widget _buildCompletedOperationItem(CompletedTrade operation) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: trade.pnl >= 0 
+          color: operation.totalPnL >= 0 
               ? Colors.green.withValues(alpha: 0.3) 
               : Colors.red.withValues(alpha: 0.3),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            trade.pnl >= 0 ? Icons.trending_up : Icons.trending_down,
-            color: trade.pnl >= 0 ? Colors.green : Colors.red,
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${trade.type.toUpperCase()} \$${trade.price.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
+          // Header con tipo de operación y P&L
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    operation.totalPnL >= 0 ? Icons.trending_up : Icons.trending_down,
+                    color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
+                    size: 16,
                   ),
+                  const SizedBox(width: 8),
+                  Text(
+                    operation.operationType.toUpperCase(),
+                    style: TextStyle(
+                      color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '\$${operation.totalPnL.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          // Precios de entrada y salida
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Entrada: \$${operation.entryPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    Text(
+                      operation.entryTime.toString().substring(11, 16), // Solo hora:minuto
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 10,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Salida: \$${operation.exitPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    Text(
+                      operation.exitTime.toString().substring(11, 16), // Solo hora:minuto
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 10,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          
+          // Información adicional
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Cantidad: ${operation.quantity.toStringAsFixed(4)}',
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 10,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              if (operation.leverage != null)
                 Text(
-                  'Cantidad: ${trade.quantity.toStringAsFixed(4)}',
+                  'Apalancamiento: ${operation.leverage}x',
                   style: TextStyle(
                     color: Colors.grey[400],
                     fontSize: 10,
                     fontFamily: 'Inter',
                   ),
                 ),
-                if (trade.leverage != null)
-                  Text(
-                    'Apalancamiento: ${trade.leverage}x',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                if (trade.reason != null)
-                  Text(
-                    'Razón: ${trade.reason}',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 10,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
               Text(
-                '\$${trade.pnl.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: trade.pnl >= 0 ? Colors.green : Colors.red,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              Text(
-                trade.timestamp.toString().substring(11, 16), // Solo hora:minuto
+                'Duración: ${operation.durationFormatted}',
                 style: TextStyle(
                   color: Colors.grey[400],
                   fontSize: 10,
@@ -1110,6 +1158,17 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ),
             ],
           ),
+          if (operation.reason != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Razón: ${operation.reason}',
+              style: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 10,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1130,16 +1189,31 @@ class _ManageSLTPContainer extends StatefulWidget {
 }
 
 class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
-  double? _takeProfitPercent;
-  double? _stopLossPercent;
+  // Escala personalizada para SL y TP
+  static const List<double> _slPercents = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 7, 10];
+  static const List<double> _tpPercents = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 7, 10, 15, 20];
+
+  int? _takeProfitIndex;
+  int? _stopLossIndex;
   double? _partialClosePercent;
+  bool _slEnabled = false;
+  bool _tpEnabled = false;
 
   @override
   void initState() {
     super.initState();
-    // Usar valores actuales o valores por defecto
-    _takeProfitPercent = widget.simulationProvider.manualTakeProfitPercent ?? 6.0;
-    _stopLossPercent = widget.simulationProvider.manualStopLossPercent ?? 2.5;
+    // Si hay valor, buscar el índice correspondiente, si no, null
+    _takeProfitIndex = widget.simulationProvider.manualTakeProfitPercent != null
+        ? _tpPercents.indexWhere((v) => v == widget.simulationProvider.manualTakeProfitPercent)
+        : null;
+    _stopLossIndex = widget.simulationProvider.manualStopLossPercent != null
+        ? _slPercents.indexWhere((v) => v == widget.simulationProvider.manualStopLossPercent)
+        : null;
+    
+    // Inicializar checkboxes basado en si hay valores definidos
+    _tpEnabled = widget.simulationProvider.manualTakeProfitPercent != null;
+    _slEnabled = widget.simulationProvider.manualStopLossPercent != null;
+    
     _partialClosePercent = 0.0;
   }
 
@@ -1148,8 +1222,14 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
     final entryPrice = widget.simulationProvider.entryPrice;
     final positionSize = widget.simulationProvider.positionSize;
     final amount = positionSize * entryPrice;
-    final tpValue = amount * (_takeProfitPercent ?? 0 / 100);
-    final slValue = amount * (_stopLossPercent ?? 0 / 100);
+    
+    // Calcular el P&L esperado basado en el movimiento del precio
+    final tpValue = _takeProfitIndex != null 
+        ? positionSize * entryPrice * (_tpPercents[_takeProfitIndex!] / 100) * (widget.simulationProvider.currentTrades.last.leverage ?? 1)
+        : 0;
+    final slValue = _stopLossIndex != null 
+        ? positionSize * entryPrice * (_slPercents[_stopLossIndex!] / 100) * (widget.simulationProvider.currentTrades.last.leverage ?? 1)
+        : 0;
     final partialValue = amount * (_partialClosePercent ?? 0 / 100);
 
     return Container(
@@ -1178,65 +1258,111 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
             ),
             const SizedBox(height: 12),
             
-            // Take Profit
-            Text('TP: +\$${tpValue.toStringAsFixed(0)} (+${_takeProfitPercent!.toStringAsFixed(1)}%)', 
-                 style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12)),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: Colors.green,
-                inactiveTrackColor: Colors.green.withValues(alpha: 0.2),
-                thumbColor: Colors.green,
-                overlayColor: Colors.green.withValues(alpha: 0.1),
-              ),
-              child: Slider(
-                value: _takeProfitPercent ?? 0,
-                min: 0.1,
-                max: 20.0,
-                divisions: 199,
-                onChanged: (value) {
+            // Take Profit Section
+            Row(
+              children: [
+                Checkbox(
+                  value: _tpEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _tpEnabled = value ?? false;
+                      if (!_tpEnabled) {
+                        _takeProfitIndex = null;
+                        widget.simulationProvider.setManualTakeProfit(null);
+                      } else if (_takeProfitIndex == null) {
+                        // Si se activa pero no hay índice, establecer uno por defecto
+                        _takeProfitIndex = 9; // 1%
+                        widget.simulationProvider.setManualTakeProfit(_tpPercents[9]);
+                      }
+                    });
+                  },
+                  activeColor: Colors.green,
+                ),
+                Expanded(
+                  child: Text(
+                    _tpEnabled && _takeProfitIndex != null
+                        ? 'TP: +\$${tpValue.toStringAsFixed(0)} (+${_tpPercents[_takeProfitIndex!].toStringAsFixed(1)}%)'
+                        : 'TP: Desactivado',
+                    style: TextStyle(
+                      color: _tpEnabled ? Colors.green : Colors.grey[400], 
+                      fontWeight: FontWeight.w600, 
+                      fontSize: 12
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_tpEnabled) ...[
+              Slider(
+                value: _takeProfitIndex?.toDouble() ?? 0.0,
+                min: 0,
+                max: (_tpPercents.length - 1).toDouble(),
+                divisions: _tpPercents.length - 1,
+                label: '+${_tpPercents[_takeProfitIndex ?? 0].toStringAsFixed(1)}%',
+                activeColor: Colors.green,
+                inactiveColor: Colors.green.withValues(alpha: 0.2),
+                onChanged: (v) {
                   setState(() {
-                    _takeProfitPercent = value;
+                    _takeProfitIndex = v.round();
                   });
-                  widget.simulationProvider.setManualSLTP(takeProfitPercent: value);
+                  widget.simulationProvider.setManualTakeProfit(_tpPercents[_takeProfitIndex!]);
                 },
               ),
-            ),
+            ],
             const SizedBox(height: 6),
             
-            // Stop Loss
-            Text('SL: -\$${slValue.toStringAsFixed(0)} (-${_stopLossPercent!.toStringAsFixed(1)}%)', 
-                 style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 12)),
-            Slider(
-              value: _stopLossPercent ?? 0,
-              min: 0,
-              max: 10,
-              divisions: 40,
-              label: '-${_stopLossPercent!.toStringAsFixed(1)}%',
-              activeColor: Colors.red,
-              inactiveColor: Colors.red.withValues(alpha: 0.2),
-              onChanged: (v) {
-                setState(() => _stopLossPercent = v);
-                // Actualizar en tiempo real
-                widget.simulationProvider.setManualSLTP(stopLossPercent: v);
-              },
+            // Stop Loss Section
+            Row(
+              children: [
+                Checkbox(
+                  value: _slEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _slEnabled = value ?? false;
+                      if (!_slEnabled) {
+                        _stopLossIndex = null;
+                        widget.simulationProvider.setManualStopLoss(null);
+                      } else if (_stopLossIndex == null) {
+                        // Si se activa pero no hay índice, establecer uno por defecto
+                        _stopLossIndex = 9; // 1%
+                        widget.simulationProvider.setManualStopLoss(_slPercents[9]);
+                      }
+                    });
+                  },
+                  activeColor: Colors.red,
+                ),
+                Expanded(
+                  child: Text(
+                    _slEnabled && _stopLossIndex != null
+                        ? 'SL: -\$${slValue.toStringAsFixed(0)} (-${_slPercents[_stopLossIndex!].toStringAsFixed(1)}%)'
+                        : 'SL: Desactivado',
+                    style: TextStyle(
+                      color: _slEnabled ? Colors.red : Colors.grey[400], 
+                      fontWeight: FontWeight.w600, 
+                      fontSize: 12
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 6),
-            
-            // Partial Close
-            Text('Parcial: \$${partialValue.toStringAsFixed(0)} (${_partialClosePercent!.toStringAsFixed(1)}%)', 
-                 style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w600, fontSize: 12)),
-            Slider(
-              value: _partialClosePercent ?? 0,
-              min: 0,
-              max: 100,
-              divisions: 100,
-              label: '${_partialClosePercent!.toStringAsFixed(1)}%',
-              activeColor: Colors.blue,
-              inactiveColor: Colors.blue.withValues(alpha: 0.2),
-              onChanged: (v) => setState(() => _partialClosePercent = v),
-            ),
+            if (_slEnabled) ...[
+              Slider(
+                value: _stopLossIndex?.toDouble() ?? 0.0,
+                min: 0,
+                max: (_slPercents.length - 1).toDouble(),
+                divisions: _slPercents.length - 1,
+                label: '-${_slPercents[_stopLossIndex ?? 0].toStringAsFixed(1)}%',
+                activeColor: Colors.red,
+                inactiveColor: Colors.red.withValues(alpha: 0.2),
+                onChanged: (v) {
+                  setState(() {
+                    _stopLossIndex = v.round();
+                  });
+                  widget.simulationProvider.setManualStopLoss(_slPercents[_stopLossIndex!]);
+                },
+              ),
+            ],
             const SizedBox(height: 12),
-            
             Row(
               children: [
                 Expanded(
@@ -1246,9 +1372,12 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                       if ((_partialClosePercent ?? 0) > 0) {
                         widget.simulationProvider.closePartialPosition(_partialClosePercent ?? 0);
                       }
-                      widget.simulationProvider.setManualSLTP(
-                        stopLossPercent: _stopLossPercent,
-                        takeProfitPercent: _takeProfitPercent,
+                      // Aplicar SL y TP de forma independiente
+                      widget.simulationProvider.setManualStopLoss(
+                        _slEnabled && _stopLossIndex != null ? _slPercents[_stopLossIndex!] : null,
+                      );
+                      widget.simulationProvider.setManualTakeProfit(
+                        _tpEnabled && _takeProfitIndex != null ? _tpPercents[_takeProfitIndex!] : null,
                       );
                       // Cerrar el container
                       widget.onClose();
