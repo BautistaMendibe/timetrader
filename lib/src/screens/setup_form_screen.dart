@@ -246,8 +246,12 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Requerido';
                       }
-                      if (double.tryParse(value) == null) {
+                      final number = double.tryParse(value);
+                      if (number == null) {
                         return 'Número válido';
+                      }
+                      if (number <= 0) {
+                        return 'Debe ser mayor a 0';
                       }
                       return null;
                     },
@@ -268,8 +272,12 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Requerido';
                       }
-                      if (double.tryParse(value) == null) {
+                      final number = double.tryParse(value);
+                      if (number == null) {
                         return 'Número válido';
+                      }
+                      if (number <= 0) {
+                        return 'Debe ser mayor a 0';
                       }
                       return null;
                     },

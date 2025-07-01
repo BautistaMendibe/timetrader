@@ -1196,6 +1196,8 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
   int? _takeProfitIndex;
   int? _stopLossIndex;
   double? _partialClosePercent;
+  bool _slEnabled = false;
+  bool _tpEnabled = false;
 
   @override
   void initState() {
@@ -1207,6 +1209,11 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
     _stopLossIndex = widget.simulationProvider.manualStopLossPercent != null
         ? _slPercents.indexWhere((v) => v == widget.simulationProvider.manualStopLossPercent)
         : null;
+    
+    // Inicializar checkboxes basado en si hay valores definidos
+    _tpEnabled = widget.simulationProvider.manualTakeProfitPercent != null;
+    _slEnabled = widget.simulationProvider.manualStopLossPercent != null;
+    
     _partialClosePercent = 0.0;
   }
 
@@ -1250,53 +1257,111 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
               ],
             ),
             const SizedBox(height: 12),
-            // Take Profit
-            Text(
-              _takeProfitIndex != null
-                  ? 'TP: +\$${tpValue.toStringAsFixed(0)} (+${_tpPercents[_takeProfitIndex!].toStringAsFixed(1)}%)'
-                  : 'TP: No definido',
-              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12)),
-            Slider(
-              value: (_takeProfitIndex ?? -1).toDouble(),
-              min: -1,
-              max: (_tpPercents.length - 1).toDouble(),
-              divisions: _tpPercents.length,
-              label: _takeProfitIndex != null ? '+${_tpPercents[_takeProfitIndex!].toStringAsFixed(1)}%' : 'No definido',
-              activeColor: Colors.green,
-              inactiveColor: Colors.green.withValues(alpha: 0.2),
-              onChanged: (v) {
-                setState(() {
-                  _takeProfitIndex = v.round() == -1 ? null : v.round();
-                });
-                widget.simulationProvider.setManualSLTP(
-                  takeProfitPercent: _takeProfitIndex != null ? _tpPercents[_takeProfitIndex!] : null,
-                );
-              },
+            
+            // Take Profit Section
+            Row(
+              children: [
+                Checkbox(
+                  value: _tpEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _tpEnabled = value ?? false;
+                      if (!_tpEnabled) {
+                        _takeProfitIndex = null;
+                        widget.simulationProvider.setManualTakeProfit(null);
+                      } else if (_takeProfitIndex == null) {
+                        // Si se activa pero no hay índice, establecer uno por defecto
+                        _takeProfitIndex = 9; // 1%
+                        widget.simulationProvider.setManualTakeProfit(_tpPercents[9]);
+                      }
+                    });
+                  },
+                  activeColor: Colors.green,
+                ),
+                Expanded(
+                  child: Text(
+                    _tpEnabled && _takeProfitIndex != null
+                        ? 'TP: +\$${tpValue.toStringAsFixed(0)} (+${_tpPercents[_takeProfitIndex!].toStringAsFixed(1)}%)'
+                        : 'TP: Desactivado',
+                    style: TextStyle(
+                      color: _tpEnabled ? Colors.green : Colors.grey[400], 
+                      fontWeight: FontWeight.w600, 
+                      fontSize: 12
+                    ),
+                  ),
+                ),
+              ],
             ),
+            if (_tpEnabled) ...[
+              Slider(
+                value: _takeProfitIndex?.toDouble() ?? 0.0,
+                min: 0,
+                max: (_tpPercents.length - 1).toDouble(),
+                divisions: _tpPercents.length - 1,
+                label: '+${_tpPercents[_takeProfitIndex ?? 0].toStringAsFixed(1)}%',
+                activeColor: Colors.green,
+                inactiveColor: Colors.green.withValues(alpha: 0.2),
+                onChanged: (v) {
+                  setState(() {
+                    _takeProfitIndex = v.round();
+                  });
+                  widget.simulationProvider.setManualTakeProfit(_tpPercents[_takeProfitIndex!]);
+                },
+              ),
+            ],
             const SizedBox(height: 6),
-            // Stop Loss
-            Text(
-              _stopLossIndex != null
-                  ? 'SL: -\$${slValue.toStringAsFixed(0)} (-${_slPercents[_stopLossIndex!].toStringAsFixed(1)}%)'
-                  : 'SL: No definido',
-              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 12)),
-            Slider(
-              value: (_stopLossIndex ?? -1).toDouble(),
-              min: -1,
-              max: (_slPercents.length - 1).toDouble(),
-              divisions: _slPercents.length,
-              label: _stopLossIndex != null ? '-${_slPercents[_stopLossIndex!].toStringAsFixed(1)}%' : 'No definido',
-              activeColor: Colors.red,
-              inactiveColor: Colors.red.withValues(alpha: 0.2),
-              onChanged: (v) {
-                setState(() {
-                  _stopLossIndex = v.round() == -1 ? null : v.round();
-                });
-                widget.simulationProvider.setManualSLTP(
-                  stopLossPercent: _stopLossIndex != null ? _slPercents[_stopLossIndex!] : null,
-                );
-              },
+            
+            // Stop Loss Section
+            Row(
+              children: [
+                Checkbox(
+                  value: _slEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _slEnabled = value ?? false;
+                      if (!_slEnabled) {
+                        _stopLossIndex = null;
+                        widget.simulationProvider.setManualStopLoss(null);
+                      } else if (_stopLossIndex == null) {
+                        // Si se activa pero no hay índice, establecer uno por defecto
+                        _stopLossIndex = 9; // 1%
+                        widget.simulationProvider.setManualStopLoss(_slPercents[9]);
+                      }
+                    });
+                  },
+                  activeColor: Colors.red,
+                ),
+                Expanded(
+                  child: Text(
+                    _slEnabled && _stopLossIndex != null
+                        ? 'SL: -\$${slValue.toStringAsFixed(0)} (-${_slPercents[_stopLossIndex!].toStringAsFixed(1)}%)'
+                        : 'SL: Desactivado',
+                    style: TextStyle(
+                      color: _slEnabled ? Colors.red : Colors.grey[400], 
+                      fontWeight: FontWeight.w600, 
+                      fontSize: 12
+                    ),
+                  ),
+                ),
+              ],
             ),
+            if (_slEnabled) ...[
+              Slider(
+                value: _stopLossIndex?.toDouble() ?? 0.0,
+                min: 0,
+                max: (_slPercents.length - 1).toDouble(),
+                divisions: _slPercents.length - 1,
+                label: '-${_slPercents[_stopLossIndex ?? 0].toStringAsFixed(1)}%',
+                activeColor: Colors.red,
+                inactiveColor: Colors.red.withValues(alpha: 0.2),
+                onChanged: (v) {
+                  setState(() {
+                    _stopLossIndex = v.round();
+                  });
+                  widget.simulationProvider.setManualStopLoss(_slPercents[_stopLossIndex!]);
+                },
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               children: [
@@ -1307,9 +1372,12 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                       if ((_partialClosePercent ?? 0) > 0) {
                         widget.simulationProvider.closePartialPosition(_partialClosePercent ?? 0);
                       }
-                      widget.simulationProvider.setManualSLTP(
-                        stopLossPercent: _stopLossIndex != null ? _slPercents[_stopLossIndex!] : null,
-                        takeProfitPercent: _takeProfitIndex != null ? _tpPercents[_takeProfitIndex!] : null,
+                      // Aplicar SL y TP de forma independiente
+                      widget.simulationProvider.setManualStopLoss(
+                        _slEnabled && _stopLossIndex != null ? _slPercents[_stopLossIndex!] : null,
+                      );
+                      widget.simulationProvider.setManualTakeProfit(
+                        _tpEnabled && _takeProfitIndex != null ? _tpPercents[_takeProfitIndex!] : null,
                       );
                       // Cerrar el container
                       widget.onClose();

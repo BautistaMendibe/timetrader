@@ -122,9 +122,11 @@ class _TradingViewChartState extends State<TradingViewChart> {
           'amount': t.amount,
           'leverage': t.leverage,
         }).toList() ?? [],
-        'stopLoss': widget.stopLoss,
-        'takeProfit': widget.takeProfit,
+        'stopLoss': (widget.stopLoss != null && widget.stopLoss! > 0) ? widget.stopLoss : null,
+        'takeProfit': (widget.takeProfit != null && widget.takeProfit! > 0) ? widget.takeProfit : null,
       };
+
+
 
       final jsonData = jsonEncode(data);
       

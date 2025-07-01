@@ -185,14 +185,14 @@ class SimulationProvider with ChangeNotifier {
     bool shouldClose = false;
     String closeReason = '';
     
-    // Check stop loss
-    if (candle.low <= _stopLossPrice) {
+    // Check stop loss (only if it's greater than 0)
+    if (_stopLossPrice > 0 && candle.low <= _stopLossPrice) {
       shouldClose = true;
       closeReason = 'Stop Loss';
     }
     
-    // Check take profit
-    if (candle.high >= _takeProfitPrice) {
+    // Check take profit (only if it's greater than 0)
+    if (_takeProfitPrice > 0 && candle.high >= _takeProfitPrice) {
       shouldClose = true;
       closeReason = 'Take Profit';
     }
@@ -253,13 +253,13 @@ class SimulationProvider with ChangeNotifier {
     final stopLossDistance = price * (_currentSetup!.stopLossPercent / 100);
     _positionSize = riskAmount / stopLossDistance;
     
-    // Set stop loss and take profit
+    // Set stop loss and take profit (only if percentages are greater than 0)
     if (type == 'buy') {
-      _stopLossPrice = price - stopLossDistance;
-      _takeProfitPrice = price + (price * _currentSetup!.takeProfitPercent / 100);
+      _stopLossPrice = _currentSetup!.stopLossPercent > 0 ? price - stopLossDistance : 0.0;
+      _takeProfitPrice = _currentSetup!.takeProfitPercent > 0 ? price + (price * _currentSetup!.takeProfitPercent / 100) : 0.0;
     } else {
-      _stopLossPrice = price + stopLossDistance;
-      _takeProfitPrice = price - (price * _currentSetup!.takeProfitPercent / 100);
+      _stopLossPrice = _currentSetup!.stopLossPercent > 0 ? price + stopLossDistance : 0.0;
+      _takeProfitPrice = _currentSetup!.takeProfitPercent > 0 ? price - (price * _currentSetup!.takeProfitPercent / 100) : 0.0;
     }
     
     // Execute trade
@@ -654,8 +654,46 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void setManualSLTP({double? stopLossPercent, double? takeProfitPercent}) {
-    if (stopLossPercent != null) _manualStopLossPercent = stopLossPercent;
-    if (takeProfitPercent != null) _manualTakeProfitPercent = takeProfitPercent;
+    // Si se pasa null explícitamente, limpiar el valor
+    if (stopLossPercent == null) {
+      _manualStopLossPercent = null;
+    } else if (stopLossPercent > 0) {
+      _manualStopLossPercent = stopLossPercent;
+    } else {
+      _manualStopLossPercent = null;
+    }
+    
+    if (takeProfitPercent == null) {
+      _manualTakeProfitPercent = null;
+    } else if (takeProfitPercent > 0) {
+      _manualTakeProfitPercent = takeProfitPercent;
+    } else {
+      _manualTakeProfitPercent = null;
+    }
+    
+    notifyListeners();
+  }
+
+  // Métodos separados para manejar SL y TP de forma independiente
+  void setManualStopLoss(double? stopLossPercent) {
+    if (stopLossPercent == null) {
+      _manualStopLossPercent = null;
+    } else if (stopLossPercent > 0) {
+      _manualStopLossPercent = stopLossPercent;
+    } else {
+      _manualStopLossPercent = null;
+    }
+    notifyListeners();
+  }
+
+  void setManualTakeProfit(double? takeProfitPercent) {
+    if (takeProfitPercent == null) {
+      _manualTakeProfitPercent = null;
+    } else if (takeProfitPercent > 0) {
+      _manualTakeProfitPercent = takeProfitPercent;
+    } else {
+      _manualTakeProfitPercent = null;
+    }
     notifyListeners();
   }
 
