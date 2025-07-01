@@ -41,11 +41,12 @@ class SetupDetailScreen extends StatelessWidget {
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: 'Editar setup',
               ),
-              IconButton(
-                onPressed: () => _showDeleteDialog(context, setup),
-                icon: const Icon(Icons.delete_outline),
-                tooltip: 'Eliminar setup',
-              ),
+              if (!setup.isExample)
+                IconButton(
+                  onPressed: () => _showDeleteDialog(context, setup),
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Eliminar setup',
+                ),
             ],
           ),
           body: ListView(
@@ -361,16 +362,29 @@ class SetupDetailScreen extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () {
-                context.read<SetupProvider>().deleteSetup(setup.id);
+              onPressed: () async {
                 Navigator.of(context).pop();
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Setup eliminado'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                try {
+                  await context.read<SetupProvider>().deleteSetup(setup.id);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Setup eliminado'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error al eliminar: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
               child: const Text(
                 'Eliminar',

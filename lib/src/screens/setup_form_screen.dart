@@ -76,17 +76,30 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
         backgroundColor: const Color(0xFF1A1A1A),
         foregroundColor: Colors.white,
         actions: [
-          TextButton(
-            onPressed: _saveSetup,
-            child: const Text(
-              'Guardar',
-              style: TextStyle(
-                color: Color(0xFF21CE99),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+          if (_isSaving)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF21CE99)),
+                ),
+              ),
+            )
+          else
+            TextButton(
+              onPressed: _saveSetup,
+              child: const Text(
+                'Guardar',
+                style: TextStyle(
+                  color: Color(0xFF21CE99),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
         ],
       ),
       body: Form(
@@ -513,46 +526,75 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
     );
   }
 
-  void _saveSetup() {
+  bool _isSaving = false;
+
+  Future<void> _saveSetup() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final setup = Setup(
-      id: widget.setupToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _nameController.text,
-      asset: _assetController.text,
-      positionSize: double.parse(_positionSizeController.text),
-      positionSizeType: _positionSizeType,
-      stopLossPercent: double.parse(_stopLossController.text),
-      stopLossType: _stopLossType,
-      takeProfitPercent: double.parse(_takeProfitController.text),
-      takeProfitType: _takeProfitType,
-      useAdvancedRules: _useAdvancedRules,
-      rules: _selectedRules,
-      createdAt: widget.setupToEdit?.createdAt ?? DateTime.now(),
-    );
+    setState(() {
+      _isSaving = true;
+    });
 
-    final setupProvider = context.read<SetupProvider>();
-    
-    if (widget.setupToEdit != null) {
-      setupProvider.updateSetup(setup);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Setup actualizado exitosamente'),
-          backgroundColor: Color(0xFF21CE99),
-        ),
+    try {
+      final setup = Setup(
+        id: widget.setupToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        name: _nameController.text,
+        asset: _assetController.text,
+        positionSize: double.parse(_positionSizeController.text),
+        positionSizeType: _positionSizeType,
+        stopLossPercent: double.parse(_stopLossController.text),
+        stopLossType: _stopLossType,
+        takeProfitPercent: double.parse(_takeProfitController.text),
+        takeProfitType: _takeProfitType,
+        useAdvancedRules: _useAdvancedRules,
+        rules: _selectedRules,
+        createdAt: widget.setupToEdit?.createdAt ?? DateTime.now(),
       );
-    } else {
-      setupProvider.addSetup(setup);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Setup creado exitosamente'),
-          backgroundColor: Color(0xFF21CE99),
-        ),
-      );
+
+      final setupProvider = context.read<SetupProvider>();
+      
+      if (widget.setupToEdit != null) {
+        await setupProvider.updateSetup(setup);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Setup actualizado exitosamente'),
+              backgroundColor: Color(0xFF21CE99),
+            ),
+          );
+        }
+      } else {
+        await setupProvider.addSetup(setup);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Setup creado exitosamente'),
+              backgroundColor: Color(0xFF21CE99),
+            ),
+          );
+        }
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
-
-    Navigator.pop(context);
   }
 } 

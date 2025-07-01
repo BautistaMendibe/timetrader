@@ -18,6 +18,27 @@ class SetupsListScreen extends StatelessWidget {
       ),
       body: Consumer<SetupProvider>(
         builder: (context, setupProvider, child) {
+          if (setupProvider.isLoading) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF21CE99)),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Cargando setups...',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
           if (setupProvider.setups.isEmpty) {
             return const Center(
               child: Column(
@@ -114,27 +135,51 @@ class _SetupCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                                         decoration: BoxDecoration(
-                       color: setup.useAdvancedRules
-                           ? const Color(0xFF21CE99).withValues(alpha: 0.2)
-                           : Colors.grey.withValues(alpha: 0.2),
-                       borderRadius: BorderRadius.circular(20),
-                     ),
-                    child: Text(
-                      setup.useAdvancedRules ? 'Avanzado' : 'Básico',
-                      style: TextStyle(
-                        color: setup.useAdvancedRules
-                            ? const Color(0xFF21CE99)
-                            : Colors.grey,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                  Column(
+                    children: [
+                      if (setup.isExample)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Ejemplo',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: setup.useAdvancedRules
+                              ? const Color(0xFF21CE99).withValues(alpha: 0.2)
+                              : Colors.grey.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          setup.useAdvancedRules ? 'Avanzado' : 'Básico',
+                          style: TextStyle(
+                            color: setup.useAdvancedRules
+                                ? const Color(0xFF21CE99)
+                                : Colors.grey,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),

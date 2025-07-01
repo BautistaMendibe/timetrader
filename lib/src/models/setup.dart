@@ -18,6 +18,7 @@ class Setup {
   final bool useAdvancedRules;
   final List<Rule> rules;
   final DateTime createdAt;
+  final bool isExample;
 
   Setup({
     required this.id,
@@ -32,6 +33,7 @@ class Setup {
     this.useAdvancedRules = false,
     this.rules = const [],
     required this.createdAt,
+    this.isExample = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -48,6 +50,7 @@ class Setup {
       'useAdvancedRules': useAdvancedRules,
       'rules': rules.map((rule) => rule.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
+      'isExample': isExample,
     };
   }
 
@@ -77,6 +80,7 @@ class Setup {
               .toList() ??
           [],
       createdAt: DateTime.parse(json['createdAt']),
+      isExample: json['isExample'] ?? false,
     );
   }
 
@@ -93,6 +97,7 @@ class Setup {
     bool? useAdvancedRules,
     List<Rule>? rules,
     DateTime? createdAt,
+    bool? isExample,
   }) {
     return Setup(
       id: id ?? this.id,
@@ -107,6 +112,7 @@ class Setup {
       useAdvancedRules: useAdvancedRules ?? this.useAdvancedRules,
       rules: rules ?? this.rules,
       createdAt: createdAt ?? this.createdAt,
+      isExample: isExample ?? this.isExample,
     );
   }
 

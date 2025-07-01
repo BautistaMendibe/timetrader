@@ -1,76 +1,50 @@
 import 'package:flutter/foundation.dart';
 import '../models/setup.dart';
 import '../models/rule.dart';
+import 'firebase_setup_service.dart';
 
 class SetupProvider with ChangeNotifier {
   final List<Setup> _setups = [];
   final List<Rule> _customRules = [];
   Setup? _selectedSetup;
+  final FirebaseSetupService _firebaseService = FirebaseSetupService();
+  bool _isLoading = false;
 
   List<Setup> get setups => _setups;
   List<Rule> get customRules => _customRules;
   Setup? get selectedSetup => _selectedSetup;
+  bool get isLoading => _isLoading;
 
   SetupProvider() {
-    _initializeSampleSetups();
     _initializeSampleCustomRules();
+    _loadSetups();
   }
 
-  void _initializeSampleSetups() {
-    _setups.addAll([
-      Setup(
-        id: '1',
-        name: 'Scalping BTC',
-        asset: 'BTC/USD',
-        positionSize: 100.0,
-        positionSizeType: ValueType.fixed,
-        stopLossPercent: 2.0,
-        stopLossType: ValueType.percentage,
-        takeProfitPercent: 4.0,
-        takeProfitType: ValueType.percentage,
-        useAdvancedRules: true,
-        rules: [
-          PredefinedRules.getRuleById('ema_cross')!,
-          PredefinedRules.getRuleById('morning_session')!,
-          PredefinedRules.getRuleById('volume_spike')!,
-        ],
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      ),
-      Setup(
-        id: '2',
-        name: 'Swing Trading EUR/USD',
-        asset: 'EUR/USD',
-        positionSize: 5.0,
-        positionSizeType: ValueType.percentage,
-        stopLossPercent: 1.5,
-        stopLossType: ValueType.percentage,
-        takeProfitPercent: 3.0,
-        takeProfitType: ValueType.percentage,
-        useAdvancedRules: true,
-        rules: [
-          PredefinedRules.getRuleById('rsi_oversold')!,
-          PredefinedRules.getRuleById('hammer_pattern')!,
-          PredefinedRules.getRuleById('support_resistance')!,
-        ],
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-      Setup(
-        id: '3',
-        name: 'Day Trading S&P500',
-        asset: 'S&P500',
-        positionSize: 1000.0,
-        positionSizeType: ValueType.fixed,
-        stopLossPercent: 50.0,
-        stopLossType: ValueType.fixed,
-        takeProfitPercent: 100.0,
-        takeProfitType: ValueType.fixed,
-        useAdvancedRules: false,
-        rules: [
-          PredefinedRules.getRuleById('london_session')!,
-        ],
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-    ]);
+  Future<void> _loadSetups() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+      
+      final setups = await _firebaseService.getAllSetups();
+      _setups.clear();
+      _setups.addAll(setups);
+      
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      print('Error loading setups: $e');
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Listen to setups changes
+  void startListening() {
+    _firebaseService.listenToAllSetups().listen((setups) {
+      _setups.clear();
+      _setups.addAll(setups);
+      notifyListeners();
+    });
   }
 
   void _initializeSampleCustomRules() {
@@ -101,22 +75,34 @@ class SetupProvider with ChangeNotifier {
     ]);
   }
 
-  void addSetup(Setup setup) {
-    _setups.add(setup);
-    notifyListeners();
-  }
-
-  void updateSetup(Setup setup) {
-    final index = _setups.indexWhere((s) => s.id == setup.id);
-    if (index != -1) {
-      _setups[index] = setup;
-      notifyListeners();
+  Future<void> addSetup(Setup setup) async {
+    try {
+      await _firebaseService.addSetup(setup);
+      // The setup will be added to the list through the stream listener
+    } catch (e) {
+      print('Error adding setup: $e');
+      rethrow;
     }
   }
 
-  void deleteSetup(String id) {
-    _setups.removeWhere((setup) => setup.id == id);
-    notifyListeners();
+  Future<void> updateSetup(Setup setup) async {
+    try {
+      await _firebaseService.updateSetup(setup);
+      // The setup will be updated in the list through the stream listener
+    } catch (e) {
+      print('Error updating setup: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteSetup(String id) async {
+    try {
+      await _firebaseService.deleteSetup(id);
+      // The setup will be removed from the list through the stream listener
+    } catch (e) {
+      print('Error deleting setup: $e');
+      rethrow;
+    }
   }
 
   void selectSetup(Setup setup) {
@@ -124,7 +110,16 @@ class SetupProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Setup? getSetupById(String id) {
+  Future<Setup?> getSetupById(String id) async {
+    try {
+      return await _firebaseService.getSetupById(id);
+    } catch (e) {
+      print('Error getting setup by ID: $e');
+      return null;
+    }
+  }
+
+  Setup? getSetupByIdSync(String id) {
     try {
       return _setups.firstWhere((setup) => setup.id == id);
     } catch (e) {
@@ -134,7 +129,7 @@ class SetupProvider with ChangeNotifier {
 
   // Métodos para manejar reglas en setups
   void addRuleToSetup(String setupId, Rule rule) {
-    final setup = getSetupById(setupId);
+    final setup = getSetupByIdSync(setupId);
     if (setup != null) {
       final updatedSetup = setup.copyWith(
         rules: [...setup.rules, rule],
@@ -144,7 +139,7 @@ class SetupProvider with ChangeNotifier {
   }
 
   void removeRuleFromSetup(String setupId, String ruleId) {
-    final setup = getSetupById(setupId);
+    final setup = getSetupByIdSync(setupId);
     if (setup != null) {
       final updatedRules = setup.rules.where((rule) => rule.id != ruleId).toList();
       final updatedSetup = setup.copyWith(rules: updatedRules);
@@ -153,7 +148,7 @@ class SetupProvider with ChangeNotifier {
   }
 
   void updateRuleInSetup(String setupId, Rule updatedRule) {
-    final setup = getSetupById(setupId);
+    final setup = getSetupByIdSync(setupId);
     if (setup != null) {
       final updatedRules = setup.rules.map((rule) {
         return rule.id == updatedRule.id ? updatedRule : rule;
@@ -164,7 +159,7 @@ class SetupProvider with ChangeNotifier {
   }
 
   void toggleRuleInSetup(String setupId, String ruleId, bool isActive) {
-    final setup = getSetupById(setupId);
+    final setup = getSetupByIdSync(setupId);
     if (setup != null) {
       final updatedRules = setup.rules.map((rule) {
         if (rule.id == ruleId) {

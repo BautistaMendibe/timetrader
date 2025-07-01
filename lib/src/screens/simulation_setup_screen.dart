@@ -340,7 +340,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                                 child: Text(setup.name),
                               );
                             }).toList(),
-                            onChanged: (value) {
+                            onChanged: (value) async {
                               if (value != null) {
                                 setState(() {
                                   _selectedSetup = value;
