@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "666957697784",
+    "project_id": "timetrader-83265",
+    "storage_bucket": "timetrader-83265.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:666957697784:android:2741ed343229aea0db610d",
+        "android_client_info": {
+          "package_name": "com.example.timetrader"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "666957697784-q8s3c3tb23jaac075qp40k1hcq1qjag6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAiKhovjDFUn5Y2il5nd6gLh3CbUFqvIGc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "666957697784-q8s3c3tb23jaac075qp40k1hcq1qjag6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "666957697784-gv4ecuqafu5d7b3hv9uta4cdpo21mcds.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.timetrader"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
