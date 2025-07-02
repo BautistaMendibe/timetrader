@@ -116,6 +116,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () async {
+                    if (!mounted) return;
                     final shouldExit = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
@@ -137,9 +138,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         ],
                       ),
                     );
-                    if (shouldExit == true) {
+                    if (shouldExit == true && mounted) {
                       simulationProvider.stopSimulation();
-                      Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+                        }
+                      });
                     }
                   },
                 ),
@@ -546,7 +551,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
     // Calcular estadísticas de operaciones completadas
     final totalCompletedOperations = completedOperations.length;
     final winningTrades = completedOperations.where((t) => t.totalPnL > 0).length;
-    final losingTrades = completedOperations.where((t) => t.totalPnL < 0).length;
     final winRate = totalCompletedOperations > 0 ? winningTrades / totalCompletedOperations : 0.0;
     
     // Calcular P&L total de operaciones completadas
@@ -959,7 +963,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
   Widget _buildTradeItem(Trade trade) {
     // Todos los trades en el historial ahora son abiertos
-    final isOpen = true;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1221,7 +1224,6 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
   Widget build(BuildContext context) {
     final entryPrice = widget.simulationProvider.entryPrice;
     final positionSize = widget.simulationProvider.positionSize;
-    final amount = positionSize * entryPrice;
     
     // Calcular el P&L esperado basado en el movimiento del precio
     final tpValue = _takeProfitIndex != null 
@@ -1230,7 +1232,6 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
     final slValue = _stopLossIndex != null 
         ? positionSize * entryPrice * (_slPercents[_stopLossIndex!] / 100) * (widget.simulationProvider.currentTrades.last.leverage ?? 1)
         : 0;
-    final partialValue = amount * (_partialClosePercent ?? 0 / 100);
 
     return Container(
       padding: const EdgeInsets.all(12),

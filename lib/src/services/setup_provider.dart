@@ -32,7 +32,6 @@ class SetupProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      print('Error loading setups: $e');
       _isLoading = false;
       notifyListeners();
     }
@@ -80,7 +79,6 @@ class SetupProvider with ChangeNotifier {
       await _firebaseService.addSetup(setup);
       // The setup will be added to the list through the stream listener
     } catch (e) {
-      print('Error adding setup: $e');
       rethrow;
     }
   }
@@ -90,7 +88,6 @@ class SetupProvider with ChangeNotifier {
       await _firebaseService.updateSetup(setup);
       // The setup will be updated in the list through the stream listener
     } catch (e) {
-      print('Error updating setup: $e');
       rethrow;
     }
   }
@@ -100,7 +97,6 @@ class SetupProvider with ChangeNotifier {
       await _firebaseService.deleteSetup(id);
       // The setup will be removed from the list through the stream listener
     } catch (e) {
-      print('Error deleting setup: $e');
       rethrow;
     }
   }
@@ -114,7 +110,6 @@ class SetupProvider with ChangeNotifier {
     try {
       return await _firebaseService.getSetupById(id);
     } catch (e) {
-      print('Error getting setup by ID: $e');
       return null;
     }
   }

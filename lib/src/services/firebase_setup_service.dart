@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/setup.dart';
-import '../models/rule.dart';
 
 class FirebaseSetupService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -77,9 +76,8 @@ class FirebaseSetupService {
     try {
       // Check if Firebase is initialized
       try {
-        await _firestore.app;
+        _firestore.app;
       } catch (e) {
-        print('Firebase not configured, returning example setups only');
         return _exampleSetups
             .map((exampleData) => Setup.fromJson(exampleData))
             .toList();
@@ -94,7 +92,14 @@ class FirebaseSetupService {
 
       // Convert user setups
       final List<Setup> userSetups = userSetupsSnapshot.docs
-          .map((doc) => Setup.fromJson({...doc.data() as Map<String, dynamic>, 'id': doc.id}))
+          .map((doc) {
+            final data = doc.data();
+            if (data != null && data is Map<String, dynamic>) {
+              return Setup.fromJson({...data, 'id': doc.id});
+            } else {
+              return Setup.fromJson({'id': doc.id});
+            }
+          })
           .toList();
 
       // Convert example setups
@@ -105,7 +110,6 @@ class FirebaseSetupService {
       // Combine and return (examples first, then user setups)
       return [...exampleSetups, ...userSetups];
     } catch (e) {
-      print('Error getting setups: $e');
       // Return only example setups if there's an error
       return _exampleSetups
           .map((exampleData) => Setup.fromJson(exampleData))
@@ -123,10 +127,16 @@ class FirebaseSetupService {
           .get();
 
       return snapshot.docs
-          .map((doc) => Setup.fromJson({...doc.data() as Map<String, dynamic>, 'id': doc.id}))
+          .map((doc) {
+            final data = doc.data();
+            if (data != null && data is Map<String, dynamic>) {
+              return Setup.fromJson({...data, 'id': doc.id});
+            } else {
+              return Setup.fromJson({'id': doc.id});
+            }
+          })
           .toList();
     } catch (e) {
-      print('Error getting user setups: $e');
       return [];
     }
   }
@@ -139,7 +149,6 @@ class FirebaseSetupService {
       
       await _firestore.collection(_collectionName).add(setupData);
     } catch (e) {
-      print('Error adding setup: $e');
       throw Exception('Failed to add setup: $e');
     }
   }
@@ -152,7 +161,6 @@ class FirebaseSetupService {
       
       await _firestore.collection(_collectionName).doc(setup.id).update(setupData);
     } catch (e) {
-      print('Error updating setup: $e');
       throw Exception('Failed to update setup: $e');
     }
   }
@@ -168,7 +176,6 @@ class FirebaseSetupService {
       
       await _firestore.collection(_collectionName).doc(setupId).delete();
     } catch (e) {
-      print('Error deleting setup: $e');
       throw Exception('Failed to delete setup: $e');
     }
   }
@@ -190,12 +197,16 @@ class FirebaseSetupService {
       final DocumentSnapshot doc = await _firestore.collection(_collectionName).doc(setupId).get();
       
       if (doc.exists) {
-        return Setup.fromJson({...doc.data() as Map<String, dynamic>, 'id': doc.id});
+        final data = doc.data();
+        if (data != null && data is Map<String, dynamic>) {
+          return Setup.fromJson({...data, 'id': doc.id});
+        } else {
+          return Setup.fromJson({'id': doc.id});
+        }
       }
       
       return null;
     } catch (e) {
-      print('Error getting setup by ID: $e');
       return null;
     }
   }
@@ -220,7 +231,7 @@ class FirebaseSetupService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => Setup.fromJson({...doc.data() as Map<String, dynamic>, 'id': doc.id}))
+            .map((doc) => Setup.fromJson({...doc.data(), 'id': doc.id}))
             .toList());
   }
 
@@ -233,7 +244,7 @@ class FirebaseSetupService {
         .snapshots()
         .map((snapshot) {
           final userSetups = snapshot.docs
-              .map((doc) => Setup.fromJson({...doc.data() as Map<String, dynamic>, 'id': doc.id}))
+              .map((doc) => Setup.fromJson({...doc.data(), 'id': doc.id}))
               .toList();
           
           final exampleSetups = _exampleSetups
