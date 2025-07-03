@@ -28,12 +28,14 @@ class Candle {
 
   factory Candle.fromJson(Map<String, dynamic> json) {
     return Candle(
-      timestamp: DateTime.parse(json['timestamp']),
-      open: json['open'].toDouble(),
-      high: json['high'].toDouble(),
-      low: json['low'].toDouble(),
-      close: json['close'].toDouble(),
-      volume: json['volume'].toDouble(),
+      timestamp: json['timestamp'] != null 
+          ? DateTime.parse(json['timestamp']) 
+          : DateTime.now(),
+      open: (json['open'] ?? 0.0).toDouble(),
+      high: (json['high'] ?? 0.0).toDouble(),
+      low: (json['low'] ?? 0.0).toDouble(),
+      close: (json['close'] ?? 0.0).toDouble(),
+      volume: (json['volume'] ?? 0.0).toDouble(),
     );
   }
 } 

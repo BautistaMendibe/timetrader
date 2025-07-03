@@ -56,22 +56,22 @@ class Setup {
 
   factory Setup.fromJson(Map<String, dynamic> json) {
     return Setup(
-      id: json['id'],
-      name: json['name'],
-      asset: json['asset'],
-      positionSize: json['positionSize'].toDouble(),
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      asset: json['asset'] ?? '',
+      positionSize: (json['positionSize'] ?? 0.0).toDouble(),
       positionSizeType: ValueType.values.firstWhere(
-        (e) => e.toString() == json['positionSizeType'],
+        (e) => e.toString() == (json['positionSizeType'] ?? ValueType.fixed.toString()),
         orElse: () => ValueType.fixed,
       ),
-      stopLossPercent: json['stopLossPercent'].toDouble(),
+      stopLossPercent: (json['stopLossPercent'] ?? 0.0).toDouble(),
       stopLossType: ValueType.values.firstWhere(
-        (e) => e.toString() == json['stopLossType'],
+        (e) => e.toString() == (json['stopLossType'] ?? ValueType.percentage.toString()),
         orElse: () => ValueType.percentage,
       ),
-      takeProfitPercent: json['takeProfitPercent'].toDouble(),
+      takeProfitPercent: (json['takeProfitPercent'] ?? 0.0).toDouble(),
       takeProfitType: ValueType.values.firstWhere(
-        (e) => e.toString() == json['takeProfitType'],
+        (e) => e.toString() == (json['takeProfitType'] ?? ValueType.percentage.toString()),
         orElse: () => ValueType.percentage,
       ),
       useAdvancedRules: json['useAdvancedRules'] ?? false,
@@ -79,7 +79,9 @@ class Setup {
               ?.map((ruleJson) => Rule.fromJson(ruleJson))
               .toList() ??
           [],
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : DateTime.now(),
       isExample: json['isExample'] ?? false,
     );
   }

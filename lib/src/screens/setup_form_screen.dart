@@ -538,6 +538,7 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
     });
 
     try {
+      print('DEBUG: Iniciando guardado de setup...');
       final setup = Setup(
         id: widget.setupToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text,
@@ -555,30 +556,94 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
 
       final setupProvider = context.read<SetupProvider>();
       
+      print('DEBUG: Setup creado, guardando en Firebase...');
+      
       if (widget.setupToEdit != null) {
         await setupProvider.updateSetup(setup);
         if (mounted) {
+          // Limpiar el estado de loading antes de mostrar el snackbar
+          setState(() {
+            _isSaving = false;
+          });
+          
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Setup actualizado exitosamente'),
               backgroundColor: Color(0xFF21CE99),
             ),
           );
+          Navigator.pop(context);
         }
       } else {
+        print('DEBUG: Guardando nuevo setup...');
         await setupProvider.addSetup(setup);
+        print('DEBUG: Setup guardado exitosamente (local o Firebase)');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Setup creado exitosamente'),
-              backgroundColor: Color(0xFF21CE99),
-            ),
+          // Limpiar el estado de loading antes de mostrar el diálogo
+          setState(() {
+            _isSaving = false;
+          });
+          
+          print('DEBUG: Mostrando diálogo de confirmación...');
+          // Mostrar diálogo de confirmación para nuevos setups
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                backgroundColor: const Color(0xFF2A2A2A),
+                title: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      color: Color(0xFF21CE99),
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      '¡Setup Creado!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Text(
+                  'El setup "${setup.name}" ha sido creado exitosamente.',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Cerrar diálogo
+                      Navigator.of(context).pop(); // Volver al listado
+                      // Mostrar snackbar adicional en la pantalla del listado
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Setup "${setup.name}" agregado al listado'),
+                          backgroundColor: const Color(0xFF21CE99),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Ver Listado',
+                      style: TextStyle(
+                        color: Color(0xFF21CE99),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         }
-      }
-
-      if (mounted) {
-        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -590,7 +655,8 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
         );
       }
     } finally {
-      if (mounted) {
+      // Solo limpiar el estado si no se ha limpiado ya
+      if (mounted && _isSaving) {
         setState(() {
           _isSaving = false;
         });

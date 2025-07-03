@@ -5,8 +5,22 @@ import '../services/setup_provider.dart';
 import '../models/setup.dart';
 import '../models/rule.dart';
 
-class SetupsListScreen extends StatelessWidget {
+class SetupsListScreen extends StatefulWidget {
   const SetupsListScreen({super.key});
+
+  @override
+  State<SetupsListScreen> createState() => _SetupsListScreenState();
+}
+
+class _SetupsListScreenState extends State<SetupsListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Iniciar la escucha de cambios en los setups
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SetupProvider>().startListening();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -76,9 +76,23 @@ class SetupProvider with ChangeNotifier {
 
   Future<void> addSetup(Setup setup) async {
     try {
-      await _firebaseService.addSetup(setup);
-      // The setup will be added to the list through the stream listener
+      print('DEBUG: SetupProvider.addSetup - Iniciando...');
+      
+      // Temporalmente, agregar el setup localmente para testing
+      _setups.add(setup);
+      notifyListeners();
+      print('DEBUG: SetupProvider.addSetup - Setup agregado localmente');
+      
+      // Intentar guardar en Firebase
+      try {
+        await _firebaseService.addSetup(setup);
+        print('DEBUG: SetupProvider.addSetup - Completado exitosamente en Firebase');
+      } catch (firebaseError) {
+        print('DEBUG: SetupProvider.addSetup - Error en Firebase: $firebaseError');
+        // No rethrow para que la app funcione sin Firebase
+      }
     } catch (e) {
+      print('DEBUG: SetupProvider.addSetup - Error: $e');
       rethrow;
     }
   }
