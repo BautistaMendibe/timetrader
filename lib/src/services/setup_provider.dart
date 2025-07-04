@@ -77,23 +77,23 @@ class SetupProvider with ChangeNotifier {
 
   Future<void> addSetup(Setup setup) async {
     try {
-      print('DEBUG: SetupProvider.addSetup - Iniciando...');
+      debugPrint('DEBUG: SetupProvider.addSetup - Iniciando...');
       
       // Temporalmente, agregar el setup localmente para testing
       _setups.add(setup);
       notifyListeners();
-      print('DEBUG: SetupProvider.addSetup - Setup agregado localmente');
+      debugPrint('DEBUG: SetupProvider.addSetup - Setup agregado localmente');
       
       // Intentar guardar en Firebase
       try {
         await _firebaseService.addSetup(setup);
-        print('DEBUG: SetupProvider.addSetup - Completado exitosamente en Firebase');
+        debugPrint('DEBUG: SetupProvider.addSetup - Completado exitosamente en Firebase');
       } catch (firebaseError) {
-        print('DEBUG: SetupProvider.addSetup - Error en Firebase: $firebaseError');
+        debugPrint('DEBUG: SetupProvider.addSetup - Error en Firebase: $firebaseError');
         // No rethrow para que la app funcione sin Firebase
       }
     } catch (e) {
-      print('DEBUG: SetupProvider.addSetup - Error: $e');
+      debugPrint('DEBUG: SetupProvider.addSetup - Error: $e');
       rethrow;
     }
   }
@@ -109,9 +109,9 @@ class SetupProvider with ChangeNotifier {
 
   Future<void> deleteSetup(String id, {String? setupName}) async {
     try {
-      print('DEBUG: SetupProvider.deleteSetup - Iniciando eliminación del setup: $id');
+      debugPrint('DEBUG: SetupProvider.deleteSetup - Iniciando eliminación del setup: $id');
       await _firebaseService.deleteSetup(id);
-      print('DEBUG: SetupProvider.deleteSetup - Eliminación completada en Firebase');
+      debugPrint('DEBUG: SetupProvider.deleteSetup - Eliminación completada en Firebase');
       
       // Guardar el nombre del setup eliminado para mostrar el snackbar
       if (setupName != null) {
@@ -120,7 +120,7 @@ class SetupProvider with ChangeNotifier {
       
       // The setup will be removed from the list through the stream listener
     } catch (e) {
-      print('DEBUG: SetupProvider.deleteSetup - Error: $e');
+      debugPrint('DEBUG: SetupProvider.deleteSetup - Error: $e');
       rethrow;
     }
   }

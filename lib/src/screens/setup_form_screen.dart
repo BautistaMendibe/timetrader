@@ -539,7 +539,7 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
     });
 
     try {
-      print('DEBUG: Iniciando guardado de setup...');
+      debugPrint('DEBUG: Iniciando guardado de setup...');
       final setup = Setup(
         id: widget.setupToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text,
@@ -557,7 +557,7 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
 
       final setupProvider = context.read<SetupProvider>();
       
-      print('DEBUG: Setup creado, guardando en Firebase...');
+      debugPrint('DEBUG: Setup creado, guardando en Firebase...');
       
       if (widget.setupToEdit != null) {
         await setupProvider.updateSetup(setup);

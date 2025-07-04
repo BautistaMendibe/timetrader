@@ -363,23 +363,23 @@ class SetupDetailScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () async {
-                print('DEBUG: Iniciando proceso de eliminación...');
+                debugPrint('DEBUG: Iniciando proceso de eliminación...');
                 
                 // Guardar el nombre del setup antes de eliminarlo
                 final setupName = setup.name;
-                print('DEBUG: Setup a eliminar: $setupName (ID: ${setup.id})');
+                debugPrint('DEBUG: Setup a eliminar: $setupName (ID: ${setup.id})');
                 
                 // Cerrar diálogo y navegar inmediatamente
                 Navigator.of(context).pop(); // Cerrar diálogo
                 Navigator.of(context).pop(); // Navegar de vuelta al listado
-                print('DEBUG: Navegación completada inmediatamente');
+                debugPrint('DEBUG: Navegación completada inmediatamente');
                 
                 try {
-                  print('DEBUG: Llamando a deleteSetup...');
+                  debugPrint('DEBUG: Llamando a deleteSetup...');
                   await context.read<SetupProvider>().deleteSetup(setup.id, setupName: setupName);
-                  print('DEBUG: deleteSetup completado exitosamente');
+                  debugPrint('DEBUG: deleteSetup completado exitosamente');
                 } catch (e) {
-                  print('DEBUG: Error durante la eliminación: $e');
+                  debugPrint('DEBUG: Error durante la eliminación: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error al eliminar: ${e.toString()}'),
