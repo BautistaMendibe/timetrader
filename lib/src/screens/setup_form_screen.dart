@@ -576,9 +576,9 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
           Navigator.pop(context);
         }
       } else {
-        print('DEBUG: Guardando nuevo setup...');
+        debugPrint('DEBUG: Guardando nuevo setup...');
         await setupProvider.addSetup(setup);
-        print('DEBUG: Setup guardado exitosamente (local o Firebase)');
+        debugPrint('DEBUG: Setup guardado exitosamente (local o Firebase)');
         if (mounted) {
           // Limpiar el estado de loading
           setState(() {
