@@ -52,7 +52,8 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
     } else {
       // Modo creación
       _assetController.text = 'BTC/USD';
-      _positionSizeController.text = '100';
+      _positionSizeController.text = '1.0';
+      _positionSizeType = ValueType.percentage; // Cambiar a porcentaje por defecto
       _stopLossController.text = '2.0';
       _takeProfitController.text = '4.0';
     }
