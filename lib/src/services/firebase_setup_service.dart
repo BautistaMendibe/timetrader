@@ -209,14 +209,20 @@ class FirebaseSetupService {
   // Delete a setup
   Future<void> deleteSetup(String setupId) async {
     try {
+      print('DEBUG: FirebaseSetupService.deleteSetup - Iniciando eliminación: $setupId');
+      
       // Check if it's an example setup
       final isExample = _exampleSetups.any((setup) => setup['id'] == setupId);
       if (isExample) {
+        print('DEBUG: FirebaseSetupService.deleteSetup - Intento de eliminar setup de ejemplo');
         throw Exception('Cannot delete example setups');
       }
       
+      print('DEBUG: FirebaseSetupService.deleteSetup - Eliminando de Firestore...');
       await _userSetupsCollection.doc(setupId).delete();
+      print('DEBUG: FirebaseSetupService.deleteSetup - Eliminación completada en Firestore');
     } catch (e) {
+      print('DEBUG: FirebaseSetupService.deleteSetup - Error: $e');
       throw Exception('Failed to delete setup: $e');
     }
   }

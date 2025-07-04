@@ -32,6 +32,25 @@ class _SetupsListScreenState extends State<SetupsListScreen> {
       ),
       body: Consumer<SetupProvider>(
         builder: (context, setupProvider, child) {
+          // Mostrar snackbar si se eliminó un setup
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (setupProvider.lastDeletedSetupName != null) {
+              final setupName = setupProvider.lastDeletedSetupName!;
+              setupProvider.clearLastDeletedSetupName();
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Setup "$setupName" eliminado exitosamente'),
+                  backgroundColor: const Color(0xFF21CE99),
+                  duration: const Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              );
+            }
+          });
           if (setupProvider.isLoading) {
             return const Center(
               child: Column(

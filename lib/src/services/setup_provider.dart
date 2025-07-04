@@ -9,6 +9,7 @@ class SetupProvider with ChangeNotifier {
   Setup? _selectedSetup;
   final FirebaseSetupService _firebaseService = FirebaseSetupService();
   bool _isLoading = false;
+  String? _lastDeletedSetupName;
 
   List<Setup> get setups => _setups;
   List<Rule> get customRules => _customRules;
@@ -106,11 +107,20 @@ class SetupProvider with ChangeNotifier {
     }
   }
 
-  Future<void> deleteSetup(String id) async {
+  Future<void> deleteSetup(String id, {String? setupName}) async {
     try {
+      print('DEBUG: SetupProvider.deleteSetup - Iniciando eliminación del setup: $id');
       await _firebaseService.deleteSetup(id);
+      print('DEBUG: SetupProvider.deleteSetup - Eliminación completada en Firebase');
+      
+      // Guardar el nombre del setup eliminado para mostrar el snackbar
+      if (setupName != null) {
+        setLastDeletedSetupName(setupName);
+      }
+      
       // The setup will be removed from the list through the stream listener
     } catch (e) {
+      print('DEBUG: SetupProvider.deleteSetup - Error: $e');
       rethrow;
     }
   }
@@ -230,5 +240,18 @@ class SetupProvider with ChangeNotifier {
     final predefinedRules = PredefinedRules.getRulesByType(type);
     final customRules = _customRules.where((rule) => rule.type == type).toList();
     return [...predefinedRules, ...customRules];
+  }
+
+  // Métodos para manejar mensajes de confirmación
+  String? get lastDeletedSetupName => _lastDeletedSetupName;
+  
+  void setLastDeletedSetupName(String setupName) {
+    _lastDeletedSetupName = setupName;
+    notifyListeners();
+  }
+  
+  void clearLastDeletedSetupName() {
+    _lastDeletedSetupName = null;
+    notifyListeners();
   }
 } 

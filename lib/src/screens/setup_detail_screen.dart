@@ -363,27 +363,30 @@ class SetupDetailScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
+                print('DEBUG: Iniciando proceso de eliminación...');
+                
+                // Guardar el nombre del setup antes de eliminarlo
+                final setupName = setup.name;
+                print('DEBUG: Setup a eliminar: $setupName (ID: ${setup.id})');
+                
+                // Cerrar diálogo y navegar inmediatamente
+                Navigator.of(context).pop(); // Cerrar diálogo
+                Navigator.of(context).pop(); // Navegar de vuelta al listado
+                print('DEBUG: Navegación completada inmediatamente');
+                
                 try {
-                  await context.read<SetupProvider>().deleteSetup(setup.id);
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Setup eliminado'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
+                  print('DEBUG: Llamando a deleteSetup...');
+                  await context.read<SetupProvider>().deleteSetup(setup.id, setupName: setupName);
+                  print('DEBUG: deleteSetup completado exitosamente');
                 } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error al eliminar: ${e.toString()}'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
+                  print('DEBUG: Error durante la eliminación: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al eliminar: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
                 }
               },
               child: const Text(
