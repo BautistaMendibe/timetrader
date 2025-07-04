@@ -19,6 +19,7 @@ class Setup {
   final List<Rule> rules;
   final DateTime createdAt;
   final bool isExample;
+  final String? userId;
 
   Setup({
     required this.id,
@@ -34,6 +35,7 @@ class Setup {
     this.rules = const [],
     required this.createdAt,
     this.isExample = false,
+    this.userId,
   });
 
   Map<String, dynamic> toJson() {
@@ -51,6 +53,7 @@ class Setup {
       'rules': rules.map((rule) => rule.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'isExample': isExample,
+      'userId': userId,
     };
   }
 
@@ -83,6 +86,7 @@ class Setup {
           ? DateTime.parse(json['createdAt']) 
           : DateTime.now(),
       isExample: json['isExample'] ?? false,
+      userId: json['userId'],
     );
   }
 
@@ -100,6 +104,7 @@ class Setup {
     List<Rule>? rules,
     DateTime? createdAt,
     bool? isExample,
+    String? userId,
   }) {
     return Setup(
       id: id ?? this.id,
@@ -115,6 +120,7 @@ class Setup {
       rules: rules ?? this.rules,
       createdAt: createdAt ?? this.createdAt,
       isExample: isExample ?? this.isExample,
+      userId: userId ?? this.userId,
     );
   }
 

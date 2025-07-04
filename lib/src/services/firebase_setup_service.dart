@@ -1,9 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/setup.dart';
 
 class FirebaseSetupService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String _collectionName = 'setups';
+
+  // Get current user ID
+  String? get _currentUserId {
+    final user = FirebaseAuth.instance.currentUser;
+    return user?.uid;
+  }
+
+  // Get user's setups collection reference
+  CollectionReference<Map<String, dynamic>> get _userSetupsCollection {
+    if (_currentUserId == null) {
+      throw Exception('User not authenticated');
+    }
+    return _firestore.collection('users').doc(_currentUserId).collection(_collectionName);
+  }
 
   // Example setups that are always available
   static const List<Map<String, dynamic>> _exampleSetups = [
@@ -83,11 +98,9 @@ class FirebaseSetupService {
             .toList();
       }
 
-      // Get user setups from Firestore
-      final QuerySnapshot userSetupsSnapshot = await _firestore
-          .collection(_collectionName)
+      // Get user setups from Firestore (only current user's setups)
+      final QuerySnapshot userSetupsSnapshot = await _userSetupsCollection
           .where('isExample', isEqualTo: false)
-          .orderBy('createdAt', descending: true)
           .get();
 
       // Convert user setups
@@ -101,6 +114,9 @@ class FirebaseSetupService {
             return Setup.fromJson({...data, 'id': doc.id});
           })
           .toList();
+      
+      // Ordenar localmente
+      userSetups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       // Convert example setups
       final List<Setup> exampleSetups = _exampleSetups
@@ -120,13 +136,11 @@ class FirebaseSetupService {
   // Get only user setups (excluding examples)
   Future<List<Setup>> getUserSetups() async {
     try {
-      final QuerySnapshot snapshot = await _firestore
-          .collection(_collectionName)
+      final QuerySnapshot snapshot = await _userSetupsCollection
           .where('isExample', isEqualTo: false)
-          .orderBy('createdAt', descending: true)
           .get();
 
-      return snapshot.docs
+      final setups = snapshot.docs
           .where((doc) {
             final data = doc.data();
             return data != null && data is Map<String, dynamic>;
@@ -136,6 +150,10 @@ class FirebaseSetupService {
             return Setup.fromJson({...data, 'id': doc.id});
           })
           .toList();
+      
+      // Ordenar localmente
+      setups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return setups;
     } catch (e) {
       return [];
     }
@@ -161,7 +179,7 @@ class FirebaseSetupService {
       print('DEBUG: FirebaseSetupService.addSetup - Datos preparados, guardando en Firestore...');
       
       // Agregar timeout para evitar que se quede colgado
-      await _firestore.collection(_collectionName).add(setupData).timeout(
+      await _userSetupsCollection.add(setupData).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           print('DEBUG: FirebaseSetupService.addSetup - Timeout al guardar en Firestore');
@@ -182,7 +200,7 @@ class FirebaseSetupService {
       final setupData = setup.toJson();
       setupData['isExample'] = false; // Mark as user setup
       
-      await _firestore.collection(_collectionName).doc(setup.id).update(setupData);
+      await _userSetupsCollection.doc(setup.id).update(setupData);
     } catch (e) {
       throw Exception('Failed to update setup: $e');
     }
@@ -197,7 +215,7 @@ class FirebaseSetupService {
         throw Exception('Cannot delete example setups');
       }
       
-      await _firestore.collection(_collectionName).doc(setupId).delete();
+      await _userSetupsCollection.doc(setupId).delete();
     } catch (e) {
       throw Exception('Failed to delete setup: $e');
     }
@@ -217,14 +235,15 @@ class FirebaseSetupService {
       }
 
       // If not an example, get from Firestore
-      final DocumentSnapshot doc = await _firestore.collection(_collectionName).doc(setupId).get();
+      final DocumentSnapshot doc = await _userSetupsCollection.doc(setupId).get();
       
-              if (doc.exists) {
-          final data = doc.data();
-          if (data != null && data is Map<String, dynamic>) {
-            return Setup.fromJson({...data, 'id': doc.id});
-          }
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null && data is Map<String, dynamic>) {
+          final setup = Setup.fromJson({...data, 'id': doc.id});
+          return setup;
         }
+      }
       
       return null;
     } catch (e) {
@@ -246,29 +265,31 @@ class FirebaseSetupService {
 
   // Listen to user setups changes
   Stream<List<Setup>> listenToUserSetups() {
-    return _firestore
-        .collection(_collectionName)
+    return _userSetupsCollection
         .where('isExample', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .where((doc) {
-              final data = doc.data();
-              return data != null && data is Map<String, dynamic>;
-            })
-            .map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              return Setup.fromJson({...data, 'id': doc.id});
-            })
-            .toList());
+        .map((snapshot) {
+          final setups = snapshot.docs
+              .where((doc) {
+                final data = doc.data();
+                return data != null && data is Map<String, dynamic>;
+              })
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return Setup.fromJson({...data, 'id': doc.id});
+              })
+              .toList();
+          
+          // Ordenar localmente
+          setups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return setups;
+        });
   }
 
   // Listen to all setups changes (examples + user setups)
   Stream<List<Setup>> listenToAllSetups() {
-    return _firestore
-        .collection(_collectionName)
+    return _userSetupsCollection
         .where('isExample', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
           final userSetups = snapshot.docs
@@ -281,6 +302,9 @@ class FirebaseSetupService {
                 return Setup.fromJson({...data, 'id': doc.id});
               })
               .toList();
+          
+          // Ordenar localmente en lugar de en la consulta
+          userSetups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           
           final exampleSetups = _exampleSetups
               .map((exampleData) => Setup.fromJson(exampleData))
