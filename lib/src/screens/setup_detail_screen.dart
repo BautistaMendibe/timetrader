@@ -4,6 +4,7 @@ import '../routes.dart';
 import '../services/setup_provider.dart';
 import '../models/setup.dart';
 import '../widgets/rule_card.dart';
+import '../widgets/top_snack_bar.dart';
 
 class SetupDetailScreen extends StatelessWidget {
   const SetupDetailScreen({super.key});
@@ -380,12 +381,10 @@ class SetupDetailScreen extends StatelessWidget {
                   debugPrint('DEBUG: deleteSetup completado exitosamente');
                 } catch (e) {
                   debugPrint('DEBUG: Error durante la eliminación: $e');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al eliminar: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 3),
-                    ),
+                  TopSnackBar.showError(
+                    context: context,
+                    message: 'Error al eliminar: ${e.toString()}',
+                    duration: const Duration(seconds: 3),
                   );
                 }
               },

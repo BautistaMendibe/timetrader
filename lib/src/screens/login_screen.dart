@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../routes.dart';
+import '../widgets/top_snack_bar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -72,20 +73,16 @@ class _LoginScreenState extends State<LoginScreen> {
         }
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.red,
-            ),
+          TopSnackBar.showError(
+            context: context,
+            message: errorMessage,
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error de conexión'),
-              backgroundColor: Colors.red,
-            ),
+          TopSnackBar.showError(
+            context: context,
+            message: 'Error de conexión',
           );
         }
       } finally {
@@ -166,11 +163,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-          ),
+        TopSnackBar.showError(
+          context: context,
+          message: errorMessage,
         );
       }
     } catch (e) {
@@ -187,11 +182,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-          ),
+        TopSnackBar.showError(
+          context: context,
+          message: errorMessage,
         );
       }
     } finally {

@@ -5,6 +5,7 @@ import '../models/setup.dart';
 import '../models/rule.dart';
 import '../widgets/rule_selector.dart';
 import '../widgets/rule_card.dart';
+import '../widgets/top_snack_bar.dart';
 
 class SetupFormScreen extends StatefulWidget {
   final Setup? setupToEdit;
@@ -150,7 +151,7 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
-                labelText: 'Nombre del Setup',
+                labelText: 'Nombre del Setup *',
                 labelStyle: TextStyle(color: Colors.grey),
                 border: OutlineInputBorder(),
                 enabledBorder: OutlineInputBorder(
@@ -567,11 +568,9 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
             _isSaving = false;
           });
           
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Setup actualizado exitosamente'),
-              backgroundColor: Color(0xFF21CE99),
-            ),
+          TopSnackBar.showSuccess(
+            context: context,
+            message: 'Setup actualizado exitosamente',
           );
           Navigator.pop(context);
         }
@@ -589,26 +588,18 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
           Navigator.of(context).pop();
           
           // Mostrar snackbar de confirmación en la pantalla del listado
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Setup "${setup.name}" creado exitosamente'),
-              backgroundColor: const Color(0xFF21CE99),
-              duration: const Duration(seconds: 3),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
+          TopSnackBar.showSuccess(
+            context: context,
+            message: 'Setup "${setup.name}" creado exitosamente',
+            duration: const Duration(seconds: 3),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+        TopSnackBar.showError(
+          context: context,
+          message: 'Error: ${e.toString()}',
         );
       }
     } finally {

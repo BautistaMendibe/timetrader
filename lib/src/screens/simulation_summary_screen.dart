@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/simulation_provider.dart';
 import '../models/simulation_result.dart';
 import '../routes.dart';
+import '../widgets/top_snack_bar.dart';
 
 class SimulationSummaryScreen extends StatelessWidget {
   const SimulationSummaryScreen({super.key});
@@ -54,8 +55,9 @@ class SimulationSummaryScreen extends StatelessWidget {
                 icon: const Icon(Icons.share),
                 onPressed: () {
                   // TODO: Implement share functionality
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Función de compartir próximamente')),
+                  TopSnackBar.showInfo(
+                    context: context,
+                    message: 'Función de compartir próximamente',
                   );
                 },
               ),

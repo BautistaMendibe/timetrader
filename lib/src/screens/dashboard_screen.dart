@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../routes.dart';
 import '../services/simulation_provider.dart';
 import '../models/simulation_result.dart';
+import '../widgets/top_snack_bar.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -16,11 +17,9 @@ class DashboardScreen extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error al cerrar sesión'),
-            backgroundColor: Colors.red,
-          ),
+        TopSnackBar.showError(
+          context: context,
+          message: 'Error al cerrar sesión',
         );
       }
     }
@@ -145,8 +144,9 @@ class DashboardScreen extends StatelessWidget {
                             child: TextButton(
                               onPressed: () {
                                 // TODO: Navigate to full history screen
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Historial completo próximamente')),
+                                TopSnackBar.showInfo(
+                                  context: context,
+                                  message: 'Historial completo próximamente',
                                 );
                               },
                               child: Text(

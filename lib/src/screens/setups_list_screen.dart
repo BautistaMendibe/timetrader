@@ -4,6 +4,7 @@ import '../routes.dart';
 import '../services/setup_provider.dart';
 import '../models/setup.dart';
 import '../models/rule.dart';
+import '../widgets/top_snack_bar.dart';
 
 class SetupsListScreen extends StatefulWidget {
   const SetupsListScreen({super.key});
@@ -38,16 +39,10 @@ class _SetupsListScreenState extends State<SetupsListScreen> {
               final setupName = setupProvider.lastDeletedSetupName!;
               setupProvider.clearLastDeletedSetupName();
               
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Setup "$setupName" eliminado exitosamente'),
-                  backgroundColor: const Color(0xFF21CE99),
-                  duration: const Duration(seconds: 3),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+              TopSnackBar.showSuccess(
+                context: context,
+                message: 'Setup "$setupName" eliminado exitosamente',
+                duration: const Duration(seconds: 3),
               );
             }
           });

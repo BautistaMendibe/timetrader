@@ -5,6 +5,7 @@ import '../services/simulation_provider.dart';
 import '../services/setup_provider.dart';
 import '../models/setup.dart';
 import '../routes.dart';
+import '../widgets/top_snack_bar.dart';
 
 class SimulationSetupScreen extends StatefulWidget {
   const SimulationSetupScreen({super.key});
@@ -55,12 +56,10 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
       if (_selectedDate == null) errorMessage += '\n• Selecciona una fecha de inicio';
       if (_selectedSetup == null) errorMessage += '\n• Selecciona un setup';
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
+      TopSnackBar.showError(
+        context: context,
+        message: errorMessage,
+        duration: const Duration(seconds: 3),
       );
       return;
     }
@@ -68,12 +67,10 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
     // Validar que la fecha no sea futura
     final now = DateTime.now();
     if (_selectedDate!.isAfter(now)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se puede simular con fechas futuras. Selecciona una fecha anterior a hoy.'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
+      TopSnackBar.showError(
+        context: context,
+        message: 'No se puede simular con fechas futuras. Selecciona una fecha anterior a hoy.',
+        duration: const Duration(seconds: 3),
       );
       return;
     }
@@ -97,11 +94,9 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar datos: $e'),
-            backgroundColor: Colors.red,
-          ),
+        TopSnackBar.showError(
+          context: context,
+          message: 'Error al cargar datos: $e',
         );
       }
     } finally {
