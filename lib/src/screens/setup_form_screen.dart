@@ -579,69 +579,25 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
         await setupProvider.addSetup(setup);
         print('DEBUG: Setup guardado exitosamente (local o Firebase)');
         if (mounted) {
-          // Limpiar el estado de loading antes de mostrar el diálogo
+          // Limpiar el estado de loading
           setState(() {
             _isSaving = false;
           });
           
-          print('DEBUG: Mostrando diálogo de confirmación...');
-          // Mostrar diálogo de confirmación para nuevos setups
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                backgroundColor: const Color(0xFF2A2A2A),
-                title: Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Color(0xFF21CE99),
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      '¡Setup Creado!',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                content: Text(
-                  'El setup "${setup.name}" ha sido creado exitosamente.',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Cerrar diálogo
-                      Navigator.of(context).pop(); // Volver al listado
-                      // Mostrar snackbar adicional en la pantalla del listado
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Setup "${setup.name}" agregado al listado'),
-                          backgroundColor: const Color(0xFF21CE99),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Ver Listado',
-                      style: TextStyle(
-                        color: Color(0xFF21CE99),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
+          // Navegar directamente al listado
+          Navigator.of(context).pop();
+          
+          // Mostrar snackbar de confirmación en la pantalla del listado
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Setup "${setup.name}" creado exitosamente'),
+              backgroundColor: const Color(0xFF21CE99),
+              duration: const Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
           );
         }
       }
