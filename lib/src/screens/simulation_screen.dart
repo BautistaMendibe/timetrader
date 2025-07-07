@@ -35,8 +35,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
   @override
   void dispose() {
-    final simulationProvider = context.read<SimulationProvider>();
-    simulationProvider.stopSimulation();
+    // No acceder al contexto en dispose() ya que el widget puede estar desactivado
     super.dispose();
   }
 
@@ -195,8 +194,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
           color: const Color(0xFF1E1E1E),
           child: Column(
             children: [
-              // Chart Section
-              Expanded(
+              // Chart Section - 50% of screen height
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
                 child: Container(
                   margin: const EdgeInsets.all(16),
                   child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
@@ -217,12 +217,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 ),
               ),
               
-              // Controls Section
-              Container(
-                padding: const EdgeInsets.all(5),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              // Controls Section - Flexible
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(5),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     // Order Container (when active)
                     if (_showOrderContainerInline) ...[
                       Container(
@@ -638,8 +639,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
-            ],
+          )],
           ),
         );
   }
