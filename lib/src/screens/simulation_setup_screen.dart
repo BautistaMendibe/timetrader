@@ -318,8 +318,8 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                             ),
                           )
                         else
-                          DropdownButtonFormField<Setup>(
-                            value: _selectedSetup,
+                          DropdownButtonFormField<String>(
+                            value: _selectedSetup?.id,
                             decoration: InputDecoration(
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -331,14 +331,18 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                             style: const TextStyle(color: Colors.white),
                             items: setupProvider.setups.map((setup) {
                               return DropdownMenuItem(
-                                value: setup,
+                                value: setup.id,
                                 child: Text(setup.name),
                               );
                             }).toList(),
                             onChanged: (value) async {
                               if (value != null) {
+                                final selectedSetup = setupProvider.setups.firstWhere(
+                                  (setup) => setup.id == value,
+                                  orElse: () => setupProvider.setups.first,
+                                );
                                 setState(() {
-                                  _selectedSetup = value;
+                                  _selectedSetup = selectedSetup;
                                 });
                               }
                             },
