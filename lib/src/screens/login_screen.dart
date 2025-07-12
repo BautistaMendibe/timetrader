@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } on FirebaseAuthException catch (e) {
         String errorMessage = 'Ocurrió un error';
-        
+
         switch (e.code) {
           case 'user-not-found':
             errorMessage = 'No se encontró una cuenta con este email';
@@ -73,17 +73,11 @@ class _LoginScreenState extends State<LoginScreen> {
         }
 
         if (mounted) {
-          TopSnackBar.showError(
-            context: context,
-            message: errorMessage,
-          );
+          TopSnackBar.showError(context: context, message: errorMessage);
         }
       } catch (e) {
         if (mounted) {
-          TopSnackBar.showError(
-            context: context,
-            message: 'Error de conexión',
-          );
+          TopSnackBar.showError(context: context, message: 'Error de conexión');
         }
       } finally {
         if (mounted) {
@@ -103,9 +97,9 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       // Primero, verificar si el usuario ya está autenticado
       await _googleSignIn.signOut();
-      
+
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
+
       if (googleUser == null) {
         // User cancelled the sign-in
         setState(() {
@@ -114,12 +108,15 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
       if (googleAuth.accessToken == null || googleAuth.idToken == null) {
-        throw Exception('No se pudieron obtener los tokens de autenticación de Google');
+        throw Exception(
+          'No se pudieron obtener los tokens de autenticación de Google',
+        );
       }
-      
+
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -132,10 +129,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Error al iniciar sesión con Google';
-      
+
       switch (e.code) {
         case 'account-exists-with-different-credential':
-          errorMessage = 'Ya existe una cuenta con este email usando otro método de autenticación';
+          errorMessage =
+              'Ya existe una cuenta con este email usando otro método de autenticación';
           break;
         case 'invalid-credential':
           errorMessage = 'Credenciales de Google inválidas';
@@ -163,16 +161,13 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (mounted) {
-        TopSnackBar.showError(
-          context: context,
-          message: errorMessage,
-        );
+        TopSnackBar.showError(context: context, message: errorMessage);
       }
     } catch (e) {
       debugPrint('Google Sign-In Error: $e');
-      
+
       String errorMessage = 'Error al conectar con Google';
-      
+
       if (e.toString().contains('network')) {
         errorMessage = 'Error de conexión a internet';
       } else if (e.toString().contains('cancelled')) {
@@ -182,10 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (mounted) {
-        TopSnackBar.showError(
-          context: context,
-          message: errorMessage,
-        );
+        TopSnackBar.showError(context: context, message: errorMessage);
       }
     } finally {
       if (mounted) {
@@ -210,9 +202,11 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.all(24.0),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height - 
-                         MediaQuery.of(context).padding.top - 
-                         MediaQuery.of(context).padding.bottom - 48, // 48 for padding
+              minHeight:
+                  MediaQuery.of(context).size.height -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom -
+                  48, // 48 for padding
             ),
             child: IntrinsicHeight(
               child: Form(
@@ -222,26 +216,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Logo and Title
-                    Image.asset(
-                      'assets/imgs/icono.png',
-                      height: 80,
-                      width: 80,
-                    ),
+                    Image.asset('assets/imgs/icono.png', height: 80, width: 80),
                     const SizedBox(height: 24),
                     Text(
                       'TimeTrader',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Practica cualquier set up en segundos,\ndirectamente desde tu móvil',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[400],
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyLarge?.copyWith(color: Colors.grey[400]),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48),
@@ -311,7 +302,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const CircularProgressIndicator(color: Colors.white)
                           : Text(
                               _isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                     ),
                     const SizedBox(height: 16),
@@ -335,13 +329,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Google Sign-In Button
                     OutlinedButton.icon(
                       onPressed: _isLoading ? null : _handleGoogleSignIn,
-                      icon: Image.network(
-                        'https://img.icons8.com/?size=512&id=17949&format=png',
+                      icon: Image.asset(
+                        'assets/imgs/icono-google.png',
                         height: 24,
                       ),
                       label: const Text(
                         'Continuar con Google',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
@@ -367,7 +364,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Text(
                         _isLoginMode ? 'Crear Cuenta' : 'Ya tengo cuenta',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -379,4 +379,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-} 
+}
