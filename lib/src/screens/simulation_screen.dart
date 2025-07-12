@@ -4,7 +4,6 @@ import '../services/simulation_provider.dart';
 import '../widgets/trading_view_chart.dart';
 import '../routes.dart';
 import '../models/simulation_result.dart';
-import '../models/setup.dart';
 import '../models/rule.dart';
 import 'package:tuple/tuple.dart';
 
@@ -16,8 +15,6 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
-  final double _selectedAmount = 100.0;
-  int _selectedLeverage = 1;
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
   bool _showSLTPContainer = false;
@@ -30,6 +27,12 @@ class _SimulationScreenState extends State<SimulationScreen> {
       if (simulationProvider.isSimulationRunning) {
         // Timer logic removed for manual mode
       }
+
+      // Initialize default values for order container
+      setState(() {
+        _showSLTPContainer = false;
+        _isBuyOrder = true;
+      });
     });
   }
 
@@ -44,6 +47,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
     SimulationProvider simulationProvider,
     bool isBuy,
   ) {
+    // Calculate position parameters when showing the order container
+    simulationProvider.calculatePositionParameters(isBuy ? 'buy' : 'sell');
+
     setState(() {
       _showOrderContainerInline = true;
       _isBuyOrder = isBuy;
@@ -270,111 +276,42 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ],
                               ),
 
-                              // Amount Selection
-                              /*
-                                Text(
-                                  'Monto',
-                                  style: TextStyle(
-                                    color: Colors.grey[400],
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'Inter',
-                                  ),
+                              // Position Summary (replaces manual amount and leverage selection)
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E1E1E),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey[700]!),
                                 ),
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: [100, 400, 1000, 1500, 3000].map((amount) {
-                                    return GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedAmount = amount.toDouble();
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: _selectedAmount == amount
-                                              ? const Color(0xFF21CE99)
-                                              : const Color(0xFF1E1E1E),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(
-                                            color: _selectedAmount == amount
-                                                ? const Color(0xFF21CE99)
-                                                : Colors.grey[700]!,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '\$${amount.toString()}',
-                                          style: TextStyle(
-                                            color: _selectedAmount == amount
-                                                ? Colors.white
-                                                : Colors.grey[300],
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            fontFamily: 'Inter',
-                                          ),
-                                        ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Resumen de Posición',
+                                      style: TextStyle(
+                                        color: Colors.grey[400],
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Inter',
                                       ),
-                                    );
-                                  }).toList(),
-                                ),
-                                
-                                const SizedBox(height: 10),
-                                
-                                // Leverage Selection
-                                Text(
-                                  'Apalancamiento',
-                                  style: TextStyle(
-                                    color: Colors.grey[400],
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'Inter',
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: [1, 5, 10, 20, 30, 50].map((leverage) {
-                                    return GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedLeverage = leverage;
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: _selectedLeverage == leverage
-                                              ? const Color(0xFF21CE99)
-                                              : const Color(0xFF1E1E1E),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(
-                                            color: _selectedLeverage == leverage
-                                                ? const Color(0xFF21CE99)
-                                                : Colors.grey[700]!,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '${leverage}x',
-                                          style: TextStyle(
-                                            color: _selectedLeverage == leverage
-                                                ? Colors.white
-                                                : Colors.grey[300],
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            fontFamily: 'Inter',
-                                          ),
-                                        ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      simulationProvider
+                                          .getPositionSummaryText(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Inter',
                                       ),
-                                    );
-                                  }).toList(),
+                                    ),
+                                  ],
                                 ),
-                                
-                                const SizedBox(height: 20),
-                                */
+                              ),
+
+                              const SizedBox(height: 20),
 
                               // Información del setup
                               if (simulationProvider.currentSetup != null) ...[
@@ -444,18 +381,55 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    simulationProvider.executeManualTrade(
-                                      type: _isBuyOrder ? 'buy' : 'sell',
-                                      amount:
-                                          0.0, // Se calculará automáticamente
-                                      leverage:
-                                          1, // Se calculará automáticamente
-                                    );
-                                    setState(() {
-                                      _showOrderContainerInline = false;
-                                    });
-                                  },
+                                  onPressed:
+                                      simulationProvider.canCalculatePosition()
+                                      ? () {
+                                          // Calculate position parameters before executing
+                                          simulationProvider
+                                              .calculatePositionParameters(
+                                                _isBuyOrder ? 'buy' : 'sell',
+                                              );
+
+                                          if (simulationProvider
+                                              .setupParametersCalculated) {
+                                            simulationProvider.executeManualTrade(
+                                              type: _isBuyOrder
+                                                  ? 'buy'
+                                                  : 'sell',
+                                              amount:
+                                                  simulationProvider
+                                                      .calculatedPositionSize ??
+                                                  0.0,
+                                              leverage:
+                                                  simulationProvider
+                                                      .calculatedLeverage
+                                                      ?.toInt() ??
+                                                  1,
+                                            );
+                                            setState(() {
+                                              _showOrderContainerInline = false;
+                                            });
+                                          } else {
+                                            // Show error snackbar
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: const Text(
+                                                  'No se puede calcular la posición: verifica tu setup.',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontFamily: 'Inter',
+                                                  ),
+                                                ),
+                                                backgroundColor: Colors.red,
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      : null,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: _isBuyOrder
                                         ? const Color(0xFF21CE99)
@@ -542,7 +516,10 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             children: [
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: !simulationProvider.inPosition
+                                  onPressed:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
                                       ? () => _showOrderContainer(
                                           context,
                                           simulationProvider,
@@ -566,7 +543,10 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: !simulationProvider.inPosition
+                                  onPressed:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
                                       ? () => _showOrderContainer(
                                           context,
                                           simulationProvider,

@@ -35,6 +35,19 @@ class SimulationProvider with ChangeNotifier {
   double? _manualStopLossPercent;
   double? _manualTakeProfitPercent;
 
+  // New methods for automatic setup parameter reading and position calculation
+  double? _calculatedPositionSize;
+  double? _calculatedLeverage;
+  double? _calculatedStopLossPrice;
+  double? _calculatedTakeProfitPrice;
+  bool _setupParametersCalculated = false;
+
+  double? get calculatedPositionSize => _calculatedPositionSize;
+  double? get calculatedLeverage => _calculatedLeverage;
+  double? get calculatedStopLossPrice => _calculatedStopLossPrice;
+  double? get calculatedTakeProfitPrice => _calculatedTakeProfitPrice;
+  bool get setupParametersCalculated => _setupParametersCalculated;
+
   SimulationResult? get currentSimulation => _currentSimulation;
   List<SimulationResult> get simulationHistory => _simulationHistory;
   List<Candle> get historicalData => _historicalData;
@@ -59,6 +72,14 @@ class SimulationProvider with ChangeNotifier {
   double? get manualTakeProfitPercent => _manualTakeProfitPercent;
 
   double? get manualStopLossPrice {
+    // First check if we have calculated SL/TP from setup
+    if (_inPosition &&
+        _setupParametersCalculated &&
+        _calculatedStopLossPrice != null) {
+      return _calculatedStopLossPrice;
+    }
+
+    // Fall back to manual SL/TP if no calculated values
     if (!_inPosition || _manualStopLossPercent == null) return null;
     final entry = _entryPrice;
 
@@ -72,6 +93,14 @@ class SimulationProvider with ChangeNotifier {
   }
 
   double? get manualTakeProfitPrice {
+    // First check if we have calculated SL/TP from setup
+    if (_inPosition &&
+        _setupParametersCalculated &&
+        _calculatedTakeProfitPrice != null) {
+      return _calculatedTakeProfitPrice;
+    }
+
+    // Fall back to manual SL/TP if no calculated values
     if (!_inPosition || _manualTakeProfitPercent == null) return null;
     final entry = _entryPrice;
 
@@ -150,6 +179,13 @@ class SimulationProvider with ChangeNotifier {
     _positionSize = 0.0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
+
+    // Reset calculated parameters
+    _calculatedPositionSize = null;
+    _calculatedLeverage = null;
+    _calculatedStopLossPrice = null;
+    _calculatedTakeProfitPrice = null;
+    _setupParametersCalculated = false;
 
     notifyListeners();
   }
@@ -624,43 +660,39 @@ class SimulationProvider with ChangeNotifier {
   }) {
     if (_currentSetup == null) return;
 
+    // Calculate position parameters first
+    calculatePositionParameters(type);
+
+    if (!_setupParametersCalculated) {
+      debugPrint('🔥 SimulationProvider: Cannot calculate position parameters');
+      return;
+    }
+
     final candle = _historicalData[_currentCandleIndex];
     final price = candle.close;
-
-    // Calcular el tamaño de la posición basado en el riesgo del setup
-    double riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
-
-    // Calcular el tamaño de la posición basado en la distancia del stop loss
-    double stopLossDistance = _currentSetup!.stopLossDistance;
-    double positionSize;
-
-    if (_currentSetup!.stopLossType == StopLossType.pips) {
-      // Convertir pips a precio (asumiendo que 1 pip = 0.0001 para la mayoría de pares)
-      double pipValue = 0.0001;
-      double priceDistance = stopLossDistance * pipValue;
-      positionSize = riskAmount / priceDistance;
-    } else {
-      // Usar distancia en precio directamente
-      positionSize = riskAmount / stopLossDistance;
-    }
 
     final trade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       timestamp: candle.timestamp,
       type: type,
       price: price,
-      quantity: positionSize,
+      quantity: _calculatedPositionSize!,
       candleIndex: _currentCandleIndex,
       reason: 'Manual',
-      amount: riskAmount,
-      leverage: 1,
+      amount: _currentBalance * (_currentSetup!.riskPercent / 100),
+      leverage: _calculatedLeverage!.toInt(),
     );
     _currentTrades.add(trade);
     _inPosition = true;
     _entryPrice = price;
-    _positionSize = positionSize;
-    _manualMargin = riskAmount;
+    _positionSize = _calculatedPositionSize!;
+    _manualMargin = _currentBalance * (_currentSetup!.riskPercent / 100);
     _manualPositionType = type; // Guardar el tipo de operación
+
+    // Set the calculated SL/TP prices for the chart
+    _manualStopLossPercent = null; // Clear manual SL/TP to use calculated ones
+    _manualTakeProfitPercent = null;
+
     notifyListeners();
   }
 
@@ -740,6 +772,14 @@ class SimulationProvider with ChangeNotifier {
     _manualPositionType = 'buy';
     _manualStopLossPercent = null;
     _manualTakeProfitPercent = null;
+
+    // Reset calculated parameters
+    _calculatedPositionSize = null;
+    _calculatedLeverage = null;
+    _calculatedStopLossPrice = null;
+    _calculatedTakeProfitPrice = null;
+    _setupParametersCalculated = false;
+
     _currentTrades.clear();
     notifyListeners();
   }
@@ -875,5 +915,86 @@ class SimulationProvider with ChangeNotifier {
       _manualMargin = _manualMargin * (1 - percent / 100);
     }
     notifyListeners();
+  }
+
+  // New methods for automatic setup parameter reading and position calculation
+  void calculatePositionParameters(String tradeType) {
+    if (_currentSetup == null || _historicalData.isEmpty) {
+      _setupParametersCalculated = false;
+      return;
+    }
+
+    final currentPrice = _historicalData[_currentCandleIndex].close;
+
+    // 1. Calculate risk amount
+    final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
+
+    // 2. Calculate stop loss distance in price
+    double slPriceDistance;
+    if (_currentSetup!.stopLossType == StopLossType.pips) {
+      // Convert pips to price (assuming 1 pip = 0.0001 for most pairs)
+      const double pipValue = 0.0001;
+      slPriceDistance = _currentSetup!.stopLossDistance * pipValue;
+    } else {
+      // Use price distance directly
+      slPriceDistance = _currentSetup!.stopLossDistance;
+    }
+
+    // 3. Calculate position size
+    if (slPriceDistance <= 0) {
+      _setupParametersCalculated = false;
+      return;
+    }
+
+    _calculatedPositionSize = riskAmount / slPriceDistance;
+
+    // 4. Set leverage (use setup leverage if defined, otherwise 1x)
+    _calculatedLeverage = 1.0; // Default leverage
+
+    // 5. Calculate stop loss and take profit prices
+    final takeProfitRatio = _currentSetup!.getEffectiveTakeProfitRatio();
+
+    if (tradeType == 'buy') {
+      _calculatedStopLossPrice = currentPrice - slPriceDistance;
+      _calculatedTakeProfitPrice =
+          currentPrice + (slPriceDistance * takeProfitRatio);
+    } else {
+      _calculatedStopLossPrice = currentPrice + slPriceDistance;
+      _calculatedTakeProfitPrice =
+          currentPrice - (slPriceDistance * takeProfitRatio);
+    }
+
+    _setupParametersCalculated = true;
+    debugPrint(
+      '🔥 SimulationProvider: Position parameters calculated - Size: $_calculatedPositionSize, SL: $_calculatedStopLossPrice, TP: $_calculatedTakeProfitPrice',
+    );
+  }
+
+  // Validate if position can be calculated
+  bool canCalculatePosition() {
+    if (_currentSetup == null || _historicalData.isEmpty) return false;
+
+    final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
+    if (riskAmount <= 0) return false;
+
+    double slPriceDistance;
+    if (_currentSetup!.stopLossType == StopLossType.pips) {
+      const double pipValue = 0.0001;
+      slPriceDistance = _currentSetup!.stopLossDistance * pipValue;
+    } else {
+      slPriceDistance = _currentSetup!.stopLossDistance;
+    }
+
+    return slPriceDistance > 0;
+  }
+
+  // Get position summary text
+  String getPositionSummaryText() {
+    if (!_setupParametersCalculated || _currentSetup == null) {
+      return 'No se puede calcular la posición';
+    }
+
+    final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
+    return 'Posición: ${_calculatedPositionSize!.toStringAsFixed(4)} unidades @ ${_calculatedLeverage!.toStringAsFixed(0)}x (riesgo ${_currentSetup!.riskPercent.toStringAsFixed(1)}% = \$${riskAmount.toStringAsFixed(0)})';
   }
 }
