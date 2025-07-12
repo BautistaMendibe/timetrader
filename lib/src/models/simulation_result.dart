@@ -49,19 +49,26 @@ class SimulationResult {
 
   factory SimulationResult.fromJson(Map<String, dynamic> json) {
     return SimulationResult(
-      id: json['id'],
-      setupId: json['setupId'],
-      startDate: DateTime.parse(json['startDate']),
-      endDate: DateTime.parse(json['endDate']),
-      initialBalance: json['initialBalance'].toDouble(),
-      finalBalance: json['finalBalance'].toDouble(),
-      netPnL: json['netPnL'].toDouble(),
-      winRate: json['winRate'].toDouble(),
-      maxDrawdown: json['maxDrawdown'].toDouble(),
-      totalTrades: json['totalTrades'],
-      winningTrades: json['winningTrades'],
-      trades: (json['trades'] as List).map((trade) => Trade.fromJson(trade)).toList(),
-      equityCurve: (json['equityCurve'] as List<dynamic>).cast<double>(),
+      id: json['id'] ?? '',
+      setupId: json['setupId'] ?? '',
+      startDate: json['startDate'] != null 
+          ? DateTime.parse(json['startDate']) 
+          : DateTime.now(),
+      endDate: json['endDate'] != null 
+          ? DateTime.parse(json['endDate']) 
+          : DateTime.now(),
+      initialBalance: (json['initialBalance'] ?? 0.0).toDouble(),
+      finalBalance: (json['finalBalance'] ?? 0.0).toDouble(),
+      netPnL: (json['netPnL'] ?? 0.0).toDouble(),
+      winRate: (json['winRate'] ?? 0.0).toDouble(),
+      maxDrawdown: (json['maxDrawdown'] ?? 0.0).toDouble(),
+      totalTrades: json['totalTrades'] ?? 0,
+      winningTrades: json['winningTrades'] ?? 0,
+      trades: (json['trades'] as List<dynamic>?)
+              ?.map((trade) => Trade.fromJson(trade))
+              .toList() ?? [],
+      equityCurve: (json['equityCurve'] as List<dynamic>?)
+              ?.cast<double>() ?? [],
     );
   }
 }
@@ -111,11 +118,13 @@ class Trade {
 
   factory Trade.fromJson(Map<String, dynamic> json) {
     return Trade(
-      id: json['id'],
-      timestamp: DateTime.parse(json['timestamp']),
-      type: json['type'],
-      price: json['price'].toDouble(),
-      quantity: json['quantity'].toDouble(),
+      id: json['id'] ?? '',
+      timestamp: json['timestamp'] != null 
+          ? DateTime.parse(json['timestamp']) 
+          : DateTime.now(),
+      type: json['type'] ?? '',
+      price: (json['price'] ?? 0.0).toDouble(),
+      quantity: (json['quantity'] ?? 0.0).toDouble(),
       candleIndex: json['candleIndex'] ?? 0,
       reason: json['reason'],
       amount: json['amount']?.toDouble(),
@@ -189,15 +198,19 @@ class CompletedTrade {
 
   factory CompletedTrade.fromJson(Map<String, dynamic> json) {
     return CompletedTrade(
-      id: json['id'],
-      entryTrade: Trade.fromJson(json['entryTrade']),
-      exitTrade: Trade.fromJson(json['exitTrade']),
-      totalPnL: json['totalPnL'].toDouble(),
-      entryTime: DateTime.parse(json['entryTime']),
-      exitTime: DateTime.parse(json['exitTime']),
-      entryPrice: json['entryPrice'].toDouble(),
-      exitPrice: json['exitPrice'].toDouble(),
-      quantity: json['quantity'].toDouble(),
+      id: json['id'] ?? '',
+      entryTrade: Trade.fromJson(json['entryTrade'] ?? {}),
+      exitTrade: Trade.fromJson(json['exitTrade'] ?? {}),
+      totalPnL: (json['totalPnL'] ?? 0.0).toDouble(),
+      entryTime: json['entryTime'] != null 
+          ? DateTime.parse(json['entryTime']) 
+          : DateTime.now(),
+      exitTime: json['exitTime'] != null 
+          ? DateTime.parse(json['exitTime']) 
+          : DateTime.now(),
+      entryPrice: (json['entryPrice'] ?? 0.0).toDouble(),
+      exitPrice: (json['exitPrice'] ?? 0.0).toDouble(),
+      quantity: (json['quantity'] ?? 0.0).toDouble(),
       leverage: json['leverage'],
       reason: json['reason'],
     );

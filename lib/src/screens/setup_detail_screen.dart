@@ -4,6 +4,7 @@ import '../routes.dart';
 import '../services/setup_provider.dart';
 import '../models/setup.dart';
 import '../widgets/rule_card.dart';
+import '../widgets/top_snack_bar.dart';
 
 class SetupDetailScreen extends StatelessWidget {
   const SetupDetailScreen({super.key});
@@ -41,11 +42,12 @@ class SetupDetailScreen extends StatelessWidget {
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: 'Editar setup',
               ),
-              IconButton(
-                onPressed: () => _showDeleteDialog(context, setup),
-                icon: const Icon(Icons.delete_outline),
-                tooltip: 'Eliminar setup',
-              ),
+              if (!setup.isExample)
+                IconButton(
+                  onPressed: () => _showDeleteDialog(context, setup),
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Eliminar setup',
+                ),
             ],
           ),
           body: ListView(
@@ -361,16 +363,30 @@ class SetupDetailScreen extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () {
-                context.read<SetupProvider>().deleteSetup(setup.id);
-                Navigator.of(context).pop();
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Setup eliminado'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+              onPressed: () async {
+                debugPrint('DEBUG: Iniciando proceso de eliminación...');
+                
+                // Guardar el nombre del setup antes de eliminarlo
+                final setupName = setup.name;
+                debugPrint('DEBUG: Setup a eliminar: $setupName (ID: ${setup.id})');
+                
+                // Cerrar diálogo y navegar inmediatamente
+                Navigator.of(context).pop(); // Cerrar diálogo
+                Navigator.of(context).pop(); // Navegar de vuelta al listado
+                debugPrint('DEBUG: Navegación completada inmediatamente');
+                
+                try {
+                  debugPrint('DEBUG: Llamando a deleteSetup...');
+                  await context.read<SetupProvider>().deleteSetup(setup.id, setupName: setupName);
+                  debugPrint('DEBUG: deleteSetup completado exitosamente');
+                } catch (e) {
+                  debugPrint('DEBUG: Error durante la eliminación: $e');
+                  TopSnackBar.showError(
+                    context: context,
+                    message: 'Error al eliminar: ${e.toString()}',
+                    duration: const Duration(seconds: 3),
+                  );
+                }
               },
               child: const Text(
                 'Eliminar',

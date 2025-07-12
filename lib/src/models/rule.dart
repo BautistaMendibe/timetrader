@@ -35,11 +35,11 @@ class Rule {
 
   factory Rule.fromJson(Map<String, dynamic> json) {
     return Rule(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
       type: RuleType.values.firstWhere(
-        (e) => e.toString() == json['type'],
+        (e) => e.toString() == (json['type'] ?? RuleType.other.toString()),
         orElse: () => RuleType.other,
       ),
       parameters: Map<String, dynamic>.from(json['parameters'] ?? {}),

@@ -4,9 +4,24 @@ import '../routes.dart';
 import '../services/setup_provider.dart';
 import '../models/setup.dart';
 import '../models/rule.dart';
+import '../widgets/top_snack_bar.dart';
 
-class SetupsListScreen extends StatelessWidget {
+class SetupsListScreen extends StatefulWidget {
   const SetupsListScreen({super.key});
+
+  @override
+  State<SetupsListScreen> createState() => _SetupsListScreenState();
+}
+
+class _SetupsListScreenState extends State<SetupsListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Iniciar la escucha de cambios en los setups
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SetupProvider>().startListening();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +33,40 @@ class SetupsListScreen extends StatelessWidget {
       ),
       body: Consumer<SetupProvider>(
         builder: (context, setupProvider, child) {
+          // Mostrar snackbar si se eliminó un setup
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (setupProvider.lastDeletedSetupName != null) {
+              final setupName = setupProvider.lastDeletedSetupName!;
+              setupProvider.clearLastDeletedSetupName();
+              
+              TopSnackBar.showSuccess(
+                context: context,
+                message: 'Setup "$setupName" eliminado exitosamente',
+                duration: const Duration(seconds: 3),
+              );
+            }
+          });
+          if (setupProvider.isLoading) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF21CE99)),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Cargando setups...',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
           if (setupProvider.setups.isEmpty) {
             return const Center(
               child: Column(
@@ -114,27 +163,51 @@ class _SetupCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                                         decoration: BoxDecoration(
-                       color: setup.useAdvancedRules
-                           ? const Color(0xFF21CE99).withValues(alpha: 0.2)
-                           : Colors.grey.withValues(alpha: 0.2),
-                       borderRadius: BorderRadius.circular(20),
-                     ),
-                    child: Text(
-                      setup.useAdvancedRules ? 'Avanzado' : 'Básico',
-                      style: TextStyle(
-                        color: setup.useAdvancedRules
-                            ? const Color(0xFF21CE99)
-                            : Colors.grey,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                  Column(
+                    children: [
+                      if (setup.isExample)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Ejemplo',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: setup.useAdvancedRules
+                              ? const Color(0xFF21CE99).withValues(alpha: 0.2)
+                              : Colors.grey.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          setup.useAdvancedRules ? 'Avanzado' : 'Básico',
+                          style: TextStyle(
+                            color: setup.useAdvancedRules
+                                ? const Color(0xFF21CE99)
+                                : Colors.grey,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),

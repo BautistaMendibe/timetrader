@@ -69,7 +69,7 @@ class AuthWrapper extends StatelessWidget {
         
         if (snapshot.hasData && snapshot.data != null) {
           debugPrint('AuthWrapper - User is signed in, navigating to dashboard');
-          return const DashboardScreen();
+          return const SetupListenerWrapper(child: DashboardScreen());
         }
         
         debugPrint('AuthWrapper - User is not signed in, showing login screen');
@@ -77,4 +77,29 @@ class AuthWrapper extends StatelessWidget {
       },
     );
   }
-} 
+}
+
+class SetupListenerWrapper extends StatefulWidget {
+  final Widget child;
+  
+  const SetupListenerWrapper({super.key, required this.child});
+
+  @override
+  State<SetupListenerWrapper> createState() => _SetupListenerWrapperState();
+}
+
+class _SetupListenerWrapperState extends State<SetupListenerWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    // Start listening to setup changes when user is authenticated
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SetupProvider>().startListening();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
+}
