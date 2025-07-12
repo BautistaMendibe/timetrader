@@ -276,6 +276,84 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ],
                               ),
 
+                              // Confirm Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed:
+                                      simulationProvider.canCalculatePosition()
+                                      ? () {
+                                          // Calculate position parameters before executing
+                                          simulationProvider
+                                              .calculatePositionParameters(
+                                                _isBuyOrder ? 'buy' : 'sell',
+                                              );
+
+                                          if (simulationProvider
+                                              .setupParametersCalculated) {
+                                            simulationProvider.executeManualTrade(
+                                              type: _isBuyOrder
+                                                  ? 'buy'
+                                                  : 'sell',
+                                              amount:
+                                                  simulationProvider
+                                                      .calculatedPositionSize ??
+                                                  0.0,
+                                              leverage:
+                                                  simulationProvider
+                                                      .calculatedLeverage
+                                                      ?.toInt() ??
+                                                  1,
+                                            );
+                                            setState(() {
+                                              _showOrderContainerInline = false;
+                                            });
+                                          } else {
+                                            // Show error snackbar
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: const Text(
+                                                  'No se puede calcular la posición: verifica tu setup.',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontFamily: 'Inter',
+                                                  ),
+                                                ),
+                                                backgroundColor: Colors.red,
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isBuyOrder
+                                        ? const Color(0xFF21CE99)
+                                        : const Color(0xFFFF6B6B),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _isBuyOrder ? 'Comprar' : 'Vender',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+
                               // Position Summary (replaces manual amount and leverage selection)
                               Container(
                                 padding: const EdgeInsets.all(12),
@@ -376,82 +454,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ),
                                 const SizedBox(height: 20),
                               ],
-
-                              // Confirm Button
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed:
-                                      simulationProvider.canCalculatePosition()
-                                      ? () {
-                                          // Calculate position parameters before executing
-                                          simulationProvider
-                                              .calculatePositionParameters(
-                                                _isBuyOrder ? 'buy' : 'sell',
-                                              );
-
-                                          if (simulationProvider
-                                              .setupParametersCalculated) {
-                                            simulationProvider.executeManualTrade(
-                                              type: _isBuyOrder
-                                                  ? 'buy'
-                                                  : 'sell',
-                                              amount:
-                                                  simulationProvider
-                                                      .calculatedPositionSize ??
-                                                  0.0,
-                                              leverage:
-                                                  simulationProvider
-                                                      .calculatedLeverage
-                                                      ?.toInt() ??
-                                                  1,
-                                            );
-                                            setState(() {
-                                              _showOrderContainerInline = false;
-                                            });
-                                          } else {
-                                            // Show error snackbar
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: const Text(
-                                                  'No se puede calcular la posición: verifica tu setup.',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontFamily: 'Inter',
-                                                  ),
-                                                ),
-                                                backgroundColor: Colors.red,
-                                                behavior:
-                                                    SnackBarBehavior.floating,
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isBuyOrder
-                                        ? const Color(0xFF21CE99)
-                                        : const Color(0xFFFF6B6B),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    _isBuyOrder ? 'Comprar' : 'Vender',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),
