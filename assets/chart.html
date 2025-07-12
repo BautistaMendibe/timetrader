@@ -176,7 +176,7 @@
                         if (formattedTime === null) {
                             return null;
                         }
-                        const amount = trade.amount ? `$${trade.amount}` : '';
+                        const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
                         const lev = trade.leverage ? `x${trade.leverage}` : '';
                         let text;
                         if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {

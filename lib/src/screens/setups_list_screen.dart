@@ -38,7 +38,7 @@ class _SetupsListScreenState extends State<SetupsListScreen> {
             if (setupProvider.lastDeletedSetupName != null) {
               final setupName = setupProvider.lastDeletedSetupName!;
               setupProvider.clearLastDeletedSetupName();
-              
+
               TopSnackBar.showSuccess(
                 context: context,
                 message: 'Setup "$setupName" eliminado exitosamente',
@@ -52,15 +52,14 @@ class _SetupsListScreenState extends State<SetupsListScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF21CE99)),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF21CE99),
+                    ),
                   ),
                   SizedBox(height: 16),
                   Text(
                     'Cargando setups...',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 ],
               ),
@@ -72,26 +71,16 @@ class _SetupsListScreenState extends State<SetupsListScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.add_chart,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
+                  Icon(Icons.add_chart, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
                     'No tienes setups creados',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 18,
-                    ),
+                    style: TextStyle(color: Colors.grey, fontSize: 18),
                   ),
                   SizedBox(height: 8),
                   Text(
                     'Crea tu primer setup para comenzar',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ],
               ),
@@ -231,9 +220,10 @@ class _SetupCard extends StatelessWidget {
       children: [
         Expanded(
           child: _buildStatItem(
-            'Posición',
-            setup.getPositionSizeDisplay(),
-            Icons.account_balance_wallet,
+            'Riesgo',
+            setup.getRiskPercentDisplay(),
+            Icons.security,
+            color: Colors.orange,
           ),
         ),
         Expanded(
@@ -247,7 +237,7 @@ class _SetupCard extends StatelessWidget {
         Expanded(
           child: _buildStatItem(
             'Take Profit',
-            setup.getTakeProfitDisplay(),
+            setup.getTakeProfitRatioDisplay(),
             Icons.trending_up,
             color: Colors.green,
           ),
@@ -256,14 +246,15 @@ class _SetupCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, {Color? color}) {
+  Widget _buildStatItem(
+    String label,
+    String value,
+    IconData icon, {
+    Color? color,
+  }) {
     return Column(
       children: [
-        Icon(
-          icon,
-          color: color ?? Colors.grey[400],
-          size: 20,
-        ),
+        Icon(icon, color: color ?? Colors.grey[400], size: 20),
         const SizedBox(height: 4),
         Text(
           value,
@@ -273,13 +264,7 @@ class _SetupCard extends StatelessWidget {
             color: color ?? Colors.white,
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[400],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[400])),
       ],
     );
   }
@@ -290,11 +275,7 @@ class _SetupCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(
-              Icons.rule,
-              color: Color(0xFF21CE99),
-              size: 16,
-            ),
+            const Icon(Icons.rule, color: Color(0xFF21CE99), size: 16),
             const SizedBox(width: 8),
             Text(
               'Reglas (${setup.rules.length})',
@@ -307,30 +288,31 @@ class _SetupCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ...setup.rules.take(3).map((rule) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            children: [
-              Icon(
-                _getRuleIcon(rule.type),
-                size: 12,
-                color: Colors.grey[400],
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  rule.name,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[400],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+        ...setup.rules
+            .take(3)
+            .map(
+              (rule) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getRuleIcon(rule.type),
+                      size: 12,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        rule.name,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        )),
+            ),
         if (setup.rules.length > 3)
           Text(
             '+${setup.rules.length - 3} más',
@@ -350,16 +332,9 @@ class _SetupCard extends StatelessWidget {
       children: [
         Text(
           'Creado: ${_formatDate(setup.createdAt)}',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[500],
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
         ),
-        const Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Colors.grey,
-        ),
+        const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
       ],
     );
   }
@@ -391,4 +366,4 @@ class _SetupCard extends StatelessWidget {
       return '${date.day}/${date.month}/${date.year}';
     }
   }
-} 
+}

@@ -16,7 +16,7 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
-  double _selectedAmount = 100.0;
+  final double _selectedAmount = 100.0;
   int _selectedLeverage = 1;
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
@@ -39,14 +39,21 @@ class _SimulationScreenState extends State<SimulationScreen> {
     super.dispose();
   }
 
-  void _showOrderContainer(BuildContext context, SimulationProvider simulationProvider, bool isBuy) {
+  void _showOrderContainer(
+    BuildContext context,
+    SimulationProvider simulationProvider,
+    bool isBuy,
+  ) {
     setState(() {
       _showOrderContainerInline = true;
       _isBuyOrder = isBuy;
     });
   }
 
-  void _showManageSLTPContainer(BuildContext context, SimulationProvider simulationProvider) {
+  void _showManageSLTPContainer(
+    BuildContext context,
+    SimulationProvider simulationProvider,
+  ) {
     setState(() {
       _showSLTPContainer = true;
     });
@@ -58,9 +65,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
       builder: (context, simulationProvider, child) {
         if (simulationProvider.historicalData.isEmpty) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -90,20 +95,21 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     Text(
                       'P&L: \$${simulationProvider.totalPnL.toStringAsFixed(2)}',
                       style: TextStyle(
-                        color: simulationProvider.totalPnL >= 0 
-                            ? const Color(0xFF21CE99) 
+                        color: simulationProvider.totalPnL >= 0
+                            ? const Color(0xFF21CE99)
                             : const Color(0xFFFF6B6B),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Inter',
                       ),
                     ),
-                    if (simulationProvider.inPosition && simulationProvider.unrealizedPnL != 0) ...[
+                    if (simulationProvider.inPosition &&
+                        simulationProvider.unrealizedPnL != 0) ...[
                       Text(
                         'Flotante: \$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
                         style: TextStyle(
-                          color: simulationProvider.unrealizedPnL >= 0 
-                              ? const Color(0xFF21CE99) 
+                          color: simulationProvider.unrealizedPnL >= 0
+                              ? const Color(0xFF21CE99)
                               : const Color(0xFFFF6B6B),
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -122,7 +128,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text('¿Salir de la simulación?'),
-                        content: const Text('¿Estás seguro que quieres salir? Se perderá el progreso de la simulación actual.'),
+                        content: const Text(
+                          '¿Estás seguro que quieres salir? Se perderá el progreso de la simulación actual.',
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
@@ -143,7 +151,10 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       simulationProvider.stopSimulation();
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (mounted) {
-                          Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+                          Navigator.pushReplacementNamed(
+                            context,
+                            AppRoutes.dashboard,
+                          );
                         }
                       });
                     }
@@ -152,14 +163,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ],
               bottom: const TabBar(
                 tabs: [
-                  Tab(
-                    icon: Icon(Icons.trending_up),
-                    text: 'Trading',
-                  ),
-                  Tab(
-                    icon: Icon(Icons.analytics),
-                    text: 'Estadísticas',
-                  ),
+                  Tab(icon: Icon(Icons.trending_up), text: 'Trading'),
+                  Tab(icon: Icon(Icons.analytics), text: 'Estadísticas'),
                 ],
                 indicatorColor: Color(0xFF21CE99),
                 labelColor: Colors.white,
@@ -190,79 +195,83 @@ class _SimulationScreenState extends State<SimulationScreen> {
       ...simulationProvider.completedTrades,
       ...simulationProvider.currentTrades,
     ];
-            return Container(
-          color: const Color(0xFF1E1E1E),
-          child: Column(
-            children: [
-              // Chart Section - 50% of screen height
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.5,
-                child: Container(
-                  margin: const EdgeInsets.all(16),
-                  child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
-                    selector: (context, provider) => Tuple2(
-                      allTrades,
-                      provider.currentCandleIndex,
-                    ),
-                    builder: (context, data, child) {
-                      return TradingViewChart(
-                        candles: simulationProvider.historicalData,
-                        trades: data.item1,
-                        currentCandleIndex: data.item2,
-                        stopLoss: simulationProvider.manualStopLossPrice,
-                        takeProfit: simulationProvider.manualTakeProfitPrice,
-                      );
-                    },
-                  ),
-                ),
+    return Container(
+      color: const Color(0xFF1E1E1E),
+      child: Column(
+        children: [
+          // Chart Section - 50% of screen height
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
+                selector: (context, provider) =>
+                    Tuple2(allTrades, provider.currentCandleIndex),
+                builder: (context, data, child) {
+                  return TradingViewChart(
+                    candles: simulationProvider.historicalData,
+                    trades: data.item1,
+                    currentCandleIndex: data.item2,
+                    stopLoss: simulationProvider.manualStopLossPrice,
+                    takeProfit: simulationProvider.manualTakeProfitPrice,
+                  );
+                },
               ),
-              
-              // Controls Section - Flexible
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(5),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                    // Order Container (when active)
-                    if (_showOrderContainerInline) ...[
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 300),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2C2C2C),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[700]!),
-                          ),
-                          child: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      _isBuyOrder ? 'Comprar' : 'Vender',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Inter',
-                                      ),
+            ),
+          ),
+
+          // Controls Section - Flexible
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(5),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Order Container (when active)
+                  if (_showOrderContainerInline) ...[
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 300),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2C2C2C),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[700]!),
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _isBuyOrder ? 'Comprar' : 'Vender',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                                      onPressed: () {
-                                        setState(() {
-                                          _showOrderContainerInline = false;
-                                        });
-                                      },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 20,
                                     ),
-                                  ],
-                                ),
-                                
-                                // Amount Selection
+                                    onPressed: () {
+                                      setState(() {
+                                        _showOrderContainerInline = false;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+
+                              // Amount Selection
+                              /*
                                 Text(
                                   'Monto',
                                   style: TextStyle(
@@ -365,104 +374,246 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ),
                                 
                                 const SizedBox(height: 20),
-                                
-                                // Confirm Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      simulationProvider.executeManualTrade(
-                                        type: _isBuyOrder ? 'buy' : 'sell',
-                                        amount: _selectedAmount,
-                                        leverage: _selectedLeverage,
-                                      );
-                                      setState(() {
-                                        _showOrderContainerInline = false;
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _isBuyOrder ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      _isBuyOrder ? 'Comprar' : 'Vender',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Inter',
-                                      ),
+                                */
+
+                              // Información del setup
+                              if (simulationProvider.currentSetup != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E1E1E),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.grey[700]!,
                                     ),
                                   ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Configuración del Setup',
+                                        style: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _buildSetupInfoItem(
+                                              'Riesgo',
+                                              simulationProvider.currentSetup!
+                                                  .getRiskPercentDisplay(),
+                                              Icons.security,
+                                              Colors.orange,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: _buildSetupInfoItem(
+                                              'SL',
+                                              simulationProvider.currentSetup!
+                                                  .getStopLossDisplay(),
+                                              Icons.trending_down,
+                                              Colors.red,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: _buildSetupInfoItem(
+                                              'TP',
+                                              simulationProvider.currentSetup!
+                                                  .getTakeProfitRatioDisplay(),
+                                              Icons.trending_up,
+                                              Colors.green,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const SizedBox(height: 20),
                               ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ] else if (_showSLTPContainer) ...[
-                      // SL/TP Container (when active)
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 300),
-                        child: _ManageSLTPContainer(simulationProvider: simulationProvider, onClose: () {
-                          setState(() {
-                            _showSLTPContainer = false;
-                          });
-                        }),
-                      ),
-                    ] else ...[
-                      // Normal Controls (when no container is active)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2C2C2C),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[700]!),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(height: 5),
-                            
-                            // Manual Advance Button
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: simulationProvider.currentCandleIndex < simulationProvider.historicalData.length - 1
-                                    ? () => simulationProvider.advanceCandle()
-                                    : null,
-                                icon: const Icon(Icons.arrow_forward),
-                                label: const Text('Siguiente Vela'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF21CE99),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+
+                              // Confirm Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    simulationProvider.executeManualTrade(
+                                      type: _isBuyOrder ? 'buy' : 'sell',
+                                      amount:
+                                          0.0, // Se calculará automáticamente
+                                      leverage:
+                                          1, // Se calculará automáticamente
+                                    );
+                                    setState(() {
+                                      _showOrderContainerInline = false;
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isBuyOrder
+                                        ? const Color(0xFF21CE99)
+                                        : const Color(0xFFFF6B6B),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _isBuyOrder ? 'Comprar' : 'Vender',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Inter',
+                                    ),
                                   ),
                                 ),
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else if (_showSLTPContainer) ...[
+                    // SL/TP Container (when active)
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 300),
+                      child: _ManageSLTPContainer(
+                        simulationProvider: simulationProvider,
+                        onClose: () {
+                          setState(() {
+                            _showSLTPContainer = false;
+                          });
+                        },
+                      ),
+                    ),
+                  ] else ...[
+                    // Normal Controls (when no container is active)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2C2C2C),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[700]!),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 5),
+
+                          // Manual Advance Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  simulationProvider.currentCandleIndex <
+                                      simulationProvider.historicalData.length -
+                                          1
+                                  ? () => simulationProvider.advanceCandle()
+                                  : null,
+                              icon: const Icon(Icons.arrow_forward),
+                              label: const Text('Siguiente Vela'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF21CE99),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
                             ),
-                            
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Trading Buttons Row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: !simulationProvider.inPosition
+                                      ? () => _showOrderContainer(
+                                          context,
+                                          simulationProvider,
+                                          true,
+                                        )
+                                      : null,
+                                  icon: const Icon(Icons.trending_up),
+                                  label: const Text('Comprar'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF21CE99),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: !simulationProvider.inPosition
+                                      ? () => _showOrderContainer(
+                                          context,
+                                          simulationProvider,
+                                          false,
+                                        )
+                                      : null,
+                                  icon: const Icon(Icons.trending_down),
+                                  label: const Text('Vender'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF6B6B),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          // Close Position Button (only show if position is open)
+                          if (simulationProvider.inPosition) ...[
                             const SizedBox(height: 12),
-                            
-                            // Trading Buttons Row
                             Row(
                               children: [
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: !simulationProvider.inPosition 
-                                        ? () => _showOrderContainer(context, simulationProvider, true)
-                                        : null,
-                                    icon: const Icon(Icons.trending_up),
-                                    label: const Text('Comprar'),
+                                    onPressed: () {
+                                      final currentCandle =
+                                          simulationProvider
+                                              .historicalData[simulationProvider
+                                              .currentCandleIndex];
+                                      simulationProvider.closeManualPosition(
+                                        currentCandle.close,
+                                      );
+                                    },
+                                    icon: const Icon(Icons.close),
+                                    label: const Text('Cerrar Entrada'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF21CE99),
+                                      backgroundColor: Colors.orange,
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
@@ -472,15 +623,20 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: !simulationProvider.inPosition 
-                                        ? () => _showOrderContainer(context, simulationProvider, false)
-                                        : null,
-                                    icon: const Icon(Icons.trending_down),
-                                    label: const Text('Vender'),
+                                    onPressed: () {
+                                      _showManageSLTPContainer(
+                                        context,
+                                        simulationProvider,
+                                      );
+                                    },
+                                    icon: const Icon(Icons.tune),
+                                    label: const Text('Gestionar SL/TP'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFFF6B6B),
+                                      backgroundColor: const Color(0xFF1976D2),
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
@@ -489,177 +645,163 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ),
                               ],
                             ),
-                            
-                            // Close Position Button (only show if position is open)
-                            if (simulationProvider.inPosition) ...[
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        final currentCandle = simulationProvider.historicalData[simulationProvider.currentCandleIndex];
-                                        simulationProvider.closeManualPosition(currentCandle.close);
-                                      },
-                                      icon: const Icon(Icons.close),
-                                      label: const Text('Cerrar Entrada'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.orange,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        _showManageSLTPContainer(context, simulationProvider);
-                                      },
-                                      icon: const Icon(Icons.tune),
-                                      label: const Text('Gestionar SL/TP'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF1976D2),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
                           ],
-                        ),
+                        ],
                       ),
-                    ],
-                    
-                    // Setup Details Section (below controls)
-                    if (simulationProvider.currentSetup != null && !_showOrderContainerInline && !_showSLTPContainer) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2C2C2C),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[700]!),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.settings,
-                                  color: const Color(0xFF21CE99),
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Setup: ${simulationProvider.currentSetup!.name}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'Inter',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            
-                            // Setup details in compact format
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildCompactSetupDetail(
-                                    'Posición',
-                                    simulationProvider.currentSetup!.getPositionSizeDisplay(),
-                                    Icons.account_balance_wallet,
-                                    Colors.blue,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildCompactSetupDetail(
-                                    'SL',
-                                    simulationProvider.currentSetup!.getStopLossDisplay(),
-                                    Icons.trending_down,
-                                    Colors.red,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildCompactSetupDetail(
-                                    'TP',
-                                    simulationProvider.currentSetup!.getTakeProfitDisplay(),
-                                    Icons.trending_up,
-                                    Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            
-                            // Advanced Rules Section
-                            if (simulationProvider.currentSetup!.rules.isNotEmpty) ...[
-                              const SizedBox(height: 12),
+                    ),
+                  ],
+
+                  // Setup Details Section (below controls)
+                  if (simulationProvider.currentSetup != null &&
+                      !_showOrderContainerInline &&
+                      !_showSLTPContainer) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2C2C2C),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[700]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.settings,
+                                color: const Color(0xFF21CE99),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
                               Text(
-                                'Reglas Avanzadas',
-                                style: TextStyle(
-                                  color: Colors.grey[400],
-                                  fontSize: 12,
+                                'Setup: ${simulationProvider.currentSetup!.name}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   fontFamily: 'Inter',
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              
-                              // Scrollable rules list
-                              Container(
-                                constraints: const BoxConstraints(maxHeight: 120),
-                                child: SingleChildScrollView(
-                                  child: Column(
-                                    children: simulationProvider.currentSetup!.rules.map((rule) => 
-                                      _buildCompactRuleItem(rule)
-                                    ).toList(),
-                                  ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Setup details in compact format
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildCompactSetupDetail(
+                                  'Riesgo',
+                                  simulationProvider.currentSetup!
+                                      .getRiskPercentDisplay(),
+                                  Icons.security,
+                                  Colors.orange,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildCompactSetupDetail(
+                                  'SL',
+                                  simulationProvider.currentSetup!
+                                      .getStopLossDisplay(),
+                                  Icons.trending_down,
+                                  Colors.red,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildCompactSetupDetail(
+                                  'TP',
+                                  simulationProvider.currentSetup!
+                                      .getTakeProfitRatioDisplay(),
+                                  Icons.trending_up,
+                                  Colors.green,
                                 ),
                               ),
                             ],
+                          ),
+
+                          // Advanced Rules Section
+                          if (simulationProvider
+                              .currentSetup!
+                              .rules
+                              .isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              'Reglas Avanzadas',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Scrollable rules list
+                            Container(
+                              constraints: const BoxConstraints(maxHeight: 120),
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  children: simulationProvider
+                                      .currentSetup!
+                                      .rules
+                                      .map(
+                                        (rule) => _buildCompactRuleItem(rule),
+                                      )
+                                      .toList(),
+                                ),
+                              ),
+                            ),
                           ],
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ],
-                ),
+                ],
               ),
-          )],
+            ),
           ),
-        );
+        ],
+      ),
+    );
   }
 
   Widget _buildStatisticsTab(SimulationProvider simulationProvider) {
     final trades = simulationProvider.currentTrades;
     final completedOperations = simulationProvider.completedOperations;
     final totalTrades = trades.length;
-    
+
     // Calcular estadísticas de operaciones completadas
     final totalCompletedOperations = completedOperations.length;
-    final winningTrades = completedOperations.where((t) => t.totalPnL > 0).length;
-    final winRate = totalCompletedOperations > 0 ? winningTrades / totalCompletedOperations : 0.0;
-    
+    final winningTrades = completedOperations
+        .where((t) => t.totalPnL > 0)
+        .length;
+    final winRate = totalCompletedOperations > 0
+        ? winningTrades / totalCompletedOperations
+        : 0.0;
+
     // Calcular P&L total de operaciones completadas
-    final totalPnL = completedOperations.fold(0.0, (sum, operation) => sum + operation.totalPnL);
-    final maxProfit = completedOperations.isNotEmpty ? completedOperations.map((t) => t.totalPnL).reduce((a, b) => a > b ? a : b) : 0.0;
-    final maxLoss = completedOperations.isNotEmpty ? completedOperations.map((t) => t.totalPnL).reduce((a, b) => a < b ? a : b) : 0.0;
-    
-    final isSimulationComplete = simulationProvider.currentCandleIndex >= simulationProvider.historicalData.length - 1;
+    final totalPnL = completedOperations.fold(
+      0.0,
+      (sum, operation) => sum + operation.totalPnL,
+    );
+    final maxProfit = completedOperations.isNotEmpty
+        ? completedOperations
+              .map((t) => t.totalPnL)
+              .reduce((a, b) => a > b ? a : b)
+        : 0.0;
+    final maxLoss = completedOperations.isNotEmpty
+        ? completedOperations
+              .map((t) => t.totalPnL)
+              .reduce((a, b) => a < b ? a : b)
+        : 0.0;
+
+    final isSimulationComplete =
+        simulationProvider.currentCandleIndex >=
+        simulationProvider.historicalData.length - 1;
 
     return Container(
       color: const Color(0xFF1E1E1E),
@@ -688,11 +830,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                       const SizedBox(height: 12),
                       LinearProgressIndicator(
-                        value: simulationProvider.historicalData.isNotEmpty 
-                            ? (simulationProvider.currentCandleIndex + 1) / simulationProvider.historicalData.length
+                        value: simulationProvider.historicalData.isNotEmpty
+                            ? (simulationProvider.currentCandleIndex + 1) /
+                                  simulationProvider.historicalData.length
                             : 0.0,
                         backgroundColor: Colors.grey[700],
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF21CE99)),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF21CE99),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -728,7 +873,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Key Metrics Grid
                     Row(
                       children: [
@@ -812,7 +957,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             'P&L Flotante',
                             '\$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
                             Icons.pending,
-                            simulationProvider.unrealizedPnL >= 0 ? Colors.green : Colors.red,
+                            simulationProvider.unrealizedPnL >= 0
+                                ? Colors.green
+                                : Colors.red,
                           ),
                         ),
                       ],
@@ -841,21 +988,25 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     _buildPnLMetric('P&L Total', totalPnL),
                     const SizedBox(height: 8),
                     _buildPnLMetric('Balance Inicial', 10000.0),
                     const SizedBox(height: 8),
-                    _buildPnLMetric('Balance Actual', simulationProvider.currentBalance),
+                    _buildPnLMetric(
+                      'Balance Actual',
+                      simulationProvider.currentBalance,
+                    ),
                     const SizedBox(height: 8),
-                    _buildPnLMetric('P&L Flotante', simulationProvider.unrealizedPnL),
+                    _buildPnLMetric(
+                      'P&L Flotante',
+                      simulationProvider.unrealizedPnL,
+                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-
-
 
             // Recent Trades
             if (trades.isNotEmpty) ...[
@@ -876,9 +1027,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       ...trades.take(5).map((trade) => _buildTradeItem(trade)),
-                      
+
                       if (trades.length > 5) ...[
                         const SizedBox(height: 8),
                         Center(
@@ -931,9 +1082,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
-                      ...completedOperations.take(10).map((operation) => _buildCompletedOperationItem(operation)),
-                      
+
+                      ...completedOperations
+                          .take(10)
+                          .map(
+                            (operation) =>
+                                _buildCompletedOperationItem(operation),
+                          ),
+
                       if (completedOperations.length > 10) ...[
                         const SizedBox(height: 8),
                         Center(
@@ -1003,7 +1159,12 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1054,7 +1215,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
         Text(
           '\$${value.toStringAsFixed(2)}',
           style: TextStyle(
-            color: value >= 0 ? const Color(0xFF21CE99) : const Color(0xFFFF6B6B),
+            color: value >= 0
+                ? const Color(0xFF21CE99)
+                : const Color(0xFFFF6B6B),
             fontSize: 14,
             fontWeight: FontWeight.w600,
             fontFamily: 'Inter',
@@ -1066,7 +1229,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
   Widget _buildTradeItem(Trade trade) {
     // Todos los trades en el historial ahora son abiertos
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
@@ -1074,8 +1237,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: trade.type == 'buy' 
-              ? Colors.green.withValues(alpha: 0.3) 
+          color: trade.type == 'buy'
+              ? Colors.green.withValues(alpha: 0.3)
               : Colors.red.withValues(alpha: 0.3),
         ),
       ),
@@ -1133,8 +1296,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: operation.totalPnL >= 0 
-              ? Colors.green.withValues(alpha: 0.3) 
+          color: operation.totalPnL >= 0
+              ? Colors.green.withValues(alpha: 0.3)
               : Colors.red.withValues(alpha: 0.3),
         ),
       ),
@@ -1148,7 +1311,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
               Row(
                 children: [
                   Icon(
-                    operation.totalPnL >= 0 ? Icons.trending_up : Icons.trending_down,
+                    operation.totalPnL >= 0
+                        ? Icons.trending_up
+                        : Icons.trending_down,
                     color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
                     size: 16,
                   ),
@@ -1156,7 +1321,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   Text(
                     operation.operationType.toUpperCase(),
                     style: TextStyle(
-                      color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
+                      color: operation.totalPnL >= 0
+                          ? Colors.green
+                          : Colors.red,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Inter',
@@ -1176,7 +1343,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          
+
           // Precios de entrada y salida
           Row(
             children: [
@@ -1194,7 +1361,10 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                     ),
                     Text(
-                      operation.entryTime.toString().substring(11, 16), // Solo hora:minuto
+                      operation.entryTime.toString().substring(
+                        11,
+                        16,
+                      ), // Solo hora:minuto
                       style: TextStyle(
                         color: Colors.grey[400],
                         fontSize: 10,
@@ -1219,7 +1389,10 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                     ),
                     Text(
-                      operation.exitTime.toString().substring(11, 16), // Solo hora:minuto
+                      operation.exitTime.toString().substring(
+                        11,
+                        16,
+                      ), // Solo hora:minuto
                       style: TextStyle(
                         color: Colors.grey[400],
                         fontSize: 10,
@@ -1232,7 +1405,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          
+
           // Información adicional
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1280,7 +1453,12 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  Widget _buildSetupDetailCard(String title, String value, IconData icon, Color color) {
+  Widget _buildSetupDetailCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1327,8 +1505,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: rule.isActive 
-              ? const Color(0xFF21CE99).withValues(alpha: 0.3) 
+          color: rule.isActive
+              ? const Color(0xFF21CE99).withValues(alpha: 0.3)
               : Colors.grey.withValues(alpha: 0.3),
         ),
       ),
@@ -1369,8 +1547,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: rule.isActive 
-                  ? const Color(0xFF21CE99).withValues(alpha: 0.2) 
+              color: rule.isActive
+                  ? const Color(0xFF21CE99).withValues(alpha: 0.2)
                   : Colors.grey.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -1389,7 +1567,12 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  Widget _buildCompactSetupDetail(String title, String value, IconData icon, Color color) {
+  Widget _buildCompactSetupDetail(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(
@@ -1435,8 +1618,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: rule.isActive 
-              ? const Color(0xFF21CE99).withValues(alpha: 0.3) 
+          color: rule.isActive
+              ? const Color(0xFF21CE99).withValues(alpha: 0.3)
               : Colors.grey.withValues(alpha: 0.3),
         ),
       ),
@@ -1479,8 +1662,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             decoration: BoxDecoration(
-              color: rule.isActive 
-                  ? const Color(0xFF21CE99).withValues(alpha: 0.2) 
+              color: rule.isActive
+                  ? const Color(0xFF21CE99).withValues(alpha: 0.2)
                   : Colors.grey.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -1513,6 +1696,49 @@ class _SimulationScreenState extends State<SimulationScreen> {
         return Icons.rule;
     }
   }
+
+  Widget _buildSetupInfoItem(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Inter',
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.grey[400],
+              fontSize: 9,
+              fontFamily: 'Inter',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // Widget del container inline para SL/TP
@@ -1530,8 +1756,50 @@ class _ManageSLTPContainer extends StatefulWidget {
 
 class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
   // Escala personalizada para SL y TP
-  static const List<double> _slPercents = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 7, 10];
-  static const List<double> _tpPercents = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 7, 10, 15, 20];
+  static const List<double> _slPercents = [
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1,
+    1.2,
+    1.5,
+    2,
+    2.5,
+    3,
+    4,
+    5,
+    7,
+    10,
+  ];
+  static const List<double> _tpPercents = [
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1,
+    1.2,
+    1.5,
+    2,
+    2.5,
+    3,
+    4,
+    5,
+    7,
+    10,
+    15,
+    20,
+  ];
 
   int? _takeProfitIndex;
   int? _stopLossIndex;
@@ -1544,16 +1812,20 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
     super.initState();
     // Si hay valor, buscar el índice correspondiente, si no, null
     _takeProfitIndex = widget.simulationProvider.manualTakeProfitPercent != null
-        ? _tpPercents.indexWhere((v) => v == widget.simulationProvider.manualTakeProfitPercent)
+        ? _tpPercents.indexWhere(
+            (v) => v == widget.simulationProvider.manualTakeProfitPercent,
+          )
         : null;
     _stopLossIndex = widget.simulationProvider.manualStopLossPercent != null
-        ? _slPercents.indexWhere((v) => v == widget.simulationProvider.manualStopLossPercent)
+        ? _slPercents.indexWhere(
+            (v) => v == widget.simulationProvider.manualStopLossPercent,
+          )
         : null;
-    
+
     // Inicializar checkboxes basado en si hay valores definidos
     _tpEnabled = widget.simulationProvider.manualTakeProfitPercent != null;
     _slEnabled = widget.simulationProvider.manualStopLossPercent != null;
-    
+
     _partialClosePercent = 0.0;
   }
 
@@ -1561,13 +1833,19 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
   Widget build(BuildContext context) {
     final entryPrice = widget.simulationProvider.entryPrice;
     final positionSize = widget.simulationProvider.positionSize;
-    
+
     // Calcular el P&L esperado basado en el movimiento del precio
-    final tpValue = _takeProfitIndex != null 
-        ? positionSize * entryPrice * (_tpPercents[_takeProfitIndex!] / 100) * (widget.simulationProvider.currentTrades.last.leverage ?? 1)
+    final tpValue = _takeProfitIndex != null
+        ? positionSize *
+              entryPrice *
+              (_tpPercents[_takeProfitIndex!] / 100) *
+              (widget.simulationProvider.currentTrades.last.leverage ?? 1)
         : 0;
-    final slValue = _stopLossIndex != null 
-        ? positionSize * entryPrice * (_slPercents[_stopLossIndex!] / 100) * (widget.simulationProvider.currentTrades.last.leverage ?? 1)
+    final slValue = _stopLossIndex != null
+        ? positionSize *
+              entryPrice *
+              (_slPercents[_stopLossIndex!] / 100) *
+              (widget.simulationProvider.currentTrades.last.leverage ?? 1)
         : 0;
 
     return Container(
@@ -1586,7 +1864,11 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
               children: [
                 const Text(
                   'Gestión Avanzada',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.white, size: 20),
@@ -1595,7 +1877,7 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Take Profit Section
             Row(
               children: [
@@ -1610,7 +1892,9 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                       } else if (_takeProfitIndex == null) {
                         // Si se activa pero no hay índice, establecer uno por defecto
                         _takeProfitIndex = 9; // 1%
-                        widget.simulationProvider.setManualTakeProfit(_tpPercents[9]);
+                        widget.simulationProvider.setManualTakeProfit(
+                          _tpPercents[9],
+                        );
                       }
                     });
                   },
@@ -1622,9 +1906,9 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                         ? 'TP: +\$${tpValue.toStringAsFixed(0)} (+${_tpPercents[_takeProfitIndex!].toStringAsFixed(1)}%)'
                         : 'TP: Desactivado',
                     style: TextStyle(
-                      color: _tpEnabled ? Colors.green : Colors.grey[400], 
-                      fontWeight: FontWeight.w600, 
-                      fontSize: 12
+                      color: _tpEnabled ? Colors.green : Colors.grey[400],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -1636,19 +1920,22 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                 min: 0,
                 max: (_tpPercents.length - 1).toDouble(),
                 divisions: _tpPercents.length - 1,
-                label: '+${_tpPercents[_takeProfitIndex ?? 0].toStringAsFixed(1)}%',
+                label:
+                    '+${_tpPercents[_takeProfitIndex ?? 0].toStringAsFixed(1)}%',
                 activeColor: Colors.green,
                 inactiveColor: Colors.green.withValues(alpha: 0.2),
                 onChanged: (v) {
                   setState(() {
                     _takeProfitIndex = v.round();
                   });
-                  widget.simulationProvider.setManualTakeProfit(_tpPercents[_takeProfitIndex!]);
+                  widget.simulationProvider.setManualTakeProfit(
+                    _tpPercents[_takeProfitIndex!],
+                  );
                 },
               ),
             ],
             const SizedBox(height: 6),
-            
+
             // Stop Loss Section
             Row(
               children: [
@@ -1663,7 +1950,9 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                       } else if (_stopLossIndex == null) {
                         // Si se activa pero no hay índice, establecer uno por defecto
                         _stopLossIndex = 9; // 1%
-                        widget.simulationProvider.setManualStopLoss(_slPercents[9]);
+                        widget.simulationProvider.setManualStopLoss(
+                          _slPercents[9],
+                        );
                       }
                     });
                   },
@@ -1675,9 +1964,9 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                         ? 'SL: -\$${slValue.toStringAsFixed(0)} (-${_slPercents[_stopLossIndex!].toStringAsFixed(1)}%)'
                         : 'SL: Desactivado',
                     style: TextStyle(
-                      color: _slEnabled ? Colors.red : Colors.grey[400], 
-                      fontWeight: FontWeight.w600, 
-                      fontSize: 12
+                      color: _slEnabled ? Colors.red : Colors.grey[400],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -1689,14 +1978,17 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                 min: 0,
                 max: (_slPercents.length - 1).toDouble(),
                 divisions: _slPercents.length - 1,
-                label: '-${_slPercents[_stopLossIndex ?? 0].toStringAsFixed(1)}%',
+                label:
+                    '-${_slPercents[_stopLossIndex ?? 0].toStringAsFixed(1)}%',
                 activeColor: Colors.red,
                 inactiveColor: Colors.red.withValues(alpha: 0.2),
                 onChanged: (v) {
                   setState(() {
                     _stopLossIndex = v.round();
                   });
-                  widget.simulationProvider.setManualStopLoss(_slPercents[_stopLossIndex!]);
+                  widget.simulationProvider.setManualStopLoss(
+                    _slPercents[_stopLossIndex!],
+                  );
                 },
               ),
             ],
@@ -1708,14 +2000,20 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                     onPressed: () {
                       // Lógica real: aplicar SL/TP y cierre parcial
                       if ((_partialClosePercent ?? 0) > 0) {
-                        widget.simulationProvider.closePartialPosition(_partialClosePercent ?? 0);
+                        widget.simulationProvider.closePartialPosition(
+                          _partialClosePercent ?? 0,
+                        );
                       }
                       // Aplicar SL y TP de forma independiente
                       widget.simulationProvider.setManualStopLoss(
-                        _slEnabled && _stopLossIndex != null ? _slPercents[_stopLossIndex!] : null,
+                        _slEnabled && _stopLossIndex != null
+                            ? _slPercents[_stopLossIndex!]
+                            : null,
                       );
                       widget.simulationProvider.setManualTakeProfit(
-                        _tpEnabled && _takeProfitIndex != null ? _tpPercents[_takeProfitIndex!] : null,
+                        _tpEnabled && _takeProfitIndex != null
+                            ? _tpPercents[_takeProfitIndex!]
+                            : null,
                       );
                       // Cerrar el container
                       widget.onClose();
@@ -1728,7 +2026,13 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('HECHO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    child: const Text(
+                      'HECHO',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1738,4 +2042,4 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
       ),
     );
   }
-} 
+}

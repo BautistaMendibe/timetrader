@@ -1,20 +1,47 @@
 import 'rule.dart';
 
-enum ValueType {
-  percentage,
-  fixed,
+enum ValueType { percentage, fixed }
+
+enum StopLossType { pips, price }
+
+enum TakeProfitRatio {
+  oneToOne('1:1'),
+  oneToTwo('1:2'),
+  oneToThree('1:3'),
+  twoToOne('2:1'),
+  threeToOne('3:1'),
+  custom('Personalizado');
+
+  const TakeProfitRatio(this.displayName);
+  final String displayName;
+
+  double get ratio {
+    switch (this) {
+      case TakeProfitRatio.oneToOne:
+        return 1.0;
+      case TakeProfitRatio.oneToTwo:
+        return 2.0;
+      case TakeProfitRatio.oneToThree:
+        return 3.0;
+      case TakeProfitRatio.twoToOne:
+        return 0.5;
+      case TakeProfitRatio.threeToOne:
+        return 0.33;
+      case TakeProfitRatio.custom:
+        return 1.0; // Default for custom
+    }
+  }
 }
 
 class Setup {
   final String id;
   final String name;
   final String asset;
-  final double positionSize;
-  final ValueType positionSizeType;
-  final double stopLossPercent;
-  final ValueType stopLossType;
-  final double takeProfitPercent;
-  final ValueType takeProfitType;
+  final double riskPercent;
+  final double stopLossDistance;
+  final StopLossType stopLossType;
+  final TakeProfitRatio takeProfitRatio;
+  final double? customTakeProfitRatio;
   final bool useAdvancedRules;
   final List<Rule> rules;
   final DateTime createdAt;
@@ -25,12 +52,11 @@ class Setup {
     required this.id,
     required this.name,
     required this.asset,
-    required this.positionSize,
-    this.positionSizeType = ValueType.fixed,
-    required this.stopLossPercent,
-    this.stopLossType = ValueType.percentage,
-    required this.takeProfitPercent,
-    this.takeProfitType = ValueType.percentage,
+    required this.riskPercent,
+    required this.stopLossDistance,
+    this.stopLossType = StopLossType.pips,
+    this.takeProfitRatio = TakeProfitRatio.oneToTwo,
+    this.customTakeProfitRatio,
     this.useAdvancedRules = false,
     this.rules = const [],
     required this.createdAt,
@@ -43,12 +69,11 @@ class Setup {
       'id': id,
       'name': name,
       'asset': asset,
-      'positionSize': positionSize,
-      'positionSizeType': positionSizeType.toString(),
-      'stopLossPercent': stopLossPercent,
+      'riskPercent': riskPercent,
+      'stopLossDistance': stopLossDistance,
       'stopLossType': stopLossType.toString(),
-      'takeProfitPercent': takeProfitPercent,
-      'takeProfitType': takeProfitType.toString(),
+      'takeProfitRatio': takeProfitRatio.toString(),
+      'customTakeProfitRatio': customTakeProfitRatio,
       'useAdvancedRules': useAdvancedRules,
       'rules': rules.map((rule) => rule.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
@@ -62,28 +87,29 @@ class Setup {
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       asset: json['asset'] ?? '',
-      positionSize: (json['positionSize'] ?? 0.0).toDouble(),
-      positionSizeType: ValueType.values.firstWhere(
-        (e) => e.toString() == (json['positionSizeType'] ?? ValueType.fixed.toString()),
-        orElse: () => ValueType.fixed,
+      riskPercent: (json['riskPercent'] ?? 1.0).toDouble(),
+      stopLossDistance: (json['stopLossDistance'] ?? 0.0).toDouble(),
+      stopLossType: StopLossType.values.firstWhere(
+        (e) =>
+            e.toString() ==
+            (json['stopLossType'] ?? StopLossType.pips.toString()),
+        orElse: () => StopLossType.pips,
       ),
-      stopLossPercent: (json['stopLossPercent'] ?? 0.0).toDouble(),
-      stopLossType: ValueType.values.firstWhere(
-        (e) => e.toString() == (json['stopLossType'] ?? ValueType.percentage.toString()),
-        orElse: () => ValueType.percentage,
+      takeProfitRatio: TakeProfitRatio.values.firstWhere(
+        (e) =>
+            e.toString() ==
+            (json['takeProfitRatio'] ?? TakeProfitRatio.oneToTwo.toString()),
+        orElse: () => TakeProfitRatio.oneToTwo,
       ),
-      takeProfitPercent: (json['takeProfitPercent'] ?? 0.0).toDouble(),
-      takeProfitType: ValueType.values.firstWhere(
-        (e) => e.toString() == (json['takeProfitType'] ?? ValueType.percentage.toString()),
-        orElse: () => ValueType.percentage,
-      ),
+      customTakeProfitRatio: json['customTakeProfitRatio']?.toDouble(),
       useAdvancedRules: json['useAdvancedRules'] ?? false,
-      rules: (json['rules'] as List<dynamic>?)
+      rules:
+          (json['rules'] as List<dynamic>?)
               ?.map((ruleJson) => Rule.fromJson(ruleJson))
               .toList() ??
           [],
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
       isExample: json['isExample'] ?? false,
       userId: json['userId'],
@@ -94,12 +120,11 @@ class Setup {
     String? id,
     String? name,
     String? asset,
-    double? positionSize,
-    ValueType? positionSizeType,
-    double? stopLossPercent,
-    ValueType? stopLossType,
-    double? takeProfitPercent,
-    ValueType? takeProfitType,
+    double? riskPercent,
+    double? stopLossDistance,
+    StopLossType? stopLossType,
+    TakeProfitRatio? takeProfitRatio,
+    double? customTakeProfitRatio,
     bool? useAdvancedRules,
     List<Rule>? rules,
     DateTime? createdAt,
@@ -110,12 +135,12 @@ class Setup {
       id: id ?? this.id,
       name: name ?? this.name,
       asset: asset ?? this.asset,
-      positionSize: positionSize ?? this.positionSize,
-      positionSizeType: positionSizeType ?? this.positionSizeType,
-      stopLossPercent: stopLossPercent ?? this.stopLossPercent,
+      riskPercent: riskPercent ?? this.riskPercent,
+      stopLossDistance: stopLossDistance ?? this.stopLossDistance,
       stopLossType: stopLossType ?? this.stopLossType,
-      takeProfitPercent: takeProfitPercent ?? this.takeProfitPercent,
-      takeProfitType: takeProfitType ?? this.takeProfitType,
+      takeProfitRatio: takeProfitRatio ?? this.takeProfitRatio,
+      customTakeProfitRatio:
+          customTakeProfitRatio ?? this.customTakeProfitRatio,
       useAdvancedRules: useAdvancedRules ?? this.useAdvancedRules,
       rules: rules ?? this.rules,
       createdAt: createdAt ?? this.createdAt,
@@ -149,27 +174,31 @@ class Setup {
   }
 
   // Métodos de conveniencia para obtener valores formateados
-  String getPositionSizeDisplay() {
-    if (positionSizeType == ValueType.percentage) {
-      return '${positionSize.toStringAsFixed(1)}%';
-    } else {
-      return '\$${positionSize.toStringAsFixed(0)}';
-    }
+  String getRiskPercentDisplay() {
+    return '${riskPercent.toStringAsFixed(1)}%';
   }
 
   String getStopLossDisplay() {
-    if (stopLossType == ValueType.percentage) {
-      return '${stopLossPercent.toStringAsFixed(1)}%';
+    if (stopLossType == StopLossType.pips) {
+      return '${stopLossDistance.toStringAsFixed(1)} pips';
     } else {
-      return '\$${stopLossPercent.toStringAsFixed(0)}';
+      return '\$${stopLossDistance.toStringAsFixed(2)}';
     }
   }
 
-  String getTakeProfitDisplay() {
-    if (takeProfitType == ValueType.percentage) {
-      return '${takeProfitPercent.toStringAsFixed(1)}%';
-    } else {
-      return '\$${takeProfitPercent.toStringAsFixed(0)}';
+  String getTakeProfitRatioDisplay() {
+    if (takeProfitRatio == TakeProfitRatio.custom &&
+        customTakeProfitRatio != null) {
+      return '1:${customTakeProfitRatio!.toStringAsFixed(1)}';
     }
+    return takeProfitRatio.displayName;
   }
-} 
+
+  double getEffectiveTakeProfitRatio() {
+    if (takeProfitRatio == TakeProfitRatio.custom &&
+        customTakeProfitRatio != null) {
+      return customTakeProfitRatio!;
+    }
+    return takeProfitRatio.ratio;
+  }
+}

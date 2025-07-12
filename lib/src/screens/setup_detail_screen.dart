@@ -14,7 +14,7 @@ class SetupDetailScreen extends StatelessWidget {
     return Consumer<SetupProvider>(
       builder: (context, setupProvider, child) {
         final setup = setupProvider.selectedSetup;
-        
+
         if (setup == null) {
           return Scaffold(
             appBar: AppBar(
@@ -90,10 +90,7 @@ class SetupDetailScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         setup.asset,
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[400],
-                        ),
+                        style: TextStyle(fontSize: 18, color: Colors.grey[400]),
                       ),
                     ],
                   ),
@@ -125,10 +122,7 @@ class SetupDetailScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Creado: ${_formatDate(setup.createdAt)}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -146,10 +140,7 @@ class SetupDetailScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.analytics,
-                  color: Color(0xFF21CE99),
-                ),
+                const Icon(Icons.analytics, color: Color(0xFF21CE99)),
                 const SizedBox(width: 8),
                 const Text(
                   'Configuración de Trading',
@@ -166,10 +157,10 @@ class SetupDetailScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Tamaño de Posición',
-                    setup.getPositionSizeDisplay(),
-                    Icons.account_balance_wallet,
-                    Colors.blue,
+                    'Riesgo por Operación',
+                    setup.getRiskPercentDisplay(),
+                    Icons.security,
+                    Colors.orange,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -185,7 +176,7 @@ class SetupDetailScreen extends StatelessWidget {
                 Expanded(
                   child: _buildStatCard(
                     'Take Profit',
-                    setup.getTakeProfitDisplay(),
+                    setup.getTakeProfitRatioDisplay(),
                     Icons.trending_up,
                     Colors.green,
                   ),
@@ -198,14 +189,19 @@ class SetupDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
-             decoration: BoxDecoration(
-         color: color.withValues(alpha: 0.1),
-         borderRadius: BorderRadius.circular(8),
-         border: Border.all(color: color.withValues(alpha: 0.3)),
-       ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
       child: Column(
         children: [
           Icon(icon, color: color, size: 24),
@@ -221,10 +217,7 @@ class SetupDetailScreen extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[400],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[400]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -243,10 +236,7 @@ class SetupDetailScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.rule,
-                    color: Color(0xFF21CE99),
-                  ),
+                  const Icon(Icons.rule, color: Color(0xFF21CE99)),
                   const SizedBox(width: 8),
                   const Text(
                     'Reglas de Trading',
@@ -272,10 +262,7 @@ class SetupDetailScreen extends StatelessWidget {
                       setup.useAdvancedRules
                           ? 'No hay reglas configuradas'
                           : 'Este setup no usa reglas avanzadas',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: Colors.grey[400], fontSize: 16),
                     ),
                   ],
                 ),
@@ -295,10 +282,7 @@ class SetupDetailScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.rule,
-                  color: Color(0xFF21CE99),
-                ),
+                const Icon(Icons.rule, color: Color(0xFF21CE99)),
                 const SizedBox(width: 8),
                 const Text(
                   'Reglas de Trading',
@@ -314,10 +298,10 @@ class SetupDetailScreen extends StatelessWidget {
                     horizontal: 8,
                     vertical: 4,
                   ),
-                                     decoration: BoxDecoration(
-                     color: const Color(0xFF21CE99).withValues(alpha: 0.2),
-                     borderRadius: BorderRadius.circular(12),
-                   ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF21CE99).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Text(
                     '${setup.rules.length} reglas',
                     style: const TextStyle(
@@ -330,10 +314,9 @@ class SetupDetailScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            ...setup.rules.map((rule) => RuleCard(
-              rule: rule,
-              showDeleteButton: false,
-            )),
+            ...setup.rules.map(
+              (rule) => RuleCard(rule: rule, showDeleteButton: false),
+            ),
           ],
         ),
       ),
@@ -365,19 +348,24 @@ class SetupDetailScreen extends StatelessWidget {
             TextButton(
               onPressed: () async {
                 debugPrint('DEBUG: Iniciando proceso de eliminación...');
-                
+
                 // Guardar el nombre del setup antes de eliminarlo
                 final setupName = setup.name;
-                debugPrint('DEBUG: Setup a eliminar: $setupName (ID: ${setup.id})');
-                
+                debugPrint(
+                  'DEBUG: Setup a eliminar: $setupName (ID: ${setup.id})',
+                );
+
                 // Cerrar diálogo y navegar inmediatamente
                 Navigator.of(context).pop(); // Cerrar diálogo
                 Navigator.of(context).pop(); // Navegar de vuelta al listado
                 debugPrint('DEBUG: Navegación completada inmediatamente');
-                
+
                 try {
                   debugPrint('DEBUG: Llamando a deleteSetup...');
-                  await context.read<SetupProvider>().deleteSetup(setup.id, setupName: setupName);
+                  await context.read<SetupProvider>().deleteSetup(
+                    setup.id,
+                    setupName: setupName,
+                  );
                   debugPrint('DEBUG: deleteSetup completado exitosamente');
                 } catch (e) {
                   debugPrint('DEBUG: Error durante la eliminación: $e');
@@ -400,14 +388,10 @@ class SetupDetailScreen extends StatelessWidget {
   }
 
   void _editSetup(BuildContext context, Setup setup) {
-    Navigator.pushNamed(
-      context,
-      AppRoutes.setupForm,
-      arguments: setup,
-    );
+    Navigator.pushNamed(context, AppRoutes.setupForm, arguments: setup);
   }
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} a las ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
-} 
+}

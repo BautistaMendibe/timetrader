@@ -18,7 +18,10 @@ class FirebaseSetupService {
     if (_currentUserId == null) {
       throw Exception('User not authenticated');
     }
-    return _firestore.collection('users').doc(_currentUserId).collection(_collectionName);
+    return _firestore
+        .collection('users')
+        .doc(_currentUserId)
+        .collection(_collectionName);
   }
 
   // Example setups that are always available
@@ -27,18 +30,17 @@ class FirebaseSetupService {
       'id': 'example_1',
       'name': 'Scalping BTC',
       'asset': 'BTC/USD',
-      'positionSize': 100.0,
-      'positionSizeType': 'ValueType.fixed',
-      'stopLossPercent': 2.0,
-      'stopLossType': 'ValueType.percentage',
-      'takeProfitPercent': 4.0,
-      'takeProfitType': 'ValueType.percentage',
+      'riskPercent': 1.0,
+      'stopLossDistance': 50.0,
+      'stopLossType': 'StopLossType.pips',
+      'takeProfitRatio': 'TakeProfitRatio.oneToTwo',
       'useAdvancedRules': true,
       'rules': [
         {
           'id': 'ema_cross',
           'name': 'EMA 10 cruza EMA 5',
-          'description': 'Cuando la EMA de 10 períodos cruza por encima de la EMA de 5 períodos',
+          'description':
+              'Cuando la EMA de 10 períodos cruza por encima de la EMA de 5 períodos',
           'type': 'RuleType.technicalIndicator',
           'parameters': {'ema1': 10, 'ema2': 5, 'direction': 'bullish'},
           'isActive': true,
@@ -48,7 +50,11 @@ class FirebaseSetupService {
           'name': 'Sesión de Mañana',
           'description': 'Operar solo entre 10:00 AM y 1:00 PM',
           'type': 'RuleType.timeFrame',
-          'parameters': {'start_time': '10:00', 'end_time': '13:00', 'timezone': 'local'},
+          'parameters': {
+            'start_time': '10:00',
+            'end_time': '13:00',
+            'timezone': 'local',
+          },
           'isActive': true,
         },
       ],
@@ -58,12 +64,10 @@ class FirebaseSetupService {
       'id': 'example_2',
       'name': 'Swing Trading EUR/USD',
       'asset': 'EUR/USD',
-      'positionSize': 5.0,
-      'positionSizeType': 'ValueType.percentage',
-      'stopLossPercent': 1.5,
-      'stopLossType': 'ValueType.percentage',
-      'takeProfitPercent': 3.0,
-      'takeProfitType': 'ValueType.percentage',
+      'riskPercent': 2.0,
+      'stopLossDistance': 100.0,
+      'stopLossType': 'StopLossType.pips',
+      'takeProfitRatio': 'TakeProfitRatio.oneToThree',
       'useAdvancedRules': true,
       'rules': [
         {
@@ -71,7 +75,11 @@ class FirebaseSetupService {
           'name': 'RSI en sobreventa',
           'description': 'Cuando el RSI está por debajo de 30',
           'type': 'RuleType.technicalIndicator',
-          'parameters': {'rsi_period': 14, 'threshold': 30, 'condition': 'below'},
+          'parameters': {
+            'rsi_period': 14,
+            'threshold': 30,
+            'condition': 'below',
+          },
           'isActive': true,
         },
         {
@@ -115,7 +123,7 @@ class FirebaseSetupService {
             return Setup.fromJson({...data, 'id': doc.id});
           })
           .toList();
-      
+
       // Ordenar localmente
       userSetups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
@@ -151,7 +159,7 @@ class FirebaseSetupService {
             return Setup.fromJson({...data, 'id': doc.id});
           })
           .toList();
-      
+
       // Ordenar localmente
       setups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return setups;
@@ -164,31 +172,43 @@ class FirebaseSetupService {
   Future<void> addSetup(Setup setup) async {
     try {
       debugPrint('DEBUG: FirebaseSetupService.addSetup - Iniciando...');
-      
+
       // Check if Firebase is initialized
       try {
         _firestore.app;
-        debugPrint('DEBUG: FirebaseSetupService.addSetup - Firebase está inicializado');
+        debugPrint(
+          'DEBUG: FirebaseSetupService.addSetup - Firebase está inicializado',
+        );
       } catch (e) {
-        debugPrint('DEBUG: FirebaseSetupService.addSetup - Firebase no está inicializado: $e');
+        debugPrint(
+          'DEBUG: FirebaseSetupService.addSetup - Firebase no está inicializado: $e',
+        );
         throw Exception('Firebase no está inicializado');
       }
-      
+
       final setupData = setup.toJson();
       setupData['isExample'] = false; // Mark as user setup
-      
-      debugPrint('DEBUG: FirebaseSetupService.addSetup - Datos preparados, guardando en Firestore...');
-      
-      // Agregar timeout para evitar que se quede colgado
-      await _userSetupsCollection.add(setupData).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          debugPrint('DEBUG: FirebaseSetupService.addSetup - Timeout al guardar en Firestore');
-          throw Exception('Timeout al guardar en Firestore');
-        },
+
+      debugPrint(
+        'DEBUG: FirebaseSetupService.addSetup - Datos preparados, guardando en Firestore...',
       );
-      
-      debugPrint('DEBUG: FirebaseSetupService.addSetup - Guardado exitosamente en Firestore');
+
+      // Agregar timeout para evitar que se quede colgado
+      await _userSetupsCollection
+          .add(setupData)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint(
+                'DEBUG: FirebaseSetupService.addSetup - Timeout al guardar en Firestore',
+              );
+              throw Exception('Timeout al guardar en Firestore');
+            },
+          );
+
+      debugPrint(
+        'DEBUG: FirebaseSetupService.addSetup - Guardado exitosamente en Firestore',
+      );
     } catch (e) {
       debugPrint('DEBUG: FirebaseSetupService.addSetup - Error: $e');
       throw Exception('Failed to add setup: $e');
@@ -200,7 +220,7 @@ class FirebaseSetupService {
     try {
       final setupData = setup.toJson();
       setupData['isExample'] = false; // Mark as user setup
-      
+
       await _userSetupsCollection.doc(setup.id).update(setupData);
     } catch (e) {
       throw Exception('Failed to update setup: $e');
@@ -210,18 +230,26 @@ class FirebaseSetupService {
   // Delete a setup
   Future<void> deleteSetup(String setupId) async {
     try {
-      debugPrint('DEBUG: FirebaseSetupService.deleteSetup - Iniciando eliminación: $setupId');
-      
+      debugPrint(
+        'DEBUG: FirebaseSetupService.deleteSetup - Iniciando eliminación: $setupId',
+      );
+
       // Check if it's an example setup
       final isExample = _exampleSetups.any((setup) => setup['id'] == setupId);
       if (isExample) {
-        debugPrint('DEBUG: FirebaseSetupService.deleteSetup - Intento de eliminar setup de ejemplo');
+        debugPrint(
+          'DEBUG: FirebaseSetupService.deleteSetup - Intento de eliminar setup de ejemplo',
+        );
         throw Exception('Cannot delete example setups');
       }
-      
-      debugPrint('DEBUG: FirebaseSetupService.deleteSetup - Eliminando de Firestore...');
+
+      debugPrint(
+        'DEBUG: FirebaseSetupService.deleteSetup - Eliminando de Firestore...',
+      );
       await _userSetupsCollection.doc(setupId).delete();
-      debugPrint('DEBUG: FirebaseSetupService.deleteSetup - Eliminación completada en Firestore');
+      debugPrint(
+        'DEBUG: FirebaseSetupService.deleteSetup - Eliminación completada en Firestore',
+      );
     } catch (e) {
       debugPrint('DEBUG: FirebaseSetupService.deleteSetup - Error: $e');
       throw Exception('Failed to delete setup: $e');
@@ -236,14 +264,16 @@ class FirebaseSetupService {
         (setup) => setup['id'] == setupId,
         orElse: () => <String, dynamic>{},
       );
-      
+
       if (exampleSetup.isNotEmpty) {
         return Setup.fromJson(exampleSetup);
       }
 
       // If not an example, get from Firestore
-      final DocumentSnapshot doc = await _userSetupsCollection.doc(setupId).get();
-      
+      final DocumentSnapshot doc = await _userSetupsCollection
+          .doc(setupId)
+          .get();
+
       if (doc.exists) {
         final data = doc.data();
         if (data != null && data is Map<String, dynamic>) {
@@ -251,7 +281,7 @@ class FirebaseSetupService {
           return setup;
         }
       }
-      
+
       return null;
     } catch (e) {
       return null;
@@ -286,7 +316,7 @@ class FirebaseSetupService {
                 return Setup.fromJson({...data, 'id': doc.id});
               })
               .toList();
-          
+
           // Ordenar localmente
           setups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           return setups;
@@ -309,15 +339,15 @@ class FirebaseSetupService {
                 return Setup.fromJson({...data, 'id': doc.id});
               })
               .toList();
-          
+
           // Ordenar localmente en lugar de en la consulta
           userSetups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          
+
           final exampleSetups = _exampleSetups
               .map((exampleData) => Setup.fromJson(exampleData))
               .toList();
-          
+
           return [...exampleSetups, ...userSetups];
         });
   }
-} 
+}
