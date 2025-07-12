@@ -25,11 +25,11 @@ class SetupProvider with ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      
+
       final setups = await _firebaseService.getAllSetups();
       _setups.clear();
       _setups.addAll(setups);
-      
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -54,10 +54,7 @@ class SetupProvider with ChangeNotifier {
         name: 'Mi Regla de Volumen',
         description: 'Volumen 3x mayor que el promedio de 30 períodos',
         type: RuleType.technicalIndicator,
-        parameters: {
-          'volume_period': 30,
-          'multiplier': 3.0,
-        },
+        parameters: {'volume_period': 30, 'multiplier': 3.0},
         isActive: true,
       ),
       Rule(
@@ -78,18 +75,22 @@ class SetupProvider with ChangeNotifier {
   Future<void> addSetup(Setup setup) async {
     try {
       debugPrint('DEBUG: SetupProvider.addSetup - Iniciando...');
-      
+
       // Temporalmente, agregar el setup localmente para testing
       _setups.add(setup);
       notifyListeners();
       debugPrint('DEBUG: SetupProvider.addSetup - Setup agregado localmente');
-      
+
       // Intentar guardar en Firebase
       try {
         await _firebaseService.addSetup(setup);
-        debugPrint('DEBUG: SetupProvider.addSetup - Completado exitosamente en Firebase');
+        debugPrint(
+          'DEBUG: SetupProvider.addSetup - Completado exitosamente en Firebase',
+        );
       } catch (firebaseError) {
-        debugPrint('DEBUG: SetupProvider.addSetup - Error en Firebase: $firebaseError');
+        debugPrint(
+          'DEBUG: SetupProvider.addSetup - Error en Firebase: $firebaseError',
+        );
         // No rethrow para que la app funcione sin Firebase
       }
     } catch (e) {
@@ -101,7 +102,19 @@ class SetupProvider with ChangeNotifier {
   Future<void> updateSetup(Setup setup) async {
     try {
       await _firebaseService.updateSetup(setup);
-      // The setup will be updated in the list through the stream listener
+
+      // Update the setup in the local list
+      final index = _setups.indexWhere((s) => s.id == setup.id);
+      if (index != -1) {
+        _setups[index] = setup;
+      }
+
+      // Update the selected setup if it's the same one being updated
+      if (_selectedSetup?.id == setup.id) {
+        _selectedSetup = setup;
+      }
+
+      notifyListeners();
     } catch (e) {
       rethrow;
     }
@@ -109,15 +122,19 @@ class SetupProvider with ChangeNotifier {
 
   Future<void> deleteSetup(String id, {String? setupName}) async {
     try {
-      debugPrint('DEBUG: SetupProvider.deleteSetup - Iniciando eliminación del setup: $id');
+      debugPrint(
+        'DEBUG: SetupProvider.deleteSetup - Iniciando eliminación del setup: $id',
+      );
       await _firebaseService.deleteSetup(id);
-      debugPrint('DEBUG: SetupProvider.deleteSetup - Eliminación completada en Firebase');
-      
+      debugPrint(
+        'DEBUG: SetupProvider.deleteSetup - Eliminación completada en Firebase',
+      );
+
       // Guardar el nombre del setup eliminado para mostrar el snackbar
       if (setupName != null) {
         setLastDeletedSetupName(setupName);
       }
-      
+
       // The setup will be removed from the list through the stream listener
     } catch (e) {
       debugPrint('DEBUG: SetupProvider.deleteSetup - Error: $e');
@@ -150,9 +167,7 @@ class SetupProvider with ChangeNotifier {
   void addRuleToSetup(String setupId, Rule rule) {
     final setup = getSetupByIdSync(setupId);
     if (setup != null) {
-      final updatedSetup = setup.copyWith(
-        rules: [...setup.rules, rule],
-      );
+      final updatedSetup = setup.copyWith(rules: [...setup.rules, rule]);
       updateSetup(updatedSetup);
     }
   }
@@ -160,7 +175,9 @@ class SetupProvider with ChangeNotifier {
   void removeRuleFromSetup(String setupId, String ruleId) {
     final setup = getSetupByIdSync(setupId);
     if (setup != null) {
-      final updatedRules = setup.rules.where((rule) => rule.id != ruleId).toList();
+      final updatedRules = setup.rules
+          .where((rule) => rule.id != ruleId)
+          .toList();
       final updatedSetup = setup.copyWith(rules: updatedRules);
       updateSetup(updatedSetup);
     }
@@ -238,20 +255,22 @@ class SetupProvider with ChangeNotifier {
 
   List<Rule> getAvailableRulesByType(RuleType type) {
     final predefinedRules = PredefinedRules.getRulesByType(type);
-    final customRules = _customRules.where((rule) => rule.type == type).toList();
+    final customRules = _customRules
+        .where((rule) => rule.type == type)
+        .toList();
     return [...predefinedRules, ...customRules];
   }
 
   // Métodos para manejar mensajes de confirmación
   String? get lastDeletedSetupName => _lastDeletedSetupName;
-  
+
   void setLastDeletedSetupName(String setupName) {
     _lastDeletedSetupName = setupName;
     notifyListeners();
   }
-  
+
   void clearLastDeletedSetupName() {
     _lastDeletedSetupName = null;
     notifyListeners();
   }
-} 
+}
