@@ -42,11 +42,23 @@ class SimulationProvider with ChangeNotifier {
   double? _calculatedTakeProfitPrice;
   bool _setupParametersCalculated = false;
 
+  // Default SL/TP values from setup (for the sliders)
+  double? _defaultStopLossPercent;
+  double? _defaultTakeProfitPercent;
+
+  // Track if SL/TP are enabled
+  bool _stopLossEnabled = false;
+  bool _takeProfitEnabled = false;
+
   double? get calculatedPositionSize => _calculatedPositionSize;
   double? get calculatedLeverage => _calculatedLeverage;
   double? get calculatedStopLossPrice => _calculatedStopLossPrice;
   double? get calculatedTakeProfitPrice => _calculatedTakeProfitPrice;
   bool get setupParametersCalculated => _setupParametersCalculated;
+  double? get defaultStopLossPercent => _defaultStopLossPercent;
+  double? get defaultTakeProfitPercent => _defaultTakeProfitPercent;
+  bool get stopLossEnabled => _stopLossEnabled;
+  bool get takeProfitEnabled => _takeProfitEnabled;
 
   SimulationResult? get currentSimulation => _currentSimulation;
   List<SimulationResult> get simulationHistory => _simulationHistory;
@@ -72,45 +84,65 @@ class SimulationProvider with ChangeNotifier {
   double? get manualTakeProfitPercent => _manualTakeProfitPercent;
 
   double? get manualStopLossPrice {
-    // First check if we have calculated SL/TP from setup
-    if (_inPosition &&
-        _setupParametersCalculated &&
-        _calculatedStopLossPrice != null) {
+    if (!_inPosition || !_stopLossEnabled) return null;
+    final entry = _entryPrice;
+
+    // Si hay valores manuales y están habilitados, usarlos
+    if (_manualStopLossPercent != null) {
+      final price = _manualPositionType == 'buy'
+          ? entry * (1 - _manualStopLossPercent! / 100)
+          : entry * (1 + _manualStopLossPercent! / 100);
+      debugPrint(
+        '🔥 SimulationProvider: manualStopLossPrice using manual value: $price (${_manualStopLossPercent}%)',
+      );
+      return price;
+    }
+
+    // Si no hay valores manuales, usar los calculados del setup (solo si están habilitados)
+    if (_setupParametersCalculated &&
+        _calculatedStopLossPrice != null &&
+        _manualStopLossPercent != null) {
+      debugPrint(
+        '🔥 SimulationProvider: manualStopLossPrice using calculated value: $_calculatedStopLossPrice',
+      );
       return _calculatedStopLossPrice;
     }
 
-    // Fall back to manual SL/TP if no calculated values
-    if (!_inPosition || _manualStopLossPercent == null) return null;
-    final entry = _entryPrice;
-
-    if (_manualPositionType == 'buy') {
-      // Para compra: SL por debajo del precio de entrada
-      return entry * (1 - _manualStopLossPercent! / 100);
-    } else {
-      // Para venta: SL por encima del precio de entrada
-      return entry * (1 + _manualStopLossPercent! / 100);
-    }
+    debugPrint(
+      '🔥 SimulationProvider: manualStopLossPrice returning null (disabled)',
+    );
+    return null;
   }
 
   double? get manualTakeProfitPrice {
-    // First check if we have calculated SL/TP from setup
-    if (_inPosition &&
-        _setupParametersCalculated &&
-        _calculatedTakeProfitPrice != null) {
+    if (!_inPosition || !_takeProfitEnabled) return null;
+    final entry = _entryPrice;
+
+    // Si hay valores manuales y están habilitados, usarlos
+    if (_manualTakeProfitPercent != null) {
+      final price = _manualPositionType == 'buy'
+          ? entry * (1 + _manualTakeProfitPercent! / 100)
+          : entry * (1 - _manualTakeProfitPercent! / 100);
+      debugPrint(
+        '🔥 SimulationProvider: manualTakeProfitPrice using manual value: $price (${_manualTakeProfitPercent}%)',
+      );
+      return price;
+    }
+
+    // Si no hay valores manuales, usar los calculados del setup (solo si están habilitados)
+    if (_setupParametersCalculated &&
+        _calculatedTakeProfitPrice != null &&
+        _manualTakeProfitPercent != null) {
+      debugPrint(
+        '🔥 SimulationProvider: manualTakeProfitPrice using calculated value: $_calculatedTakeProfitPrice',
+      );
       return _calculatedTakeProfitPrice;
     }
 
-    // Fall back to manual SL/TP if no calculated values
-    if (!_inPosition || _manualTakeProfitPercent == null) return null;
-    final entry = _entryPrice;
-
-    if (_manualPositionType == 'buy') {
-      // Para compra: TP por encima del precio de entrada
-      return entry * (1 + _manualTakeProfitPercent! / 100);
-    } else {
-      // Para venta: TP por debajo del precio de entrada
-      return entry * (1 - _manualTakeProfitPercent! / 100);
-    }
+    debugPrint(
+      '🔥 SimulationProvider: manualTakeProfitPrice returning null (disabled)',
+    );
+    return null;
   }
 
   // Calcula el P&L flotante basado en el precio actual
@@ -186,6 +218,13 @@ class SimulationProvider with ChangeNotifier {
     _calculatedStopLossPrice = null;
     _calculatedTakeProfitPrice = null;
     _setupParametersCalculated = false;
+    // Reset default SL/TP values
+    _defaultStopLossPercent = null;
+    _defaultTakeProfitPercent = null;
+
+    // Reset SL/TP enabled state
+    _stopLossEnabled = false;
+    _takeProfitEnabled = false;
 
     notifyListeners();
   }
@@ -421,6 +460,14 @@ class SimulationProvider with ChangeNotifier {
     _takeProfitPrice = 0.0;
     _currentTrades.clear();
 
+    // Reset default SL/TP values
+    _defaultStopLossPercent = null;
+    _defaultTakeProfitPercent = null;
+
+    // Reset SL/TP enabled state
+    _stopLossEnabled = false;
+    _takeProfitEnabled = false;
+
     debugPrint(
       '🔥 SimulationProvider: Posición cerrada - Precio: $price, Razón: $reason, P&L: $pnl',
     );
@@ -585,6 +632,9 @@ class SimulationProvider with ChangeNotifier {
     // Verificar Stop Loss manual
     final slPrice = manualStopLossPrice;
     if (slPrice != null) {
+      debugPrint(
+        '🔥 SimulationProvider: Checking SL at $slPrice (manual: $_manualStopLossPercent%, default: $_defaultStopLossPercent%)',
+      );
       if (_manualPositionType == 'buy') {
         // Para compra: SL se activa cuando el precio baja
         if (candle.low <= slPrice) {
@@ -605,6 +655,9 @@ class SimulationProvider with ChangeNotifier {
     // Verificar Take Profit manual
     final tpPrice = manualTakeProfitPrice;
     if (tpPrice != null) {
+      debugPrint(
+        '🔥 SimulationProvider: Checking TP at $tpPrice (manual: $_manualTakeProfitPercent%, default: $_defaultTakeProfitPercent%)',
+      );
       if (_manualPositionType == 'buy') {
         // Para compra: TP se activa cuando el precio sube
         if (candle.high >= tpPrice) {
@@ -689,9 +742,39 @@ class SimulationProvider with ChangeNotifier {
     _manualMargin = _currentBalance * (_currentSetup!.riskPercent / 100);
     _manualPositionType = type; // Guardar el tipo de operación
 
-    // Set the calculated SL/TP prices for the chart
-    _manualStopLossPercent = null; // Clear manual SL/TP to use calculated ones
-    _manualTakeProfitPercent = null;
+    // Set the calculated SL/TP prices for the chart and default values for sliders
+    // Solo establecer los valores por defecto si no hay valores manuales previos
+    if (_manualStopLossPercent == null) {
+      _manualStopLossPercent = _defaultStopLossPercent;
+      _stopLossEnabled = _defaultStopLossPercent != null;
+      debugPrint(
+        '🔥 SimulationProvider: Setting default SL: $_manualStopLossPercent%, Enabled: $_stopLossEnabled',
+      );
+    } else {
+      _stopLossEnabled = true;
+      debugPrint(
+        '🔥 SimulationProvider: Keeping manual SL: $_manualStopLossPercent%, Enabled: $_stopLossEnabled',
+      );
+    }
+    if (_manualTakeProfitPercent == null) {
+      _manualTakeProfitPercent = _defaultTakeProfitPercent;
+      _takeProfitEnabled = _defaultTakeProfitPercent != null;
+      debugPrint(
+        '🔥 SimulationProvider: Setting default TP: $_manualTakeProfitPercent%, Enabled: $_takeProfitEnabled',
+      );
+    } else {
+      _takeProfitEnabled = true;
+      debugPrint(
+        '🔥 SimulationProvider: Keeping manual TP: $_manualTakeProfitPercent%, Enabled: $_takeProfitEnabled',
+      );
+    }
+
+    debugPrint(
+      '🔥 SimulationProvider: executeManualTrade - SL: $_manualStopLossPercent%, TP: $_manualTakeProfitPercent%',
+    );
+    debugPrint(
+      '🔥 SimulationProvider: executeManualTrade - SL Price: ${manualStopLossPrice}, TP Price: ${manualTakeProfitPrice}',
+    );
 
     notifyListeners();
   }
@@ -809,22 +892,34 @@ class SimulationProvider with ChangeNotifier {
   void setManualStopLoss(double? stopLossPercent) {
     if (stopLossPercent == null) {
       _manualStopLossPercent = null;
+      _stopLossEnabled = false;
     } else if (stopLossPercent > 0) {
       _manualStopLossPercent = stopLossPercent;
+      _stopLossEnabled = true;
     } else {
       _manualStopLossPercent = null;
+      _stopLossEnabled = false;
     }
+    debugPrint(
+      '🔥 SimulationProvider: setManualStopLoss - SL: $_manualStopLossPercent%, Enabled: $_stopLossEnabled',
+    );
     notifyListeners();
   }
 
   void setManualTakeProfit(double? takeProfitPercent) {
     if (takeProfitPercent == null) {
       _manualTakeProfitPercent = null;
+      _takeProfitEnabled = false;
     } else if (takeProfitPercent > 0) {
       _manualTakeProfitPercent = takeProfitPercent;
+      _takeProfitEnabled = true;
     } else {
       _manualTakeProfitPercent = null;
+      _takeProfitEnabled = false;
     }
+    debugPrint(
+      '🔥 SimulationProvider: setManualTakeProfit - TP: $_manualTakeProfitPercent%, Enabled: $_takeProfitEnabled',
+    );
     notifyListeners();
   }
 
@@ -964,9 +1059,23 @@ class SimulationProvider with ChangeNotifier {
           currentPrice - (slPriceDistance * takeProfitRatio);
     }
 
+    // 6. Calculate default SL/TP percentages for the sliders
+    if (tradeType == 'buy') {
+      _defaultStopLossPercent = (slPriceDistance / currentPrice) * 100;
+      _defaultTakeProfitPercent =
+          (slPriceDistance * takeProfitRatio / currentPrice) * 100;
+    } else {
+      _defaultStopLossPercent = (slPriceDistance / currentPrice) * 100;
+      _defaultTakeProfitPercent =
+          (slPriceDistance * takeProfitRatio / currentPrice) * 100;
+    }
+
     _setupParametersCalculated = true;
     debugPrint(
       '🔥 SimulationProvider: Position parameters calculated - Size: $_calculatedPositionSize, SL: $_calculatedStopLossPrice, TP: $_calculatedTakeProfitPrice',
+    );
+    debugPrint(
+      '🔥 SimulationProvider: Default percentages - SL: ${_defaultStopLossPercent?.toStringAsFixed(2)}%, TP: ${_defaultTakeProfitPercent?.toStringAsFixed(2)}%',
     );
   }
 

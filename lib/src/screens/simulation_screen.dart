@@ -1793,22 +1793,48 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
   void initState() {
     super.initState();
     // Si hay valor, buscar el índice correspondiente, si no, null
-    _takeProfitIndex = widget.simulationProvider.manualTakeProfitPercent != null
-        ? _tpPercents.indexWhere(
-            (v) => v == widget.simulationProvider.manualTakeProfitPercent,
-          )
+    final provider = widget.simulationProvider;
+    // Usar el valor manual si existe, si no, el default calculado
+    double? tpPercent =
+        provider.manualTakeProfitPercent ?? provider.defaultTakeProfitPercent;
+    double? slPercent =
+        provider.manualStopLossPercent ?? provider.defaultStopLossPercent;
+    _takeProfitIndex = tpPercent != null
+        ? _tpPercents.indexWhere((v) => (v - tpPercent).abs() < 0.0001)
         : null;
-    _stopLossIndex = widget.simulationProvider.manualStopLossPercent != null
-        ? _slPercents.indexWhere(
-            (v) => v == widget.simulationProvider.manualStopLossPercent,
-          )
+    _stopLossIndex = slPercent != null
+        ? _slPercents.indexWhere((v) => (v - slPercent).abs() < 0.0001)
         : null;
+
+    // Si no se encuentra el valor exacto, usar el más cercano
+    if (_takeProfitIndex == -1 && tpPercent != null) {
+      _takeProfitIndex = _findClosestIndex(_tpPercents, tpPercent);
+    }
+    if (_stopLossIndex == -1 && slPercent != null) {
+      _stopLossIndex = _findClosestIndex(_slPercents, slPercent);
+    }
 
     // Inicializar checkboxes basado en si hay valores definidos
-    _tpEnabled = widget.simulationProvider.manualTakeProfitPercent != null;
-    _slEnabled = widget.simulationProvider.manualStopLossPercent != null;
+    _tpEnabled = tpPercent != null;
+    _slEnabled = slPercent != null;
 
     _partialClosePercent = 0.0;
+  }
+
+  // Método auxiliar para encontrar el índice más cercano
+  int _findClosestIndex(List<double> values, double target) {
+    int closestIndex = 0;
+    double closestDistance = (values[0] - target).abs();
+
+    for (int i = 1; i < values.length; i++) {
+      double distance = (values[i] - target).abs();
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = i;
+      }
+    }
+
+    return closestIndex;
   }
 
   @override
@@ -1910,6 +1936,7 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                   setState(() {
                     _takeProfitIndex = v.round();
                   });
+                  // Actualizar el valor manual en el provider
                   widget.simulationProvider.setManualTakeProfit(
                     _tpPercents[_takeProfitIndex!],
                   );
@@ -1968,6 +1995,7 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
                   setState(() {
                     _stopLossIndex = v.round();
                   });
+                  // Actualizar el valor manual en el provider
                   widget.simulationProvider.setManualStopLoss(
                     _slPercents[_stopLossIndex!],
                   );
