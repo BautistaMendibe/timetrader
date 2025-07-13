@@ -19,6 +19,7 @@ class App extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'TimeTrader',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData.dark().copyWith(
           primaryColor: const Color(0xFF21CE99),
           scaffoldBackgroundColor: const Color(0xFF1E1E1E),
@@ -53,25 +54,27 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        debugPrint('AuthWrapper - Connection state: ${snapshot.connectionState}');
+        debugPrint(
+          'AuthWrapper - Connection state: ${snapshot.connectionState}',
+        );
         debugPrint('AuthWrapper - Has data: ${snapshot.hasData}');
         debugPrint('AuthWrapper - User: ${snapshot.data?.email}');
-        
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF21CE99),
-              ),
+              child: CircularProgressIndicator(color: Color(0xFF21CE99)),
             ),
           );
         }
-        
+
         if (snapshot.hasData && snapshot.data != null) {
-          debugPrint('AuthWrapper - User is signed in, navigating to dashboard');
+          debugPrint(
+            'AuthWrapper - User is signed in, navigating to dashboard',
+          );
           return const SetupListenerWrapper(child: DashboardScreen());
         }
-        
+
         debugPrint('AuthWrapper - User is not signed in, showing login screen');
         return const LoginScreen();
       },
@@ -81,7 +84,7 @@ class AuthWrapper extends StatelessWidget {
 
 class SetupListenerWrapper extends StatefulWidget {
   final Widget child;
-  
+
   const SetupListenerWrapper({super.key, required this.child});
 
   @override
