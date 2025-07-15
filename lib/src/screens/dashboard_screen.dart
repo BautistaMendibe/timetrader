@@ -28,10 +28,11 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('TimeTrader'),
+        automaticallyImplyLeading: false,
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -80,9 +81,9 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               user?.email ?? 'Usuario',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[400],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: Colors.grey[400]),
             ),
             if (user?.displayName != null) ...[
               const SizedBox(height: 4),
@@ -100,7 +101,7 @@ class DashboardScreen extends StatelessWidget {
             Consumer<SimulationProvider>(
               builder: (context, simulationProvider, child) {
                 final history = simulationProvider.simulationHistory;
-                
+
                 return Card(
                   color: const Color(0xFF2C2C2C),
                   child: Padding(
@@ -110,17 +111,15 @@ class DashboardScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(
-                              Icons.history,
-                              color: Color(0xFF21CE99),
-                            ),
+                            const Icon(Icons.history, color: Color(0xFF21CE99)),
                             const SizedBox(width: 8),
                             Text(
                               'Últimas Simulaciones',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
                           ],
                         ),
@@ -128,14 +127,18 @@ class DashboardScreen extends StatelessWidget {
                         if (history.isEmpty)
                           Text(
                             'No hay simulaciones recientes',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[400],
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.grey[400]),
                           )
                         else
                           Column(
-                            children: history.reversed.take(3).map((simulation) {
-                              return _buildSimulationHistoryItem(context, simulation);
+                            children: history.reversed.take(3).map((
+                              simulation,
+                            ) {
+                              return _buildSimulationHistoryItem(
+                                context,
+                                simulation,
+                              );
                             }).toList(),
                           ),
                         if (history.length > 3)
@@ -151,7 +154,9 @@ class DashboardScreen extends StatelessWidget {
                               },
                               child: Text(
                                 'Ver todas (${history.length})',
-                                style: const TextStyle(color: Color(0xFF21CE99)),
+                                style: const TextStyle(
+                                  color: Color(0xFF21CE99),
+                                ),
                               ),
                             ),
                           ),
@@ -180,10 +185,11 @@ class DashboardScreen extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           'Retos Semanales',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ],
                     ),
@@ -240,17 +246,15 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(
-                          Icons.bug_report,
-                          color: Color(0xFFFF5A5F),
-                        ),
+                        const Icon(Icons.bug_report, color: Color(0xFFFF5A5F)),
                         const SizedBox(width: 8),
                         Text(
                           'Debug - Test Chart',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ],
                     ),
@@ -274,7 +278,8 @@ class DashboardScreen extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.simulationSetup),
+        onPressed: () =>
+            Navigator.pushNamed(context, AppRoutes.simulationSetup),
         backgroundColor: const Color(0xFF21CE99),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.play_arrow),
@@ -283,7 +288,10 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSimulationHistoryItem(BuildContext context, SimulationResult simulation) {
+  Widget _buildSimulationHistoryItem(
+    BuildContext context,
+    SimulationResult simulation,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -298,13 +306,17 @@ class DashboardScreen extends StatelessWidget {
             color: const Color(0xFF1E1E1E),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: simulation.netPnL >= 0 ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+              color: simulation.netPnL >= 0
+                  ? Colors.green.withValues(alpha: 0.3)
+                  : Colors.red.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
             children: [
               Icon(
-                simulation.netPnL >= 0 ? Icons.trending_up : Icons.trending_down,
+                simulation.netPnL >= 0
+                    ? Icons.trending_up
+                    : Icons.trending_down,
                 color: simulation.netPnL >= 0 ? Colors.green : Colors.red,
                 size: 20,
               ),
@@ -322,10 +334,7 @@ class DashboardScreen extends StatelessWidget {
                     ),
                     Text(
                       '${simulation.totalTrades} trades • ${(simulation.winRate * 100).toStringAsFixed(1)}% win rate',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.grey[400], fontSize: 12),
                     ),
                   ],
                 ),
@@ -343,10 +352,7 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   Text(
                     '${(simulation.maxDrawdown * 100).toStringAsFixed(1)}% DD',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
                   ),
                 ],
               ),
@@ -361,8 +367,12 @@ class DashboardScreen extends StatelessWidget {
     return Row(
       children: [
         Icon(
-          completed >= total ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: completed >= total ? const Color(0xFF21CE99) : Colors.grey[600],
+          completed >= total
+              ? Icons.check_circle
+              : Icons.radio_button_unchecked,
+          color: completed >= total
+              ? const Color(0xFF21CE99)
+              : Colors.grey[600],
           size: 20,
         ),
         const SizedBox(width: 8),
@@ -371,14 +381,18 @@ class DashboardScreen extends StatelessWidget {
             title,
             style: TextStyle(
               color: completed >= total ? Colors.white : Colors.grey[400],
-              decoration: completed >= total ? TextDecoration.lineThrough : null,
+              decoration: completed >= total
+                  ? TextDecoration.lineThrough
+                  : null,
             ),
           ),
         ),
         Text(
           '$completed/$total',
           style: TextStyle(
-            color: completed >= total ? const Color(0xFF21CE99) : Colors.grey[400],
+            color: completed >= total
+                ? const Color(0xFF21CE99)
+                : Colors.grey[400],
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -401,11 +415,7 @@ class DashboardScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              Icon(
-                icon,
-                color: const Color(0xFF21CE99),
-                size: 32,
-              ),
+              Icon(icon, color: const Color(0xFF21CE99), size: 32),
               const SizedBox(height: 8),
               Text(
                 title,
@@ -421,4 +431,4 @@ class DashboardScreen extends StatelessWidget {
       ),
     );
   }
-} 
+}

@@ -13,28 +13,19 @@ class SimulationSummaryScreen extends StatelessWidget {
     return Consumer<SimulationProvider>(
       builder: (context, simulationProvider, child) {
         final simulation = simulationProvider.currentSimulation;
-        
+
         if (simulation == null) {
           return Scaffold(
-            appBar: AppBar(
-              title: const Text('Resumen de Simulación'),
-            ),
+            appBar: AppBar(title: const Text('Resumen de Simulación')),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
                     'No hay datos de simulación disponibles',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 18,
-                    ),
+                    style: TextStyle(color: Colors.grey[400], fontSize: 18),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
@@ -46,6 +37,16 @@ class SimulationSummaryScreen extends StatelessWidget {
             ),
           );
         }
+
+        // Obtener operaciones completadas del provider
+        final completedOperations = simulationProvider.completedOperations;
+        final totalCompletedOperations = completedOperations.length;
+        final winningTrades = completedOperations
+            .where((t) => t.totalPnL > 0)
+            .length;
+        final winRate = totalCompletedOperations > 0
+            ? winningTrades / totalCompletedOperations
+            : 0.0;
 
         return Scaffold(
           appBar: AppBar(
@@ -92,7 +93,9 @@ class SimulationSummaryScreen extends StatelessWidget {
                                 Text(
                                   '\$${simulation.netPnL.toStringAsFixed(2)}',
                                   style: TextStyle(
-                                    color: simulation.netPnL >= 0 ? Colors.green : Colors.red,
+                                    color: simulation.netPnL >= 0
+                                        ? Colors.green
+                                        : Colors.red,
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -126,9 +129,18 @@ class SimulationSummaryScreen extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildMetric('Balance Final', '\$${simulation.finalBalance.toStringAsFixed(2)}'),
-                            _buildMetric('Max Drawdown', '${(simulation.maxDrawdown * 100).toStringAsFixed(1)}%'),
-                            _buildMetric('Total Trades', simulation.totalTrades.toString()),
+                            _buildMetric(
+                              'Balance Final',
+                              '\$${simulation.finalBalance.toStringAsFixed(2)}',
+                            ),
+                            _buildMetric(
+                              'Max Drawdown',
+                              '${(simulation.maxDrawdown * 100).toStringAsFixed(1)}%',
+                            ),
+                            _buildMetric(
+                              'Total Trades',
+                              simulation.totalTrades.toString(),
+                            ),
                           ],
                         ),
                       ],
@@ -147,10 +159,11 @@ class SimulationSummaryScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Curva de Equity',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                         const SizedBox(height: 16),
                         SizedBox(
@@ -176,10 +189,11 @@ class SimulationSummaryScreen extends StatelessWidget {
                           children: [
                             Text(
                               'Historial de Trades',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
                             Text(
                               '${simulation.winningTrades}/${simulation.totalTrades} ganadores',
@@ -225,6 +239,66 @@ class SimulationSummaryScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // Completed Operations History
+                if (completedOperations.isNotEmpty) ...[
+                  Card(
+                    color: const Color(0xFF2C2C2C),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Historial de Operaciones Completadas',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              Text(
+                                '$winningTrades/$totalCompletedOperations ganadores',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          ...completedOperations
+                              .take(10)
+                              .map(
+                                (operation) =>
+                                    _buildCompletedOperationItem(operation),
+                              ),
+
+                          if (completedOperations.length > 10) ...[
+                            const SizedBox(height: 8),
+                            Center(
+                              child: Text(
+                                '... y ${completedOperations.length - 10} operaciones más',
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 12,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 const SizedBox(height: 32),
 
                 // Action Buttons
@@ -285,13 +359,7 @@ class SimulationSummaryScreen extends StatelessWidget {
   Widget _buildMetric(String label, String value) {
     return Column(
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[400],
-            fontSize: 12,
-          ),
-        ),
+        Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 12)),
         const SizedBox(height: 4),
         Text(
           value,
@@ -313,7 +381,9 @@ class SimulationSummaryScreen extends StatelessWidget {
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: trade.type == 'buy' ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+          color: trade.type == 'buy'
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.red.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -376,6 +446,171 @@ class SimulationSummaryScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildCompletedOperationItem(CompletedTrade operation) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: operation.totalPnL >= 0
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.red.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header con tipo de operación y P&L
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    operation.totalPnL >= 0
+                        ? Icons.trending_up
+                        : Icons.trending_down,
+                    color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    operation.operationType.toUpperCase(),
+                    style: TextStyle(
+                      color: operation.totalPnL >= 0
+                          ? Colors.green
+                          : Colors.red,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '\$${operation.totalPnL.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Precios de entrada y salida
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Entrada: \$${operation.entryPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    Text(
+                      operation.entryTime.toString().substring(
+                        11,
+                        16,
+                      ), // Solo hora:minuto
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 10,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Salida: \$${operation.exitPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    Text(
+                      operation.exitTime.toString().substring(
+                        11,
+                        16,
+                      ), // Solo hora:minuto
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 10,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // Información adicional
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Cantidad: ${operation.quantity.toStringAsFixed(4)}',
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 10,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              if (operation.leverage != null)
+                Text(
+                  'Apalancamiento: ${operation.leverage}x',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 10,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              Text(
+                'Duración: ${operation.durationFormatted}',
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 10,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
+          ),
+          if (operation.reason != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Razón: ${operation.reason}',
+              style: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 10,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildEquityCurveChart(List<double> equityCurve) {
     if (equityCurve.isEmpty) {
       return Container(
@@ -402,33 +637,34 @@ class SimulationSummaryScreen extends StatelessWidget {
 
 class EquityCurvePainter extends CustomPainter {
   final List<double> equityCurve;
-  
+
   EquityCurvePainter({required this.equityCurve});
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     if (equityCurve.isEmpty) return;
-    
+
     final paint = Paint()
       ..color = const Color(0xFF21CE99)
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
-    
+
     final fillPaint = Paint()
       ..color = const Color(0xFF21CE99).withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
-    
+
     final double minValue = equityCurve.reduce((a, b) => a < b ? a : b);
     final double maxValue = equityCurve.reduce((a, b) => a > b ? a : b);
     final double range = maxValue - minValue;
-    
+
     final path = Path();
     final fillPath = Path();
-    
+
     for (int i = 0; i < equityCurve.length; i++) {
       final x = (i / (equityCurve.length - 1)) * size.width;
-      final y = size.height - ((equityCurve[i] - minValue) / range) * size.height;
-      
+      final y =
+          size.height - ((equityCurve[i] - minValue) / range) * size.height;
+
       if (i == 0) {
         path.moveTo(x, y);
         fillPath.moveTo(x, size.height);
@@ -438,14 +674,14 @@ class EquityCurvePainter extends CustomPainter {
         fillPath.lineTo(x, y);
       }
     }
-    
+
     fillPath.lineTo(size.width, size.height);
     fillPath.close();
-    
+
     canvas.drawPath(fillPath, fillPaint);
     canvas.drawPath(path, paint);
   }
-  
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-} 
+}
