@@ -10,7 +10,7 @@ class TradingViewChart extends StatefulWidget {
   final int? currentCandleIndex;
   final double? stopLoss;
   final double? takeProfit;
-  
+
   const TradingViewChart({
     required this.candles,
     this.trades,
@@ -21,10 +21,10 @@ class TradingViewChart extends StatefulWidget {
   });
 
   @override
-  State<TradingViewChart> createState() => _TradingViewChartState();
+  State<TradingViewChart> createState() => TradingViewChartState();
 }
 
-class _TradingViewChartState extends State<TradingViewChart> {
+class TradingViewChartState extends State<TradingViewChart> {
   late final WebViewController _controller;
   bool _isWebViewReady = false;
   String _status = 'Inicializando...';
@@ -67,19 +67,19 @@ class _TradingViewChartState extends State<TradingViewChart> {
           },
         ),
       );
-    
+
     _controller.loadFlutterAsset('assets/chart.html');
   }
 
   @override
   void didUpdateWidget(covariant TradingViewChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_isWebViewReady && 
-        (oldWidget.candles != widget.candles || 
-         oldWidget.trades != widget.trades ||
-         oldWidget.currentCandleIndex != widget.currentCandleIndex ||
-         oldWidget.stopLoss != widget.stopLoss ||
-         oldWidget.takeProfit != widget.takeProfit)) {
+    if (_isWebViewReady &&
+        (oldWidget.candles != widget.candles ||
+            oldWidget.trades != widget.trades ||
+            oldWidget.currentCandleIndex != widget.currentCandleIndex ||
+            oldWidget.stopLoss != widget.stopLoss ||
+            oldWidget.takeProfit != widget.takeProfit)) {
       _sendDataToWebView();
     }
   }
@@ -99,52 +99,92 @@ class _TradingViewChartState extends State<TradingViewChart> {
       if (_status.contains('Enviando datos')) {
         setState(() => _status = 'Renderizando gráfico...');
       }
-      
+
       // Determine which candles to show
-      final candlesToShow = widget.currentCandleIndex != null 
+      final candlesToShow = widget.currentCandleIndex != null
           ? widget.candles.take(widget.currentCandleIndex! + 1).toList()
           : widget.candles;
-      
+
       // Prepare data structure
       final data = {
-        'candles': candlesToShow.map((c) => {
-          'time': c.timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to seconds since epoch
-          'open': c.open,
-          'high': c.high,
-          'low': c.low,
-          'close': c.close,
-          'volume': c.volume,
-        }).toList(),
-        'trades': widget.trades?.map((t) => {
-          'time': t.timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to seconds since epoch
-          'type': t.type,
-          'price': t.price,
-          'amount': t.amount,
-          'leverage': t.leverage,
-        }).toList() ?? [],
-        'stopLoss': (widget.stopLoss != null && widget.stopLoss! > 0) ? widget.stopLoss : null,
-        'takeProfit': (widget.takeProfit != null && widget.takeProfit! > 0) ? widget.takeProfit : null,
+        'candles': candlesToShow
+            .map(
+              (c) => {
+                'time':
+                    c.timestamp.millisecondsSinceEpoch ~/
+                    1000, // Convert to seconds since epoch
+                'open': c.open,
+                'high': c.high,
+                'low': c.low,
+                'close': c.close,
+                'volume': c.volume,
+              },
+            )
+            .toList(),
+        'trades':
+            widget.trades
+                ?.map(
+                  (t) => {
+                    'time':
+                        t.timestamp.millisecondsSinceEpoch ~/
+                        1000, // Convert to seconds since epoch
+                    'type': t.type,
+                    'price': t.price,
+                    'amount': t.amount,
+                    'leverage': t.leverage,
+                  },
+                )
+                .toList() ??
+            [],
+        'stopLoss': (widget.stopLoss != null && widget.stopLoss! > 0)
+            ? widget.stopLoss
+            : null,
+        'takeProfit': (widget.takeProfit != null && widget.takeProfit! > 0)
+            ? widget.takeProfit
+            : null,
       };
 
-
-
       final jsonData = jsonEncode(data);
-      
+
       // Test JavaScript execution
       try {
         await _controller.runJavaScriptReturningResult('1 + 1');
       } catch (e) {
         // Ignore test errors
       }
-      
+
       await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
-      
+
       // Update status to "Gráfico listo" on first load
       if (_status == 'Renderizando gráfico...') {
         setState(() => _status = 'Gráfico listo');
       }
     } catch (e) {
       setState(() => _status = 'Error: $e');
+    }
+  }
+
+  /// Envía una vela OHLC completa al WebView para actualización en tiempo real.
+  /// [candle] debe ser un Map con 'time' (segundos epoch), 'open', 'high', 'low', 'close'.
+  /// [trades], [stopLoss], [takeProfit] son opcionales.
+  Future<void> sendTickToWebView({
+    required Map<String, dynamic> candle,
+    List<Map<String, dynamic>>? trades,
+    double? stopLoss,
+    double? takeProfit,
+  }) async {
+    if (!_isWebViewReady) return;
+    final msg = {
+      'candle': candle,
+      'trades': trades ?? [],
+      'stopLoss': (stopLoss != null && stopLoss > 0) ? stopLoss : null,
+      'takeProfit': (takeProfit != null && takeProfit > 0) ? takeProfit : null,
+    };
+    final jsonData = jsonEncode(msg);
+    try {
+      await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
+    } catch (e) {
+      // Ignorar errores de JS
     }
   }
 
@@ -169,9 +209,7 @@ class _TradingViewChartState extends State<TradingViewChart> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(
-                        color: Color(0xFF21CE99),
-                      ),
+                      const CircularProgressIndicator(color: Color(0xFF21CE99)),
                       const SizedBox(height: 16),
                       Text(
                         _status,
@@ -205,4 +243,4 @@ class _TradingViewChartState extends State<TradingViewChart> {
       ),
     );
   }
-} 
+}

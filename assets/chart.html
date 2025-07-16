@@ -258,6 +258,191 @@
         window.addEventListener('message', (event) => {
             try {
                 const data = JSON.parse(event.data);
+                // --- SOPORTE VELAS EN TIEMPO REAL ---
+                if (data.candle) {
+                    // Actualizar el chart con una vela OHLC completa
+                    const c = data.candle;
+                    const candleBar = {
+                        time: c.time, // segundos epoch
+                        open: parseFloat(c.open),
+                        high: parseFloat(c.high),
+                        low: parseFloat(c.low),
+                        close: parseFloat(c.close),
+                    };
+                    if (!window.seriesLastTime || c.time > window.seriesLastTime) {
+                        candlestickSeries.update(candleBar);
+                        window.seriesLastTime = c.time;
+                    } else {
+                        // Si el tiempo es igual, reemplazar el último
+                        candlestickSeries.update(candleBar);
+                    }
+                    // Markers y price lines igual que antes
+                    if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
+                        const markers = data.trades.map(trade => {
+                            const formattedTime = formatTime(trade.time);
+                            if (formattedTime === null) {
+                                return null;
+                            }
+                            const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
+                            const lev = trade.leverage ? `x${trade.leverage}` : '';
+                            let text;
+                            if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
+                                text = `CLOSE`;
+                                if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
+                                    const pnl = parseFloat(trade.pnl).toFixed(2);
+                                    text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
+                                }
+                            } else {
+                                text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
+                            }
+                            return {
+                                time: formattedTime,
+                                position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
+                                color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
+                                shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
+                                text: text,
+                                size: 1,
+                            };
+                        }).filter(marker => marker !== null);
+                        if (markers.length > 0) {
+                            candlestickSeries.setMarkers(markers);
+                        }
+                    }
+                    // Price lines SL/TP
+                    if (slPriceLine) {
+                        candlestickSeries.removePriceLine(slPriceLine);
+                        slPriceLine = null;
+                    }
+                    if (tpPriceLine) {
+                        candlestickSeries.removePriceLine(tpPriceLine);
+                        tpPriceLine = null;
+                    }
+                    if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
+                        slPriceLine = candlestickSeries.createPriceLine({
+                            price: data.stopLoss,
+                            color: '#FF5A5F',
+                            lineWidth: 2,
+                            lineStyle: LightweightCharts.LineStyle.Dotted,
+                            axisLabelVisible: true,
+                            title: 'SL',
+                            labelVisible: true,
+                            text: 'SL',
+                            axisLabelColor: '#FF5A5F',
+                            axisLabelTextColor: '#FFFFFF',
+                            axisLabelBackgroundColor: '#FF5A5F',
+                        });
+                    }
+                    if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
+                        tpPriceLine = candlestickSeries.createPriceLine({
+                            price: data.takeProfit,
+                            color: '#21CE99',
+                            lineWidth: 2,
+                            lineStyle: LightweightCharts.LineStyle.Dotted,
+                            axisLabelVisible: true,
+                            title: 'TP',
+                            labelVisible: true,
+                            text: 'TP',
+                            axisLabelColor: '#21CE99',
+                            axisLabelTextColor: '#FFFFFF',
+                            axisLabelBackgroundColor: '#21CE99',
+                        });
+                    }
+                    return;
+                }
+                // --- FIN SOPORTE VELAS EN TIEMPO REAL ---
+                // --- SOPORTE TICK A TICK (mantener compatibilidad) ---
+                if (data.tick) {
+                    // Actualizar el chart punto a punto usando LightweightCharts
+                    const t = data.tick;
+                    const tickBar = {
+                        time: t.time, // segundos epoch
+                        open: t.price,
+                        high: t.price,
+                        low: t.price,
+                        close: t.price,
+                    };
+                    if (!window.seriesLastTime || t.time > window.seriesLastTime) {
+                        candlestickSeries.update(tickBar);
+                        window.seriesLastTime = t.time;
+                    } else {
+                        // Si el tiempo es igual, reemplazar el último
+                        candlestickSeries.update(tickBar);
+                    }
+                    // Markers y price lines igual que antes
+                    if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
+                        const markers = data.trades.map(trade => {
+                            const formattedTime = formatTime(trade.time);
+                            if (formattedTime === null) {
+                                return null;
+                            }
+                            const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
+                            const lev = trade.leverage ? `x${trade.leverage}` : '';
+                            let text;
+                            if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
+                                text = `CLOSE`;
+                                if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
+                                    const pnl = parseFloat(trade.pnl).toFixed(2);
+                                    text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
+                                }
+                            } else {
+                                text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
+                            }
+                            return {
+                                time: formattedTime,
+                                position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
+                                color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
+                                shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
+                                text: text,
+                                size: 1,
+                            };
+                        }).filter(marker => marker !== null);
+                        if (markers.length > 0) {
+                            candlestickSeries.setMarkers(markers);
+                        }
+                    }
+                    // Price lines SL/TP
+                    if (slPriceLine) {
+                        candlestickSeries.removePriceLine(slPriceLine);
+                        slPriceLine = null;
+                    }
+                    if (tpPriceLine) {
+                        candlestickSeries.removePriceLine(tpPriceLine);
+                        tpPriceLine = null;
+                    }
+                    if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
+                        slPriceLine = candlestickSeries.createPriceLine({
+                            price: data.stopLoss,
+                            color: '#FF5A5F',
+                            lineWidth: 2,
+                            lineStyle: LightweightCharts.LineStyle.Dotted,
+                            axisLabelVisible: true,
+                            title: 'SL',
+                            labelVisible: true,
+                            text: 'SL',
+                            axisLabelColor: '#FF5A5F',
+                            axisLabelTextColor: '#FFFFFF',
+                            axisLabelBackgroundColor: '#FF5A5F',
+                        });
+                    }
+                    if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
+                        tpPriceLine = candlestickSeries.createPriceLine({
+                            price: data.takeProfit,
+                            color: '#21CE99',
+                            lineWidth: 2,
+                            lineStyle: LightweightCharts.LineStyle.Dotted,
+                            axisLabelVisible: true,
+                            title: 'TP',
+                            labelVisible: true,
+                            text: 'TP',
+                            axisLabelColor: '#21CE99',
+                            axisLabelTextColor: '#FFFFFF',
+                            axisLabelBackgroundColor: '#21CE99',
+                        });
+                    }
+                    return;
+                }
+                // --- FIN SOPORTE TICK ---
+                // Soporte tradicional de velas
                 renderChart(data);
             } catch (error) {
                 console.error('Error parsing message from Flutter:', error);

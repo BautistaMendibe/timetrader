@@ -18,15 +18,36 @@ class _SimulationScreenState extends State<SimulationScreen> {
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
   bool _showSLTPContainer = false;
+  // GlobalKey para acceder al TradingViewChart
+  final GlobalKey<TradingViewChartState> _chartKey =
+      GlobalKey<TradingViewChartState>();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final simulationProvider = context.read<SimulationProvider>();
-      if (simulationProvider.isSimulationRunning) {
-        // Timer logic removed for manual mode
-      }
+
+      // No iniciar automáticamente la simulación - el usuario debe presionar el botón
+      // if (simulationProvider.isSimulationRunning) {
+      //   // Timer logic removed for manual mode
+      // }
+
+      // Conectar el callback para enviar ticks al chart
+      simulationProvider.setTickCallback((tickData) {
+        if (_chartKey.currentState != null) {
+          _chartKey.currentState!.sendTickToWebView(
+            candle:
+                tickData['candle'] ??
+                tickData['tick'], // Soporte tanto candle como tick
+            trades: tickData['trades'] != null
+                ? List<Map<String, dynamic>>.from(tickData['trades'])
+                : null,
+            stopLoss: tickData['stopLoss'],
+            takeProfit: tickData['takeProfit'],
+          );
+        }
+      });
 
       // Initialize default values for order container
       setState(() {
@@ -215,6 +236,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     Tuple2(allTrades, provider.currentCandleIndex),
                 builder: (context, data, child) {
                   return TradingViewChart(
+                    key: _chartKey,
                     candles: simulationProvider.historicalData,
                     trades: data.item1,
                     currentCandleIndex: data.item2,
@@ -233,6 +255,210 @@ class _SimulationScreenState extends State<SimulationScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Tick Simulation Controls
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2C2C2C),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[700]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.speed, color: Color(0xFF21CE99)),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Configuración Tick a Tick',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Ticks por vela
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Ticks por vela: ${simulationProvider.ticksPerCandle}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  Slider(
+                                    value: simulationProvider.ticksPerCandle
+                                        .toDouble(),
+                                    min: 10,
+                                    max: 200,
+                                    divisions: 19,
+                                    activeColor: const Color(0xFF21CE99),
+                                    onChanged: (value) {
+                                      simulationProvider.ticksPerCandle = value
+                                          .toInt();
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Factor de velocidad
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Velocidad: ${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  Slider(
+                                    value:
+                                        simulationProvider.ticksPerSecondFactor,
+                                    min: 0.1,
+                                    max: 5.0,
+                                    divisions: 49,
+                                    activeColor: const Color(0xFF21CE99),
+                                    onChanged: (value) {
+                                      simulationProvider.ticksPerSecondFactor =
+                                          value;
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Botones de control tick a tick
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    simulationProvider.isSimulationRunning
+                                    ? null
+                                    : () {
+                                        // Iniciar simulación tick a tick
+                                        simulationProvider.startTickSimulation(
+                                          simulationProvider.currentSetup!,
+                                          simulationProvider
+                                              .historicalData
+                                              .first
+                                              .timestamp,
+                                          simulationProvider.simulationSpeed,
+                                          simulationProvider.currentBalance,
+                                        );
+                                      },
+                                icon: const Icon(Icons.play_arrow),
+                                label: const Text('Iniciar Tick'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF21CE99),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    simulationProvider.isSimulationRunning
+                                    ? () => simulationProvider
+                                          .pauseTickSimulation()
+                                    : null,
+                                icon: const Icon(Icons.pause),
+                                label: const Text('Pausar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    simulationProvider.isSimulationRunning
+                                    ? () => simulationProvider
+                                          .stopTickSimulation()
+                                    : null,
+                                icon: const Icon(Icons.stop),
+                                label: const Text('Detener'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF6B6B),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Botón para avanzar un tick (modo manual)
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed:
+                                simulationProvider.simulationMode ==
+                                    SimulationMode.manual
+                                ? () => simulationProvider.advanceTick()
+                                : null,
+                            icon: const Icon(Icons.arrow_forward),
+                            label: const Text('Avanzar 1 Tick'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2C2C2C),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(color: Colors.grey[700]!),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
                   // Order Container (when active)
                   if (_showOrderContainerInline) ...[
                     Container(

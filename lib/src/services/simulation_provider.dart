@@ -2,6 +2,16 @@ import 'package:flutter/foundation.dart';
 import '../models/simulation_result.dart';
 import '../models/candle.dart';
 import '../models/setup.dart';
+import 'dart:async';
+import 'dart:math';
+import 'dart:convert';
+
+// --- MODELO TICK ---
+class Tick {
+  final DateTime time;
+  final double price;
+  Tick(this.time, this.price);
+}
 
 enum SimulationMode { automatic, manual }
 
@@ -49,6 +59,17 @@ class SimulationProvider with ChangeNotifier {
   // Track if SL/TP are enabled
   bool _stopLossEnabled = false;
   bool _takeProfitEnabled = false;
+
+  // --- TICK SIMULATION STATE ---
+  List<Tick> _syntheticTicks = [];
+  int _currentTickIndex = 0;
+  int _ticksPerCandle = 100;
+  Timer? _tickTimer;
+  double _ticksPerSecondFactor = 1.0; // Para ajustar velocidad
+
+  // --- ACUMULACIÓN DE TICKS PARA VELAS ---
+  List<Tick> _currentCandleTicks = [];
+  DateTime? _currentCandleStartTime;
 
   double? get calculatedPositionSize => _calculatedPositionSize;
   double? get calculatedLeverage => _calculatedLeverage;
@@ -1105,5 +1126,232 @@ class SimulationProvider with ChangeNotifier {
 
     final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
     return 'Posición: ${_calculatedPositionSize!.toStringAsFixed(4)} unidades @ ${_calculatedLeverage!.toStringAsFixed(0)}x (riesgo ${_currentSetup!.riskPercent.toStringAsFixed(1)}% = \$${riskAmount.toStringAsFixed(0)})';
+  }
+
+  // Exponer configuración para la UI
+  int get ticksPerCandle => _ticksPerCandle;
+  set ticksPerCandle(int value) {
+    _ticksPerCandle = value;
+    notifyListeners();
+  }
+
+  double get ticksPerSecondFactor => _ticksPerSecondFactor;
+  set ticksPerSecondFactor(double value) {
+    _ticksPerSecondFactor = value;
+    notifyListeners();
+  }
+
+  // --- GENERADOR DE TICKS ---
+  static List<Tick> generateSyntheticTicks(
+    Candle candle,
+    int steps, [
+    int? nextCandleMs,
+  ]) {
+    final List<Tick> ticks = [];
+    // Calcular duración de la vela
+    final durationMs = nextCandleMs != null
+        ? nextCandleMs - candle.timestamp.millisecondsSinceEpoch
+        : 60 * 60 * 1000; // fallback: 1h
+    final dt = durationMs ~/ steps;
+    final range = candle.high - candle.low;
+    final Random rnd = Random(candle.timestamp.millisecondsSinceEpoch);
+    for (int i = 0; i < steps; i++) {
+      final base =
+          candle.open + (candle.close - candle.open) * (i / (steps - 1));
+      final jitter =
+          (rnd.nextDouble() * 2 - 1) * (range * 0.2); // ±20% del rango
+      final price = (base + jitter).clamp(candle.low, candle.high);
+      final time = candle.timestamp.add(Duration(milliseconds: dt * i));
+      ticks.add(Tick(time, price));
+    }
+    return ticks;
+  }
+
+  // --- INICIAR SIMULACIÓN TICK A TICK ---
+  void startTickSimulation(
+    Setup setup,
+    DateTime startDate,
+    double speed,
+    double initialBalance,
+  ) {
+    // 1) Inicializa índices, trades y equity como ahora...
+    _currentSimulation = null;
+    _currentCandleIndex = 0;
+    _currentBalance = initialBalance;
+    _currentTrades = [];
+    _completedTrades = []; // Limpiar trades completados
+    _completedOperations = []; // Limpiar operaciones completas
+    _equityCurve = [initialBalance];
+    _isSimulationRunning = false; // 👈 Mantenerlo false inicialmente
+    _currentSetup = setup;
+    _simulationSpeed = speed;
+
+    // Reset trading state
+    _inPosition = false;
+    _entryPrice = 0.0;
+    _positionSize = 0.0;
+    _stopLossPrice = 0.0;
+    _takeProfitPrice = 0.0;
+
+    // Reset calculated parameters
+    _calculatedPositionSize = null;
+    _calculatedLeverage = null;
+    _calculatedStopLossPrice = null;
+    _calculatedTakeProfitPrice = null;
+    _setupParametersCalculated = false;
+    // Reset default SL/TP values
+    _defaultStopLossPercent = null;
+    _defaultTakeProfitPercent = null;
+
+    // Reset SL/TP enabled state
+    _stopLossEnabled = false;
+    _takeProfitEnabled = false;
+
+    // Configurar ticks para la primera vela
+    _currentTickIndex = 0;
+    _setupTicksForCurrentCandle();
+    notifyListeners(); // 🔔 Para que el botón INICIAR aparezca activo
+    _isSimulationRunning = true; // 👈 Ahora sí marcamos que arrancó
+    _startTickTimer(); // 👈 Y arrancamos el Timer
+    notifyListeners(); // 🔔 Para deshabilitar el botón de inicio
+  }
+
+  void _setupTicksForCurrentCandle() {
+    if (_currentCandleIndex >= _historicalData.length) return;
+    final candle = _historicalData[_currentCandleIndex];
+    int? nextMs;
+    if (_currentCandleIndex < _historicalData.length - 1) {
+      nextMs = _historicalData[_currentCandleIndex + 1]
+          .timestamp
+          .millisecondsSinceEpoch;
+    }
+    _syntheticTicks = generateSyntheticTicks(candle, _ticksPerCandle, nextMs);
+    _currentTickIndex = 0;
+  }
+
+  void _startTickTimer() {
+    _tickTimer?.cancel();
+    final intervalMs = (1000 ~/ (_simulationSpeed * _ticksPerSecondFactor))
+        .clamp(1, 1000);
+    _tickTimer = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
+      _processNextTick();
+    });
+  }
+
+  void stopTickSimulation() {
+    _tickTimer?.cancel();
+    stopSimulation();
+  }
+
+  void pauseTickSimulation() {
+    _tickTimer?.cancel();
+    pauseSimulation();
+  }
+
+  void resumeTickSimulation() {
+    resumeSimulation();
+    _startTickTimer();
+  }
+
+  // --- LOOP DE SIMULACIÓN POR TICK ---
+  void _processNextTick() {
+    if (!_isSimulationRunning) return;
+    if (_currentTickIndex >= _syntheticTicks.length) {
+      _currentCandleIndex++;
+      if (_currentCandleIndex >= _historicalData.length) {
+        stopTickSimulation();
+        return;
+      }
+      _setupTicksForCurrentCandle();
+    }
+    final tick = _syntheticTicks[_currentTickIndex++];
+    _accumulateTickForCandle(tick);
+  }
+
+  void _accumulateTickForCandle(Tick tick) {
+    // Inicializar tiempo de inicio de la vela si es el primer tick
+    if (_currentCandleTicks.isEmpty) {
+      _currentCandleStartTime = tick.time;
+    }
+
+    // Agregar tick a la vela actual
+    _currentCandleTicks.add(tick);
+
+    // Calcular OHLC de los ticks acumulados hasta ahora
+    final prices = _currentCandleTicks.map((t) => t.price).toList();
+    final o = prices.first, c = prices.last;
+    final h = prices.reduce((a, b) => a > b ? a : b);
+    final l = prices.reduce((a, b) => a < b ? a : b);
+    final ts =
+        (_currentCandleStartTime ?? tick.time).millisecondsSinceEpoch ~/ 1000;
+
+    // Enviar vela actualizada al gráfico en tiempo real
+    if (_tickCallback != null) {
+      final msg = {
+        'candle': {'time': ts, 'open': o, 'high': h, 'low': l, 'close': c},
+        'trades': _currentTrades
+            .map(
+              (t) => {
+                'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
+                'type': t.type,
+                'price': t.price,
+                'amount': t.amount,
+                'leverage': t.leverage,
+                'reason': t.reason,
+              },
+            )
+            .toList(),
+        'stopLoss': stopLossPrice,
+        'takeProfit': takeProfitPrice,
+      };
+
+      _tickCallback!(msg); // sólo enviamos al WebView
+    }
+
+    // Si hemos acumulado suficientes ticks, finalizar la vela y pasar a la siguiente
+    if (_currentCandleTicks.length >= _ticksPerCandle) {
+      _currentCandleTicks.clear();
+      _currentCandleStartTime = null;
+    }
+  }
+
+  // --- MODO MANUAL: AVANZAR UN TICK ---
+  void advanceTick() {
+    if (_simulationMode != SimulationMode.manual) return;
+    _processNextTick();
+  }
+
+  // --- ENVÍO DE TICK AL CHART (mantener para compatibilidad) ---
+  Function(Map<String, dynamic>)? _tickCallback;
+
+  void setTickCallback(Function(Map<String, dynamic>) callback) {
+    _tickCallback = callback;
+  }
+
+  void _sendTickToChart(Tick tick) {
+    if (_tickCallback == null) return;
+
+    final msg = {
+      'tick': {
+        'time': tick.time.millisecondsSinceEpoch ~/ 1000,
+        'price': tick.price,
+      },
+      'trades': _currentTrades
+          .map(
+            (t) => {
+              'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
+              'type': t.type,
+              'price': t.price,
+              'amount': t.amount,
+              'leverage': t.leverage,
+              'reason': t.reason,
+            },
+          )
+          .toList(),
+      'stopLoss': stopLossPrice,
+      'takeProfit': takeProfitPrice,
+    };
+
+    _tickCallback!(msg);
   }
 }
