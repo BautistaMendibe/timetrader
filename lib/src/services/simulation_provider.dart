@@ -15,10 +15,26 @@ class Tick {
 
 enum SimulationMode { automatic, manual }
 
+// --- TIMEFRAMES ---
+enum Timeframe { D1, H1, M15, M5, M1 }
+
 class SimulationProvider with ChangeNotifier {
   SimulationResult? _currentSimulation;
   final List<SimulationResult> _simulationHistory = [];
-  List<Candle> _historicalData = [];
+
+  // --- MULTI-TIMEFRAME DATA ---
+  late Map<Timeframe, List<Candle>> _allTimeframes;
+  Timeframe _activeTf = Timeframe.H1;
+
+  // Mapa de ticks por vela para cada timeframe
+  static const Map<Timeframe, int> _ticksPerCandleMap = {
+    Timeframe.D1: 1440,
+    Timeframe.H1: 60,
+    Timeframe.M15: 15,
+    Timeframe.M5: 5,
+    Timeframe.M1: 1,
+  };
+
   bool _isSimulationRunning = false;
   int _currentCandleIndex = 0;
   double _currentBalance = 10000.0;
@@ -83,7 +99,12 @@ class SimulationProvider with ChangeNotifier {
 
   SimulationResult? get currentSimulation => _currentSimulation;
   List<SimulationResult> get simulationHistory => _simulationHistory;
-  List<Candle> get historicalData => _historicalData;
+
+  // --- MULTI-TIMEFRAME GETTERS ---
+  List<Candle> get historicalData => _allTimeframes[_activeTf]!;
+  Timeframe get activeTimeframe => _activeTf;
+  Map<Timeframe, List<Candle>> get allTimeframes => _allTimeframes;
+
   bool get isSimulationRunning => _isSimulationRunning;
   int get currentCandleIndex => _currentCandleIndex;
   double get currentBalance => _currentBalance;
@@ -171,7 +192,7 @@ class SimulationProvider with ChangeNotifier {
     if (!_inPosition || _currentTrades.isEmpty) return 0.0;
 
     final lastTrade = _currentTrades.last;
-    final currentPrice = _historicalData[_currentCandleIndex].close;
+    final currentPrice = historicalData[_currentCandleIndex].close;
 
     if (lastTrade.type == 'buy') {
       return (currentPrice - lastTrade.price) *
@@ -202,7 +223,137 @@ class SimulationProvider with ChangeNotifier {
         '🔥 SimulationProvider: Última vela: ${data.last.timestamp} - ${data.last.close}',
       );
     }
-    _historicalData = data;
+    loadRawData(data);
+  }
+
+  // --- MULTI-TIMEFRAME METHODS ---
+  void loadRawData(List<Candle> raw) {
+    debugPrint(
+      '🔥 SimulationProvider: loadRawData() - Procesando ${raw.length} velas raw',
+    );
+
+    // Reagrupar datos en todos los timeframes
+    _allTimeframes = {
+      Timeframe.D1: reaggregate(raw, const Duration(days: 1)),
+      Timeframe.H1: reaggregate(raw, const Duration(hours: 1)),
+      Timeframe.M15: reaggregate(raw, const Duration(minutes: 15)),
+      Timeframe.M5: reaggregate(raw, const Duration(minutes: 5)),
+      Timeframe.M1: reaggregate(raw, const Duration(minutes: 1)),
+    };
+
+    // Inicializar con H1 por defecto
+    _activeTf = Timeframe.H1;
+    _currentCandleIndex = 0;
+
+    // Actualizar _ticksPerCandle según el timeframe inicial
+    _ticksPerCandle = _ticksPerCandleMap[_activeTf]!;
+    debugPrint(
+      '🔥 SimulationProvider: _ticksPerCandle inicializado a $_ticksPerCandle para ${_activeTf.name}',
+    );
+
+    debugPrint('🔥 SimulationProvider: Timeframes generados:');
+    for (final tf in Timeframe.values) {
+      debugPrint('  ${tf.name}: ${_allTimeframes[tf]!.length} velas');
+    }
+
+    notifyListeners();
+  }
+
+  List<Candle> reaggregate(List<Candle> raw, Duration interval) {
+    if (raw.isEmpty) return [];
+
+    final List<Candle> aggregated = [];
+    final Map<DateTime, List<Candle>> grouped = {};
+
+    // Agrupar velas por intervalo
+    for (final candle in raw) {
+      final intervalStart = DateTime(
+        candle.timestamp.year,
+        candle.timestamp.month,
+        candle.timestamp.day,
+        candle.timestamp.hour,
+        candle.timestamp.minute -
+            (candle.timestamp.minute % interval.inMinutes),
+      );
+
+      grouped.putIfAbsent(intervalStart, () => []).add(candle);
+    }
+
+    // Crear velas agregadas
+    final sortedKeys = grouped.keys.toList()..sort();
+    for (final key in sortedKeys) {
+      final candles = grouped[key]!;
+      if (candles.isEmpty) continue;
+
+      final open = candles.first.open;
+      final close = candles.last.close;
+      final high = candles.map((c) => c.high).reduce((a, b) => a > b ? a : b);
+      final low = candles.map((c) => c.low).reduce((a, b) => a < b ? a : b);
+      final volume = candles.map((c) => c.volume).reduce((a, b) => a + b);
+
+      aggregated.add(
+        Candle(
+          timestamp: key,
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          volume: volume,
+        ),
+      );
+    }
+
+    return aggregated;
+  }
+
+  void setTimeframe(Timeframe tf) {
+    if (tf == _activeTf) return;
+
+    debugPrint(
+      '🔥 SimulationProvider: setTimeframe() - Cambiando de ${_activeTf.name} a ${tf.name}',
+    );
+
+    // Capturar timestamp actual
+    final currentTimestamp =
+        historicalData.isNotEmpty && _currentCandleIndex < historicalData.length
+        ? historicalData[_currentCandleIndex].timestamp
+        : DateTime.now();
+
+    // Cambiar timeframe
+    _activeTf = tf;
+
+    // Actualizar _ticksPerCandle según el nuevo timeframe
+    _ticksPerCandle = _ticksPerCandleMap[tf]!;
+    debugPrint(
+      '🔥 SimulationProvider: _ticksPerCandle actualizado a $_ticksPerCandle para ${tf.name}',
+    );
+
+    // Buscar índice más cercano en el nuevo timeframe
+    final newData = _allTimeframes[tf]!;
+    int closestIndex = 0;
+    int minDifference = double.maxFinite.toInt();
+
+    for (int i = 0; i < newData.length; i++) {
+      final difference = (newData[i].timestamp.difference(
+        currentTimestamp,
+      )).abs().inMilliseconds;
+      if (difference < minDifference) {
+        minDifference = difference;
+        closestIndex = i;
+      }
+    }
+
+    _currentCandleIndex = closestIndex;
+
+    debugPrint(
+      '🔥 SimulationProvider: Índice ajustado a $closestIndex (${newData[closestIndex].timestamp})',
+    );
+
+    // Regenerar ticks si la simulación está corriendo
+    if (_isSimulationRunning) {
+      _setupTicksForCurrentCandle();
+    }
+
     notifyListeners();
   }
 
@@ -269,13 +420,13 @@ class SimulationProvider with ChangeNotifier {
   // Process next candle in simulation
   void processNextCandle() {
     if (!_isSimulationRunning ||
-        _currentCandleIndex >= _historicalData.length - 1) {
+        _currentCandleIndex >= historicalData.length - 1) {
       stopSimulation();
       return;
     }
 
     _currentCandleIndex++;
-    final currentCandle = _historicalData[_currentCandleIndex];
+    final currentCandle = historicalData[_currentCandleIndex];
 
     debugPrint(
       '🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}',
@@ -328,13 +479,13 @@ class SimulationProvider with ChangeNotifier {
       return; // Need at least 20 candles for analysis
 
     final lookbackPeriod = 20;
-    final highPrices = _historicalData
+    final highPrices = historicalData
         .skip(_currentCandleIndex - lookbackPeriod)
         .take(lookbackPeriod)
         .map((c) => c.high)
         .toList();
 
-    final lowPrices = _historicalData
+    final lowPrices = historicalData
         .skip(_currentCandleIndex - lookbackPeriod)
         .take(lookbackPeriod)
         .map((c) => c.low)
@@ -354,7 +505,7 @@ class SimulationProvider with ChangeNotifier {
   }
 
   double _getAverageVolume(int period) {
-    final volumes = _historicalData
+    final volumes = historicalData
         .skip(_currentCandleIndex - period)
         .take(period)
         .map((c) => c.volume)
@@ -423,7 +574,7 @@ class SimulationProvider with ChangeNotifier {
     // Crear trade de cierre con el mismo tradeGroupId
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      timestamp: historicalData[_currentCandleIndex].timestamp,
       type: closeType,
       price: price,
       quantity: lastTrade.quantity,
@@ -503,7 +654,7 @@ class SimulationProvider with ChangeNotifier {
   ]) {
     final trade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      timestamp: historicalData[_currentCandleIndex].timestamp,
       type: type,
       price: price,
       quantity: quantity,
@@ -533,8 +684,8 @@ class SimulationProvider with ChangeNotifier {
     _currentSimulation = SimulationResult(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       setupId: _currentSetup?.id ?? 'unknown',
-      startDate: _historicalData.first.timestamp,
-      endDate: _historicalData.last.timestamp,
+      startDate: historicalData.first.timestamp,
+      endDate: historicalData.last.timestamp,
       initialBalance: 10000.0,
       finalBalance: _currentBalance,
       netPnL: _currentBalance - 10000.0,
@@ -609,7 +760,7 @@ class SimulationProvider with ChangeNotifier {
       return;
     }
 
-    if (_currentCandleIndex >= _historicalData.length - 1) {
+    if (_currentCandleIndex >= historicalData.length - 1) {
       debugPrint('🔥 SimulationProvider: Ya se llegó al final de los datos');
       return;
     }
@@ -621,12 +772,12 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void _advanceCandleManually() {
-    if (_currentCandleIndex >= _historicalData.length - 1) {
+    if (_currentCandleIndex >= historicalData.length - 1) {
       return;
     }
 
     _currentCandleIndex++;
-    final currentCandle = _historicalData[_currentCandleIndex];
+    final currentCandle = historicalData[_currentCandleIndex];
 
     debugPrint(
       '🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}',
@@ -705,7 +856,7 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void goToCandle(int index) {
-    if (index < 0 || index >= _historicalData.length) {
+    if (index < 0 || index >= historicalData.length) {
       debugPrint('🔥 SimulationProvider: Índice de vela inválido: $index');
       return;
     }
@@ -742,7 +893,7 @@ class SimulationProvider with ChangeNotifier {
       return;
     }
 
-    final candle = _historicalData[_currentCandleIndex];
+    final candle = historicalData[_currentCandleIndex];
     final price = candle.close;
 
     final trade = Trade(
@@ -818,7 +969,7 @@ class SimulationProvider with ChangeNotifier {
 
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      timestamp: historicalData[_currentCandleIndex].timestamp,
       type: closeType,
       price: exitPrice,
       quantity: lastTrade.quantity,
@@ -949,7 +1100,7 @@ class SimulationProvider with ChangeNotifier {
     if (!_inPosition || percent <= 0 || percent > 100) return;
     final lastTrade = _currentTrades.last;
     final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
-    final currentPrice = _historicalData[_currentCandleIndex].close;
+    final currentPrice = historicalData[_currentCandleIndex].close;
     final qtyToClose = lastTrade.quantity * (percent / 100);
     final pnl = lastTrade.type == 'buy'
         ? (currentPrice - lastTrade.price) *
@@ -963,7 +1114,7 @@ class SimulationProvider with ChangeNotifier {
 
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      timestamp: historicalData[_currentCandleIndex].timestamp,
       type: closeType,
       price: currentPrice,
       quantity: qtyToClose,
@@ -1035,12 +1186,12 @@ class SimulationProvider with ChangeNotifier {
 
   // New methods for automatic setup parameter reading and position calculation
   void calculatePositionParameters(String tradeType) {
-    if (_currentSetup == null || _historicalData.isEmpty) {
+    if (_currentSetup == null || historicalData.isEmpty) {
       _setupParametersCalculated = false;
       return;
     }
 
-    final currentPrice = _historicalData[_currentCandleIndex].close;
+    final currentPrice = historicalData[_currentCandleIndex].close;
 
     // 1. Calculate risk amount
     final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
@@ -1102,7 +1253,7 @@ class SimulationProvider with ChangeNotifier {
 
   // Validate if position can be calculated
   bool canCalculatePosition() {
-    if (_currentSetup == null || _historicalData.isEmpty) return false;
+    if (_currentSetup == null || historicalData.isEmpty) return false;
 
     final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
     if (riskAmount <= 0) return false;
@@ -1217,11 +1368,11 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void _setupTicksForCurrentCandle() {
-    if (_currentCandleIndex >= _historicalData.length) return;
-    final candle = _historicalData[_currentCandleIndex];
+    if (_currentCandleIndex >= historicalData.length) return;
+    final candle = historicalData[_currentCandleIndex];
     int? nextMs;
-    if (_currentCandleIndex < _historicalData.length - 1) {
-      nextMs = _historicalData[_currentCandleIndex + 1]
+    if (_currentCandleIndex < historicalData.length - 1) {
+      nextMs = historicalData[_currentCandleIndex + 1]
           .timestamp
           .millisecondsSinceEpoch;
     }
@@ -1258,7 +1409,7 @@ class SimulationProvider with ChangeNotifier {
     if (!_isSimulationRunning) return;
     if (_currentTickIndex >= _syntheticTicks.length) {
       _currentCandleIndex++;
-      if (_currentCandleIndex >= _historicalData.length) {
+      if (_currentCandleIndex >= historicalData.length) {
         stopTickSimulation();
         return;
       }

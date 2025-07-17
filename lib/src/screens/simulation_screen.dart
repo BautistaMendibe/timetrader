@@ -21,6 +21,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
   // GlobalKey para acceder al TradingViewChart
   final GlobalKey<TradingViewChartState> _chartKey =
       GlobalKey<TradingViewChartState>();
+  Timeframe? _selectedTimeframe; // NUEVO: para opciones avanzadas
 
   @override
   void initState() {
@@ -53,6 +54,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
       setState(() {
         _showSLTPContainer = false;
         _isBuyOrder = true;
+        _selectedTimeframe = simulationProvider.activeTimeframe; // NUEVO
       });
     });
   }
@@ -224,13 +226,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
     ];
     return Container(
       color: const Color(0xFF1E1E1E),
+      padding: const EdgeInsets.all(10),
       child: Column(
         children: [
           // Chart Section - 50% of screen height
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.5,
             child: Container(
-              margin: const EdgeInsets.all(16),
+              margin: const EdgeInsets.all(12),
               child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
                 selector: (context, provider) =>
                     Tuple2(allTrades, provider.currentCandleIndex),
@@ -255,210 +258,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Tick Simulation Controls
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2C2C2C),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[700]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.speed, color: Color(0xFF21CE99)),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Configuración Tick a Tick',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Ticks por vela
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Ticks por vela: ${simulationProvider.ticksPerCandle}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                  Slider(
-                                    value: simulationProvider.ticksPerCandle
-                                        .toDouble(),
-                                    min: 10,
-                                    max: 200,
-                                    divisions: 19,
-                                    activeColor: const Color(0xFF21CE99),
-                                    onChanged: (value) {
-                                      simulationProvider.ticksPerCandle = value
-                                          .toInt();
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Factor de velocidad
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Velocidad: ${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                  Slider(
-                                    value:
-                                        simulationProvider.ticksPerSecondFactor,
-                                    min: 0.1,
-                                    max: 5.0,
-                                    divisions: 49,
-                                    activeColor: const Color(0xFF21CE99),
-                                    onChanged: (value) {
-                                      simulationProvider.ticksPerSecondFactor =
-                                          value;
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Botones de control tick a tick
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    simulationProvider.isSimulationRunning
-                                    ? null
-                                    : () {
-                                        // Iniciar simulación tick a tick
-                                        simulationProvider.startTickSimulation(
-                                          simulationProvider.currentSetup!,
-                                          simulationProvider
-                                              .historicalData
-                                              .first
-                                              .timestamp,
-                                          simulationProvider.simulationSpeed,
-                                          simulationProvider.currentBalance,
-                                        );
-                                      },
-                                icon: const Icon(Icons.play_arrow),
-                                label: const Text('Iniciar Tick'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF21CE99),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    simulationProvider.isSimulationRunning
-                                    ? () => simulationProvider
-                                          .pauseTickSimulation()
-                                    : null,
-                                icon: const Icon(Icons.pause),
-                                label: const Text('Pausar'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    simulationProvider.isSimulationRunning
-                                    ? () => simulationProvider
-                                          .stopTickSimulation()
-                                    : null,
-                                icon: const Icon(Icons.stop),
-                                label: const Text('Detener'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFF6B6B),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Botón para avanzar un tick (modo manual)
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed:
-                                simulationProvider.simulationMode ==
-                                    SimulationMode.manual
-                                ? () => simulationProvider.advanceTick()
-                                : null,
-                            icon: const Icon(Icons.arrow_forward),
-                            label: const Text('Avanzar 1 Tick'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2C2C2C),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: BorderSide(color: Colors.grey[700]!),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
                   // Order Container (when active)
                   if (_showOrderContainerInline) ...[
                     Container(
@@ -548,8 +347,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                   ),
                                                 ),
                                                 backgroundColor: Colors.red,
-                                                behavior:
-                                                    SnackBarBehavior.floating,
                                               ),
                                             );
                                           }
@@ -564,7 +361,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       vertical: 12,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
                                   child: Text(
@@ -578,54 +375,18 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ),
                               ),
 
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 16),
 
-                              // Position Summary (replaces manual amount and leverage selection)
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1E1E1E),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey[700]!),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Resumen de Posición',
-                                      style: TextStyle(
-                                        color: Colors.grey[400],
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      simulationProvider
-                                          .getPositionSummaryText(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              // Información del setup
-                              if (simulationProvider.currentSetup != null) ...[
+                              // Position summary
+                              if (simulationProvider
+                                  .setupParametersCalculated) ...[
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF1E1E1E),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: Colors.grey[700]!,
+                                      color: Colors.grey[600]!,
                                     ),
                                   ),
                                   child: Column(
@@ -633,131 +394,153 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Configuración del Setup',
-                                        style: TextStyle(
-                                          color: Colors.grey[400],
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
+                                        simulationProvider
+                                            .getPositionSummaryText(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
                                           fontFamily: 'Inter',
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: _buildSetupInfoItem(
-                                              'Riesgo',
-                                              simulationProvider.currentSetup!
-                                                  .getRiskPercentDisplay(),
-                                              Icons.security,
-                                              Colors.orange,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: _buildSetupInfoItem(
-                                              'SL',
-                                              simulationProvider.currentSetup!
-                                                  .getStopLossDisplay(),
-                                              Icons.trending_down,
-                                              Colors.red,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: _buildSetupInfoItem(
-                                              'TP',
-                                              simulationProvider.currentSetup!
-                                                  .getTakeProfitRatioDisplay(),
-                                              Icons.trending_up,
-                                              Colors.green,
-                                            ),
-                                          ),
-                                        ],
+                                      Text(
+                                        'Stop Loss: ${simulationProvider.calculatedStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 12,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                      Text(
+                                        'Take Profit: ${simulationProvider.calculatedTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                        style: const TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 12,
+                                          fontFamily: 'Inter',
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 20),
                               ],
                             ],
                           ),
                         ),
                       ),
                     ),
-                  ] else if (_showSLTPContainer) ...[
-                    // SL/TP Container (when active)
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 300),
-                      child: _ManageSLTPContainer(
-                        simulationProvider: simulationProvider,
-                        onClose: () {
-                          setState(() {
-                            _showSLTPContainer = false;
-                          });
-                        },
-                      ),
-                    ),
-                  ] else ...[
-                    // Normal Controls (when no container is active)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2C2C2C),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[700]!),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(height: 5),
+                    const SizedBox(height: 16),
+                  ],
 
-                          // Manual Advance Button
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed:
-                                  simulationProvider.currentCandleIndex <
-                                      simulationProvider.historicalData.length -
-                                          1
-                                  ? () => simulationProvider.advanceCandle()
-                                  : null,
-                              icon: const Icon(Icons.arrow_forward),
-                              label: const Text('Siguiente Vela'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF21CE99),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                  // --- Controles de compra/venta en la sección media ---
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2C2C2C),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[700]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.trending_up,
+                              color: Color(0xFF21CE99),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Controles de Trading',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Trading Buttons Row
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    (!simulationProvider.inPosition &&
+                                        simulationProvider
+                                            .canCalculatePosition())
+                                    ? () => _showOrderContainer(
+                                        context,
+                                        simulationProvider,
+                                        true,
+                                      )
+                                    : null,
+                                icon: const Icon(Icons.trending_up),
+                                label: const Text('Comprar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF21CE99),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    (!simulationProvider.inPosition &&
+                                        simulationProvider
+                                            .canCalculatePosition())
+                                    ? () => _showOrderContainer(
+                                        context,
+                                        simulationProvider,
+                                        false,
+                                      )
+                                    : null,
+                                icon: const Icon(Icons.trending_down),
+                                label: const Text('Vender'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF6B6B),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
 
+                        // Close Position Button (only show if position is open)
+                        if (simulationProvider.inPosition) ...[
                           const SizedBox(height: 12),
-
-                          // Trading Buttons Row
                           Row(
                             children: [
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed:
-                                      (!simulationProvider.inPosition &&
-                                          simulationProvider
-                                              .canCalculatePosition())
-                                      ? () => _showOrderContainer(
-                                          context,
-                                          simulationProvider,
-                                          true,
-                                        )
-                                      : null,
-                                  icon: const Icon(Icons.trending_up),
-                                  label: const Text('Comprar'),
+                                  onPressed: () {
+                                    final currentCandle =
+                                        simulationProvider
+                                            .historicalData[simulationProvider
+                                            .currentCandleIndex];
+                                    simulationProvider.closeManualPosition(
+                                      currentCandle.close,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.close),
+                                  label: const Text('Cerrar Entrada'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF21CE99),
+                                    backgroundColor: Colors.orange,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 12,
@@ -771,20 +554,16 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed:
-                                      (!simulationProvider.inPosition &&
-                                          simulationProvider
-                                              .canCalculatePosition())
-                                      ? () => _showOrderContainer(
-                                          context,
-                                          simulationProvider,
-                                          false,
-                                        )
-                                      : null,
-                                  icon: const Icon(Icons.trending_down),
-                                  label: const Text('Vender'),
+                                  onPressed: () {
+                                    _showManageSLTPContainer(
+                                      context,
+                                      simulationProvider,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.tune),
+                                  label: const Text('Gestionar SL/TP'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFF6B6B),
+                                    backgroundColor: const Color(0xFF1976D2),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 12,
@@ -797,68 +576,270 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               ),
                             ],
                           ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-                          // Close Position Button (only show if position is open)
-                          if (simulationProvider.inPosition) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      final currentCandle =
-                                          simulationProvider
-                                              .historicalData[simulationProvider
-                                              .currentCandleIndex];
-                                      simulationProvider.closeManualPosition(
-                                        currentCandle.close,
-                                      );
-                                    },
-                                    icon: const Icon(Icons.close),
-                                    label: const Text('Cerrar Entrada'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.orange,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                  // --- Control de simulación con timeframe integrado ---
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2C2C2C),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[700]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header con título y timeframe
+                        Row(
+                          children: [
+                            const Icon(Icons.speed, color: Color(0xFF21CE99)),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Control de simulación',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                            const Spacer(),
+                            // Dropdown de timeframe integrado
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E1E1E),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.grey[600]!),
+                              ),
+                              child: DropdownButton<Timeframe>(
+                                value: _selectedTimeframe,
+                                dropdownColor: const Color(0xFF2C2C2C),
+                                underline: Container(), // Sin línea
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Colors.grey,
+                                  size: 16,
+                                ),
+                                items: Timeframe.values.map((tf) {
+                                  String label;
+                                  switch (tf) {
+                                    case Timeframe.D1:
+                                      label = '1D';
+                                      break;
+                                    case Timeframe.H1:
+                                      label = '1H';
+                                      break;
+                                    case Timeframe.M15:
+                                      label = '15M';
+                                      break;
+                                    case Timeframe.M5:
+                                      label = '5M';
+                                      break;
+                                    case Timeframe.M1:
+                                      label = '1M';
+                                      break;
+                                  }
+                                  return DropdownMenuItem(
+                                    value: tf,
+                                    child: Text(
+                                      label,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontFamily: 'Inter',
                                       ),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      _showManageSLTPContainer(
-                                        context,
-                                        simulationProvider,
-                                      );
-                                    },
-                                    icon: const Icon(Icons.tune),
-                                    label: const Text('Gestionar SL/TP'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF1976D2),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                                  );
+                                }).toList(),
+                                onChanged: (tf) {
+                                  setState(() => _selectedTimeframe = tf);
+                                  if (tf != null)
+                                    simulationProvider.setTimeframe(tf);
+                                },
+                              ),
                             ),
                           ],
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
 
+                        const SizedBox(height: 16),
+
+                        // --- Botones de control principales ---
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    simulationProvider.isSimulationRunning
+                                    ? null
+                                    : () {
+                                        simulationProvider.startTickSimulation(
+                                          simulationProvider.currentSetup!,
+                                          simulationProvider
+                                              .historicalData
+                                              .first
+                                              .timestamp,
+                                          simulationProvider.simulationSpeed,
+                                          simulationProvider.currentBalance,
+                                        );
+                                      },
+                                icon: const Icon(Icons.play_arrow),
+                                label: const Text('Iniciar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF21CE99),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    simulationProvider.isSimulationRunning
+                                    ? () => simulationProvider
+                                          .pauseTickSimulation()
+                                    : null,
+                                icon: const Icon(Icons.pause),
+                                label: const Text('Pausar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    simulationProvider.isSimulationRunning
+                                    ? () => simulationProvider
+                                          .stopTickSimulation()
+                                    : null,
+                                icon: const Icon(Icons.stop),
+                                label: const Text('Detener'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF6B6B),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // --- Botones de siguiente vela y siguiente tick ---
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    simulationProvider.simulationMode ==
+                                        SimulationMode.manual
+                                    ? () => simulationProvider.advanceCandle()
+                                    : null,
+                                icon: const Icon(Icons.skip_next),
+                                label: const Text('Siguiente Vela'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2C2C2C),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    side: BorderSide(color: Colors.grey[700]!),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    simulationProvider.simulationMode ==
+                                        SimulationMode.manual
+                                    ? () => simulationProvider.advanceTick()
+                                    : null,
+                                icon: const Icon(Icons.arrow_forward),
+                                label: const Text('Siguiente Tick'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2C2C2C),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    side: BorderSide(color: Colors.grey[700]!),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Factor de velocidad
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Velocidad: ${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  Slider(
+                                    value:
+                                        simulationProvider.ticksPerSecondFactor,
+                                    min: 0.1,
+                                    max: 5.0,
+                                    divisions: 49,
+                                    activeColor: const Color(0xFF21CE99),
+                                    onChanged: (value) {
+                                      simulationProvider.ticksPerSecondFactor =
+                                          value;
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                   // Setup Details Section (below controls)
                   if (simulationProvider.currentSetup != null &&
                       !_showOrderContainerInline &&
@@ -882,19 +863,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 color: const Color(0xFF21CE99),
                                 size: 16,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                               Text(
                                 'Setup: ${simulationProvider.currentSetup!.name}',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 14,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                   fontFamily: 'Inter',
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 16),
 
                           // Setup details in compact format
                           Row(
