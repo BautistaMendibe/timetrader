@@ -679,21 +679,40 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed:
-                                    simulationProvider.isSimulationRunning
-                                    ? null
-                                    : () {
-                                        simulationProvider.startTickSimulation(
-                                          simulationProvider.currentSetup!,
+                                    (simulationProvider.currentSetup != null &&
+                                        !simulationProvider.isSimulationRunning)
+                                    ? () {
+                                        // Si no está corriendo, verificar si hay una simulación pausada
+                                        if (simulationProvider
+                                                .currentCandleIndex >
+                                            0) {
+                                          // Reanudar simulación existente
                                           simulationProvider
-                                              .historicalData
-                                              .first
-                                              .timestamp,
-                                          simulationProvider.simulationSpeed,
-                                          simulationProvider.currentBalance,
-                                        );
-                                      },
+                                              .resumeTickSimulation();
+                                        } else {
+                                          // Iniciar nueva simulación
+                                          simulationProvider
+                                              .startTickSimulation(
+                                                simulationProvider
+                                                    .currentSetup!,
+                                                simulationProvider
+                                                    .historicalData
+                                                    .first
+                                                    .timestamp,
+                                                simulationProvider
+                                                    .simulationSpeed,
+                                                simulationProvider
+                                                    .currentBalance,
+                                              );
+                                        }
+                                      }
+                                    : null,
                                 icon: const Icon(Icons.play_arrow),
-                                label: const Text('Iniciar'),
+                                label: Text(
+                                  simulationProvider.currentCandleIndex > 0
+                                      ? 'Reanudar'
+                                      : 'Iniciar',
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF21CE99),
                                   foregroundColor: Colors.white,
