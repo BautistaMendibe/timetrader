@@ -773,7 +773,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         ),
 
                         // --- Botones de siguiente vela y siguiente tick ---
-                        const SizedBox(height: 8),
+                        // -- Por el momento esto se comentara, ya que no funciona correctamente y no es escencial en el MVP.
+                        /*
+                        const SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
@@ -823,7 +825,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             ),
                           ],
                         ),
-
+                        */
                         const SizedBox(height: 16),
 
                         // Factor de velocidad
