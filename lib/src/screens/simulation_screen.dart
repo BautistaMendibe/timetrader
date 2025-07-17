@@ -432,115 +432,56 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   ],
 
                   // --- Controles de compra/venta en la sección media ---
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2C2C2C),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[700]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.trending_up,
-                              color: Color(0xFF21CE99),
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Controles de Trading',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
+                  if (!_showOrderContainerInline) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2C2C2C),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[700]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.trending_up,
+                                color: Color(0xFF21CE99),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Trading Buttons Row
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    (!simulationProvider.inPosition &&
-                                        simulationProvider
-                                            .canCalculatePosition())
-                                    ? () => _showOrderContainer(
-                                        context,
-                                        simulationProvider,
-                                        true,
-                                      )
-                                    : null,
-                                icon: const Icon(Icons.trending_up),
-                                label: const Text('Comprar'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF21CE99),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Controles de Trading',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Inter',
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    (!simulationProvider.inPosition &&
-                                        simulationProvider
-                                            .canCalculatePosition())
-                                    ? () => _showOrderContainer(
-                                        context,
-                                        simulationProvider,
-                                        false,
-                                      )
-                                    : null,
-                                icon: const Icon(Icons.trending_down),
-                                label: const Text('Vender'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFF6B6B),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
 
-                        // Close Position Button (only show if position is open)
-                        if (simulationProvider.inPosition) ...[
-                          const SizedBox(height: 12),
+                          // Trading Buttons Row
                           Row(
                             children: [
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    final currentCandle =
-                                        simulationProvider
-                                            .historicalData[simulationProvider
-                                            .currentCandleIndex];
-                                    simulationProvider.closeManualPosition(
-                                      currentCandle.close,
-                                    );
-                                  },
-                                  icon: const Icon(Icons.close),
-                                  label: const Text('Cerrar Entrada'),
+                                  onPressed:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? () => _showOrderContainer(
+                                          context,
+                                          simulationProvider,
+                                          true,
+                                        )
+                                      : null,
+                                  icon: const Icon(Icons.trending_up),
+                                  label: const Text('Comprar'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
+                                    backgroundColor: const Color(0xFF21CE99),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 12,
@@ -554,16 +495,20 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    _showManageSLTPContainer(
-                                      context,
-                                      simulationProvider,
-                                    );
-                                  },
-                                  icon: const Icon(Icons.tune),
-                                  label: const Text('Gestionar SL/TP'),
+                                  onPressed:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? () => _showOrderContainer(
+                                          context,
+                                          simulationProvider,
+                                          false,
+                                        )
+                                      : null,
+                                  icon: const Icon(Icons.trending_down),
+                                  label: const Text('Vender'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1976D2),
+                                    backgroundColor: const Color(0xFFFF6B6B),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 12,
@@ -576,11 +521,68 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               ),
                             ],
                           ),
+
+                          // Close Position Button (only show if position is open)
+                          if (simulationProvider.inPosition) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      final currentCandle =
+                                          simulationProvider
+                                              .historicalData[simulationProvider
+                                              .currentCandleIndex];
+                                      simulationProvider.closeManualPosition(
+                                        currentCandle.close,
+                                      );
+                                    },
+                                    icon: const Icon(Icons.close),
+                                    label: const Text('Cerrar Entrada'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      _showManageSLTPContainer(
+                                        context,
+                                        simulationProvider,
+                                      );
+                                    },
+                                    icon: const Icon(Icons.tune),
+                                    label: const Text('Gestionar SL/TP'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF1976D2),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
+                  ],
 
                   // --- Control de simulación con timeframe integrado ---
                   Container(
@@ -844,7 +846,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   if (simulationProvider.currentSetup != null &&
                       !_showOrderContainerInline &&
                       !_showSLTPContainer) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.all(12),

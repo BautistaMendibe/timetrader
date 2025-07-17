@@ -33,10 +33,10 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
   void _initializeValues() {
     // Set default values
     final assets = _dataService.getAvailableAssets();
-    
+
     if (assets.isNotEmpty) _selectedAsset = assets.first;
     // Don't set a default date - let user choose from calendar
-    
+
     _isInitialized = true;
   }
 
@@ -50,12 +50,15 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
   }
 
   Future<void> _startSimulation() async {
-    if (_selectedAsset == null || _selectedDate == null || _selectedSetup == null) {
+    if (_selectedAsset == null ||
+        _selectedDate == null ||
+        _selectedSetup == null) {
       String errorMessage = 'Por favor completa todos los campos:';
       if (_selectedAsset == null) errorMessage += '\n• Selecciona un activo';
-      if (_selectedDate == null) errorMessage += '\n• Selecciona una fecha de inicio';
+      if (_selectedDate == null)
+        errorMessage += '\n• Selecciona una fecha de inicio';
       if (_selectedSetup == null) errorMessage += '\n• Selecciona un setup';
-      
+
       TopSnackBar.showError(
         context: context,
         message: errorMessage,
@@ -69,7 +72,8 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
     if (_selectedDate!.isAfter(now)) {
       TopSnackBar.showError(
         context: context,
-        message: 'No se puede simular con fechas futuras. Selecciona una fecha anterior a hoy.',
+        message:
+            'No se puede simular con fechas futuras. Selecciona una fecha anterior a hoy.',
         duration: const Duration(seconds: 3),
       );
       return;
@@ -81,14 +85,22 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
 
     try {
       final simulationProvider = context.read<SimulationProvider>();
-      
+
       // Load historical data
-      final data = await _dataService.loadHistorical(_selectedAsset!, _selectedDate!);
-      
+      final data = await _dataService.loadHistorical(
+        _selectedAsset!,
+        _selectedDate!,
+      );
+
       // Set data and start simulation
       simulationProvider.setHistoricalData(data);
-      simulationProvider.startSimulation(_selectedSetup!, _selectedDate!, 1.0, _initialBalance); // Velocidad fija en 1.0
-      
+      simulationProvider.startTickSimulation(
+        _selectedSetup!,
+        _selectedDate!,
+        1.0,
+        _initialBalance,
+      ); // Usar simulación por ticks
+
       if (mounted) {
         Navigator.pushNamed(context, AppRoutes.simulation);
       }
@@ -114,18 +126,18 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
     if (!_isInitialized) {
       _initializeValues();
     }
-    
+
     // Validate that selected asset is in the available options
     final availableAssets = _dataService.getAvailableAssets();
-    
+
     if (_selectedAsset != null && !availableAssets.contains(_selectedAsset)) {
-      _selectedAsset = availableAssets.isNotEmpty ? availableAssets.first : null;
+      _selectedAsset = availableAssets.isNotEmpty
+          ? availableAssets.first
+          : null;
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Configurar Simulación'),
-      ),
+      appBar: AppBar(title: const Text('Configurar Simulación')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -196,9 +208,13 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                       onTap: () async {
                         final DateTime? picked = await showDatePicker(
                           context: context,
-                          initialDate: _selectedDate ?? DateTime.now().subtract(const Duration(days: 1)),
+                          initialDate:
+                              _selectedDate ??
+                              DateTime.now().subtract(const Duration(days: 1)),
                           firstDate: DateTime(2020),
-                          lastDate: DateTime.now().subtract(const Duration(days: 1)),
+                          lastDate: DateTime.now().subtract(
+                            const Duration(days: 1),
+                          ),
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
@@ -223,7 +239,10 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey[600]!),
                           borderRadius: BorderRadius.circular(8),
@@ -243,7 +262,9 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                                     ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
                                     : 'Seleccionar fecha',
                                 style: TextStyle(
-                                  color: _selectedDate != null ? Colors.white : Colors.grey[400],
+                                  color: _selectedDate != null
+                                      ? Colors.white
+                                      : Colors.grey[400],
                                   fontSize: 16,
                                 ),
                               ),
@@ -259,10 +280,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Selecciona cualquier fecha desde 2020 hasta ayer (no fechas futuras)',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
                   ],
                 ),
@@ -282,10 +300,11 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                       children: [
                         Text(
                           'Setup',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                         const SizedBox(height: 12),
                         if (setupProvider.setups.isEmpty)
@@ -310,7 +329,10 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                                 const SizedBox(height: 8),
                                 ElevatedButton(
                                   onPressed: () {
-                                    Navigator.pushNamed(context, AppRoutes.setupForm);
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.setupForm,
+                                    );
                                   },
                                   child: const Text('Crear Setup'),
                                 ),
@@ -337,10 +359,11 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                             }).toList(),
                             onChanged: (value) async {
                               if (value != null) {
-                                final selectedSetup = setupProvider.setups.firstWhere(
-                                  (setup) => setup.id == value,
-                                  orElse: () => setupProvider.setups.first,
-                                );
+                                final selectedSetup = setupProvider.setups
+                                    .firstWhere(
+                                      (setup) => setup.id == value,
+                                      orElse: () => setupProvider.setups.first,
+                                    );
                                 setState(() {
                                   _selectedSetup = selectedSetup;
                                 });
@@ -466,10 +489,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Balance inicial para la simulación (mínimo \$100)',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
                   ],
                 ),
@@ -479,7 +499,9 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
 
             // Start Simulation Button
             ElevatedButton(
-              onPressed: _isLoading || _selectedSetup == null ? null : _startSimulation,
+              onPressed: _isLoading || _selectedSetup == null
+                  ? null
+                  : _startSimulation,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF21CE99),
                 foregroundColor: Colors.white,
@@ -492,7 +514,10 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                   ? const CircularProgressIndicator(color: Colors.white)
                   : const Text(
                       'Iniciar Simulación',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
             ),
           ],
@@ -500,4 +525,4 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
       ),
     );
   }
-} 
+}
