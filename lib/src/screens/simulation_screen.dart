@@ -22,6 +22,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
   final GlobalKey<TradingViewChartState> _chartKey =
       GlobalKey<TradingViewChartState>();
   Timeframe? _selectedTimeframe; // NUEVO: para opciones avanzadas
+  bool _isAdjustingSpeed =
+      false; // Para controlar pausa durante ajuste de velocidad
 
   @override
   void initState() {
@@ -752,8 +754,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               child: ElevatedButton.icon(
                                 onPressed:
                                     simulationProvider.isSimulationRunning
-                                    ? () => simulationProvider
-                                          .stopTickSimulation()
+                                    ? () {
+                                        _isAdjustingSpeed =
+                                            false; // Resetear estado de ajuste
+                                        simulationProvider.stopTickSimulation();
+                                      }
                                     : null,
                                 icon: const Icon(Icons.stop),
                                 label: const Text('Detener'),
@@ -835,13 +840,46 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Velocidad: ${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Velocidad: ${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                      if (_isAdjustingSpeed) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.withOpacity(
+                                              0.2,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.orange,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'PAUSADO',
+                                            style: TextStyle(
+                                              color: Colors.orange,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                   Slider(
                                     value:
@@ -851,8 +889,27 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     divisions: 49,
                                     activeColor: const Color(0xFF21CE99),
                                     onChanged: (value) {
+                                      // Pausar temporalmente mientras se ajusta la velocidad
+                                      if (!_isAdjustingSpeed &&
+                                          simulationProvider
+                                              .isSimulationRunning) {
+                                        _isAdjustingSpeed = true;
+                                        simulationProvider
+                                            .pauseTickSimulation();
+                                      }
+
                                       simulationProvider.ticksPerSecondFactor =
                                           value;
+                                    },
+                                    onChangeEnd: (value) {
+                                      // Reanudar después de ajustar la velocidad
+                                      if (_isAdjustingSpeed &&
+                                          simulationProvider.currentSetup !=
+                                              null) {
+                                        _isAdjustingSpeed = false;
+                                        simulationProvider
+                                            .resumeTickSimulation();
+                                      }
                                     },
                                   ),
                                 ],

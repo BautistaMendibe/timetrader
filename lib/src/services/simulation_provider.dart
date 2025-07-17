@@ -1369,6 +1369,9 @@ class SimulationProvider with ChangeNotifier {
       // Reset SL/TP enabled state
       _stopLossEnabled = false;
       _takeProfitEnabled = false;
+
+      // Reset velocidad a 1x para nueva simulación
+      _ticksPerSecondFactor = 1.0;
     }
 
     _isSimulationRunning = false; // 👈 Mantenerlo false inicialmente
