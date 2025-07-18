@@ -262,7 +262,7 @@ class SimulationProvider with ChangeNotifier {
       debugPrint('  ${tf.name}: ${_allTimeframes[tf]!.length} velas');
     }
 
-    notifyListeners();
+    _notifyChartReset();
   }
 
   List<Candle> reaggregate(List<Candle> raw, Duration interval) {
@@ -360,7 +360,7 @@ class SimulationProvider with ChangeNotifier {
       _setupTicksForCurrentCandle();
     }
 
-    notifyListeners();
+    _notifyChartReset();
   }
 
   void startSimulation(
@@ -404,23 +404,23 @@ class SimulationProvider with ChangeNotifier {
     _stopLossEnabled = false;
     _takeProfitEnabled = false;
 
-    notifyListeners();
+    _notifyChartReset();
   }
 
   void pauseSimulation() {
     _isSimulationRunning = false;
-    notifyListeners();
+    _notifySimulationState();
   }
 
   void resumeSimulation() {
     _isSimulationRunning = true;
-    notifyListeners();
+    _notifySimulationState();
   }
 
   void stopSimulation() {
     _isSimulationRunning = false;
     _finalizeSimulation();
-    notifyListeners();
+    _notifySimulationState();
   }
 
   // Process next candle in simulation
@@ -450,7 +450,7 @@ class SimulationProvider with ChangeNotifier {
 
     // Update equity curve
     _equityCurve.add(_currentBalance);
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void _checkStopLossAndTakeProfit(Candle candle) {
@@ -649,7 +649,7 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 SimulationProvider: Posición cerrada - Precio: $price, Razón: $reason, P&L: $pnl',
     );
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void executeTrade(
@@ -672,7 +672,7 @@ class SimulationProvider with ChangeNotifier {
     // El P&L se calculará cuando se cierre la posición
     // No calcular P&L aquí para evitar duplicación
 
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void _finalizeSimulation() {
@@ -741,13 +741,13 @@ class SimulationProvider with ChangeNotifier {
     _positionSize = 0.0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
-    notifyListeners();
+    _notifyChartReset();
   }
 
   void setSimulationMode(SimulationMode mode) {
     _simulationMode = mode;
     debugPrint('🔥 SimulationProvider: Modo de simulación cambiado a: $mode');
-    notifyListeners();
+    _notifySimulationState();
   }
 
   void setSimulationSpeed(double speed) {
@@ -755,7 +755,7 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 SimulationProvider: Velocidad de simulación cambiada a: $speed',
     );
-    notifyListeners();
+    _notifySimulationState();
   }
 
   void advanceCandle() {
@@ -797,7 +797,7 @@ class SimulationProvider with ChangeNotifier {
     // En modo manual, NO ejecutar lógica automática de stop loss/take profit ni señales de entrada
     // Solo actualizar la equity curve
     _equityCurve.add(_currentBalance);
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void _checkManualStopLossAndTakeProfit(Candle candle) {
@@ -881,7 +881,7 @@ class SimulationProvider with ChangeNotifier {
     }
 
     debugPrint('🔥 SimulationProvider: Saltando a vela: $index');
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void executeManualTrade({
@@ -954,7 +954,7 @@ class SimulationProvider with ChangeNotifier {
       '🔥 SimulationProvider: executeManualTrade - SL Price: ${manualStopLossPrice}, TP Price: ${manualTakeProfitPrice}',
     );
 
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   double _manualMargin = 0.0;
@@ -1042,7 +1042,7 @@ class SimulationProvider with ChangeNotifier {
     _setupParametersCalculated = false;
 
     _currentTrades.clear();
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void setManualSLTP({double? stopLossPercent, double? takeProfitPercent}) {
@@ -1063,7 +1063,7 @@ class SimulationProvider with ChangeNotifier {
       _manualTakeProfitPercent = null;
     }
 
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   // Métodos separados para manejar SL y TP de forma independiente
@@ -1081,7 +1081,7 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 SimulationProvider: setManualStopLoss - SL: $_manualStopLossPercent%, Enabled: $_stopLossEnabled',
     );
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void setManualTakeProfit(double? takeProfitPercent) {
@@ -1098,7 +1098,7 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 SimulationProvider: setManualTakeProfit - TP: $_manualTakeProfitPercent%, Enabled: $_takeProfitEnabled',
     );
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   // Cierre parcial de la posición abierta
@@ -1187,7 +1187,7 @@ class SimulationProvider with ChangeNotifier {
       _positionSize = newQty;
       _manualMargin = _manualMargin * (1 - percent / 100);
     }
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   // New methods for automatic setup parameter reading and position calculation
@@ -1289,13 +1289,13 @@ class SimulationProvider with ChangeNotifier {
   int get ticksPerCandle => _ticksPerCandle;
   set ticksPerCandle(int value) {
     _ticksPerCandle = value;
-    notifyListeners();
+    _notifySimulationState();
   }
 
   double get ticksPerSecondFactor => _ticksPerSecondFactor;
   set ticksPerSecondFactor(double value) {
     _ticksPerSecondFactor = value;
-    notifyListeners();
+    _notifySimulationState();
   }
 
   // --- GENERADOR DE TICKS ---
@@ -1549,7 +1549,7 @@ class SimulationProvider with ChangeNotifier {
     _pausedCandleStartTime = null;
 
     // Notificar cambios
-    notifyListeners();
+    _notifySimulationState();
     debugPrint('🔥 RESUME: Simulación reanudada');
   }
 
@@ -1704,4 +1704,21 @@ class SimulationProvider with ChangeNotifier {
   }
 
   bool get isSimulationPaused => _wasPaused;
+
+  // --- NOTIFICACIONES GRANULARES ---
+
+  /// Notifica cambios que NO requieren reinicio del gráfico
+  void _notifyUIUpdate() {
+    notifyListeners();
+  }
+
+  /// Notifica cambios que SÍ requieren reinicio del gráfico (solo cuando cambian las velas base)
+  void _notifyChartReset() {
+    notifyListeners();
+  }
+
+  /// Notifica cambios de estado de simulación sin reiniciar gráfico
+  void _notifySimulationState() {
+    notifyListeners();
+  }
 }

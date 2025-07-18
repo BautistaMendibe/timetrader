@@ -76,15 +76,63 @@ class TradingViewChartState extends State<TradingViewChart> {
   @override
   void didUpdateWidget(covariant TradingViewChart oldWidget) {
     super.didUpdateWidget(oldWidget);
+
     // Solo reenviar datos automáticamente si la simulación está corriendo
-    if (_isWebViewReady &&
-        widget.isRunning &&
-        (oldWidget.candles != widget.candles ||
-            oldWidget.trades != widget.trades ||
-            oldWidget.currentCandleIndex != widget.currentCandleIndex ||
-            oldWidget.stopLoss != widget.stopLoss ||
-            oldWidget.takeProfit != widget.takeProfit)) {
-      _sendDataToWebView();
+    if (_isWebViewReady && widget.isRunning) {
+      // Verificar si realmente necesitamos reiniciar el gráfico
+      bool needsFullReset = false;
+
+      // Solo reiniciar si cambian las velas base (no los trades o índices)
+      if (oldWidget.candles != widget.candles) {
+        needsFullReset = true;
+      }
+
+      // Si necesitamos reinicio completo, hacerlo
+      if (needsFullReset) {
+        _sendDataToWebView();
+      }
+      // Si no necesitamos reinicio completo, solo actualizar trades y SL/TP si han cambiado
+      else if (oldWidget.trades != widget.trades ||
+          oldWidget.stopLoss != widget.stopLoss ||
+          oldWidget.takeProfit != widget.takeProfit) {
+        // Enviar solo los trades y SL/TP actualizados sin reiniciar el gráfico
+        _sendTradesAndSLTPOnly();
+      }
+    }
+  }
+
+  /// Envía solo trades y SL/TP sin reiniciar el gráfico completo
+  void _sendTradesAndSLTPOnly() async {
+    if (!_isWebViewReady) return;
+
+    try {
+      final data = {
+        'trades':
+            widget.trades
+                ?.map(
+                  (t) => {
+                    'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
+                    'type': t.type,
+                    'price': t.price,
+                    'amount': t.amount ?? 0.0,
+                    'leverage': t.leverage ?? 1,
+                  },
+                )
+                .toList() ??
+            [],
+        'stopLoss': (widget.stopLoss != null && widget.stopLoss! > 0)
+            ? widget.stopLoss
+            : null,
+        'takeProfit': (widget.takeProfit != null && widget.takeProfit! > 0)
+            ? widget.takeProfit
+            : null,
+        'updateOnly': true, // Señal para indicar que es solo actualización
+      };
+
+      final jsonData = jsonEncode(data);
+      await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
+    } catch (e) {
+      // Ignorar errores
     }
   }
 
