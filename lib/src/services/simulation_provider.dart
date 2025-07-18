@@ -87,6 +87,12 @@ class SimulationProvider with ChangeNotifier {
   List<Tick> _currentCandleTicks = [];
   DateTime? _currentCandleStartTime;
 
+  // --- ESTADO DE PAUSA ---
+  bool _wasPaused = false;
+  int _pausedTickIndex = 0;
+  List<Tick> _pausedCandleTicks = [];
+  DateTime? _pausedCandleStartTime;
+
   double? get calculatedPositionSize => _calculatedPositionSize;
   double? get calculatedLeverage => _calculatedLeverage;
   double? get calculatedStopLossPrice => _calculatedStopLossPrice;
@@ -1323,68 +1329,66 @@ class SimulationProvider with ChangeNotifier {
     Setup setup,
     DateTime startDate,
     double speed,
-    double initialBalance, {
-    bool isResume =
-        false, // Nuevo parámetro para distinguir entre inicio y reanudación
-  }) {
+    double initialBalance,
+  ) {
     debugPrint('🔥🔥🔥 INICIANDO SIMULACIÓN TICK A TICK 🔥🔥🔥');
     debugPrint('🔥 Setup: ${setup.name}');
     debugPrint('🔥 Velocidad: $speed');
     debugPrint('🔥 Balance inicial: $initialBalance');
-    debugPrint('🔥 Es reanudación: $isResume');
     debugPrint(
       '🔥 Datos históricos disponibles: ${historicalData.length} velas',
     );
     debugPrint('🔥 Timeframe activo: ${_activeTf.name}');
     debugPrint('🔥 Ticks por vela: $_ticksPerCandle');
 
-    // Si es una reanudación, preservar el estado actual
-    if (!isResume) {
-      // Solo reinicializar si es un inicio nuevo
-      _currentSimulation = null;
-      _currentCandleIndex = 0;
-      _currentBalance = initialBalance;
-      _currentTrades = [];
-      _completedTrades = []; // Limpiar trades completados
-      _completedOperations = []; // Limpiar operaciones completas
-      _equityCurve = [initialBalance];
+    // Reinicializar todo para nueva simulación
+    _currentSimulation = null;
+    _currentCandleIndex = 0;
+    _currentBalance = initialBalance;
+    _currentTrades = [];
+    _completedTrades = [];
+    _completedOperations = [];
+    _equityCurve = [initialBalance];
 
-      // Reset trading state
-      _inPosition = false;
-      _entryPrice = 0.0;
-      _positionSize = 0.0;
-      _stopLossPrice = 0.0;
-      _takeProfitPrice = 0.0;
+    // Reset trading state
+    _inPosition = false;
+    _entryPrice = 0.0;
+    _positionSize = 0.0;
+    _stopLossPrice = 0.0;
+    _takeProfitPrice = 0.0;
 
-      // Reset calculated parameters
-      _calculatedPositionSize = null;
-      _calculatedLeverage = null;
-      _calculatedStopLossPrice = null;
-      _calculatedTakeProfitPrice = null;
-      _setupParametersCalculated = false;
-      // Reset default SL/TP values
-      _defaultStopLossPercent = null;
-      _defaultTakeProfitPercent = null;
+    // Reset calculated parameters
+    _calculatedPositionSize = null;
+    _calculatedLeverage = null;
+    _calculatedStopLossPrice = null;
+    _calculatedTakeProfitPrice = null;
+    _setupParametersCalculated = false;
+    _defaultStopLossPercent = null;
+    _defaultTakeProfitPercent = null;
+    _stopLossEnabled = false;
+    _takeProfitEnabled = false;
 
-      // Reset SL/TP enabled state
-      _stopLossEnabled = false;
-      _takeProfitEnabled = false;
+    // Reset tick simulation state
+    _currentCandleTicks.clear();
+    _currentCandleStartTime = null;
+    _currentTickIndex = 0;
+    _wasPaused = false;
+    _pausedTickIndex = 0;
+    _pausedCandleTicks.clear();
+    _pausedCandleStartTime = null;
 
-      // Reset velocidad a 1x para nueva simulación
-      _ticksPerSecondFactor = 1.0;
-    }
-
-    _isSimulationRunning = false; // 👈 Mantenerlo false inicialmente
+    _isSimulationRunning = false;
     _currentSetup = setup;
     _simulationSpeed = speed;
+    _ticksPerSecondFactor = 1.0;
 
-    // Configurar ticks para la vela actual (preservar posición si es reanudación)
+    // Configurar ticks para la vela actual
     _setupTicksForCurrentCandle();
-    notifyListeners(); // 🔔 Para que el botón INICIAR aparezca activo
-    _isSimulationRunning = true; // 👈 Ahora sí marcamos que arrancó
+    notifyListeners();
+    _isSimulationRunning = true;
     debugPrint('🔥 Simulación marcada como corriendo: $_isSimulationRunning');
-    _startTickTimer(); // 👈 Y arrancamos el Timer
-    notifyListeners(); // 🔔 Para deshabilitar el botón de inicio
+    _startTickTimer();
+    notifyListeners();
     debugPrint('🔥🔥🔥 SIMULACIÓN INICIADA COMPLETAMENTE 🔥🔥🔥');
   }
 
@@ -1413,16 +1417,14 @@ class SimulationProvider with ChangeNotifier {
       '🔥 SimulationProvider: Generados ${_syntheticTicks.length} ticks para la vela',
     );
 
-    // Si hay ticks acumulados de la vela actual, preservar el progreso
-    if (_currentCandleTicks.isNotEmpty) {
-      // Calcular cuántos ticks ya se procesaron
-      _currentTickIndex = _currentCandleTicks.length;
-      debugPrint(
-        '🔥 SimulationProvider: Reanudando desde tick $_currentTickIndex de $_ticksPerCandle',
-      );
-    } else {
+    // Solo reiniciar si no estamos reanudando desde pausa
+    if (!_wasPaused) {
       _currentTickIndex = 0;
       debugPrint('🔥 SimulationProvider: Iniciando desde tick 0');
+    } else {
+      debugPrint(
+        '🔥 SimulationProvider: Manteniendo tick index $_currentTickIndex (reanudando)',
+      );
     }
   }
 
@@ -1465,21 +1467,90 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void pauseTickSimulation() {
+    debugPrint('🔥 PAUSE: Iniciando pausa de simulación');
+
+    // Guardar estado actual antes de pausar
+    _wasPaused = true;
+    _pausedTickIndex = _currentTickIndex;
+    _pausedCandleTicks = List.from(_currentCandleTicks);
+    _pausedCandleStartTime = _currentCandleStartTime;
+
+    debugPrint(
+      '🔥 PAUSE: Estado guardado - tick: $_pausedTickIndex, ticks acumulados: ${_pausedCandleTicks.length}',
+    );
+
+    // Detener timer
     _tickTimer?.cancel();
+
+    // Enviar señal de pausa al gráfico
+    if (_tickCallback != null) {
+      final msg = {
+        'pause': true,
+        'trades': _currentTrades
+            .map(
+              (t) => {
+                'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
+                'type': t.type,
+                'price': t.price,
+                'amount': t.amount ?? 0.0,
+                'leverage': t.leverage ?? 1,
+                'reason': t.reason ?? '',
+              },
+            )
+            .toList(),
+        'stopLoss': stopLossPrice > 0 ? stopLossPrice : null,
+        'takeProfit': takeProfitPrice > 0 ? takeProfitPrice : null,
+      };
+      debugPrint('🔥 PAUSE: Enviando señal de pausa al gráfico');
+      _tickCallback!(msg);
+    }
+
+    // Pausar simulación
     pauseSimulation();
+    debugPrint('🔥 PAUSE: Simulación pausada');
   }
 
   void resumeTickSimulation() {
-    // Reanudar la simulación preservando el estado actual
-    if (_currentSetup != null) {
-      startTickSimulation(
-        _currentSetup!,
-        DateTime.now(), // No importa la fecha para reanudación
-        _simulationSpeed,
-        _currentBalance,
-        isResume: true, // Indicar que es una reanudación
-      );
+    debugPrint('🔥 RESUME: Método resumeTickSimulation() llamado');
+
+    if (!_wasPaused) {
+      debugPrint('🔥 RESUME: No estaba pausado, saliendo');
+      return;
     }
+
+    debugPrint('🔥 RESUME: Restaurando estado guardado');
+
+    // Restaurar estado guardado
+    _currentTickIndex = _pausedTickIndex;
+    _currentCandleTicks = List.from(_pausedCandleTicks);
+    _currentCandleStartTime = _pausedCandleStartTime;
+
+    debugPrint(
+      '🔥 RESUME: Estado restaurado - tick: $_currentTickIndex, ticks acumulados: ${_currentCandleTicks.length}',
+    );
+
+    // Marcar como corriendo
+    _isSimulationRunning = true;
+
+    // Reiniciar timer
+    _startTickTimer();
+
+    // Enviar señal de reanudación al gráfico
+    if (_tickCallback != null) {
+      final resumeMsg = {'pause': false};
+      debugPrint('🔥 RESUME: Enviando señal de reanudación al chart');
+      _tickCallback!(resumeMsg);
+    }
+
+    // Limpiar estado de pausa
+    _wasPaused = false;
+    _pausedTickIndex = 0;
+    _pausedCandleTicks.clear();
+    _pausedCandleStartTime = null;
+
+    // Notificar cambios
+    notifyListeners();
+    debugPrint('🔥 RESUME: Simulación reanudada');
   }
 
   // --- LOOP DE SIMULACIÓN POR TICK ---
@@ -1518,16 +1589,30 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void _accumulateTickForCandle(Tick tick) {
+    debugPrint(
+      '🔥 TICK: Procesando tick - precio: ${tick.price}, tiempo: ${tick.time}',
+    );
+    debugPrint(
+      '🔥 TICK: Estado de simulación - isSimulationRunning: $_isSimulationRunning',
+    );
+
+    // Verificar que la simulación esté corriendo antes de procesar
+    if (!_isSimulationRunning) {
+      debugPrint('🔥 TICK: Simulación pausada, no procesando tick');
+      return;
+    }
+
     // Inicializar tiempo de inicio de la vela si es el primer tick
     if (_currentCandleTicks.isEmpty) {
       _currentCandleStartTime = tick.time;
-      debugPrint(
-        '🔥 SimulationProvider: Iniciando nueva vela a las ${tick.time}',
-      );
+      debugPrint('🔥 TICK: Iniciando nueva vela a las ${tick.time}');
     }
 
     // Agregar tick a la vela actual
     _currentCandleTicks.add(tick);
+    debugPrint(
+      '🔥 TICK: Tick agregado. Total acumulados: ${_currentCandleTicks.length}',
+    );
 
     // Calcular OHLC de los ticks acumulados hasta ahora
     final prices = _currentCandleTicks.map((t) => t.price).toList();
@@ -1538,11 +1623,12 @@ class SimulationProvider with ChangeNotifier {
         (_currentCandleStartTime ?? tick.time).millisecondsSinceEpoch ~/ 1000;
 
     debugPrint(
-      '🔥 SimulationProvider: Vela actualizada - OHLC: $o/$h/$l/$c, ticks: ${_currentCandleTicks.length}/$_ticksPerCandle',
+      '🔥 TICK: Vela actualizada - OHLC: $o/$h/$l/$c, ticks: ${_currentCandleTicks.length}/$_ticksPerCandle',
     );
+    debugPrint('🔥 TICK: Timestamp de vela: $ts');
 
-    // Enviar vela actualizada al gráfico en tiempo real
-    if (_tickCallback != null) {
+    // Solo enviar vela actualizada al gráfico si la simulación está corriendo
+    if (_isSimulationRunning && _tickCallback != null) {
       final msg = {
         'candle': {'time': ts, 'open': o, 'high': h, 'low': l, 'close': c},
         'trades': _currentTrades
@@ -1551,29 +1637,27 @@ class SimulationProvider with ChangeNotifier {
                 'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
                 'type': t.type,
                 'price': t.price,
-                'amount': t.amount,
-                'leverage': t.leverage,
-                'reason': t.reason,
+                'amount': t.amount ?? 0.0,
+                'leverage': t.leverage ?? 1,
+                'reason': t.reason ?? '',
               },
             )
             .toList(),
-        'stopLoss': stopLossPrice,
-        'takeProfit': takeProfitPrice,
+        'stopLoss': stopLossPrice > 0 ? stopLossPrice : null,
+        'takeProfit': takeProfitPrice > 0 ? takeProfitPrice : null,
       };
 
-      debugPrint('🔥 SimulationProvider: Enviando vela al chart: $msg');
+      debugPrint('🔥 TICK: Enviando vela al chart: $msg');
       _tickCallback!(msg); // sólo enviamos al WebView
     } else {
       debugPrint(
-        '🔥 SimulationProvider: _tickCallback es null - no se puede enviar al chart',
+        '🔥 TICK: No enviando vela - simulación pausada o callback null',
       );
     }
 
     // Si hemos acumulado suficientes ticks, finalizar la vela y pasar a la siguiente
     if (_currentCandleTicks.length >= _ticksPerCandle) {
-      debugPrint(
-        '🔥 SimulationProvider: Vela completada, limpiando ticks acumulados',
-      );
+      debugPrint('🔥 TICK: Vela completada, limpiando ticks acumulados');
       _currentCandleTicks.clear();
       _currentCandleStartTime = null;
     }
@@ -1606,16 +1690,18 @@ class SimulationProvider with ChangeNotifier {
               'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
               'type': t.type,
               'price': t.price,
-              'amount': t.amount,
-              'leverage': t.leverage,
-              'reason': t.reason,
+              'amount': t.amount ?? 0.0,
+              'leverage': t.leverage ?? 1,
+              'reason': t.reason ?? '',
             },
           )
           .toList(),
-      'stopLoss': stopLossPrice,
-      'takeProfit': takeProfitPrice,
+      'stopLoss': stopLossPrice > 0 ? stopLossPrice : null,
+      'takeProfit': takeProfitPrice > 0 ? takeProfitPrice : null,
     };
 
     _tickCallback!(msg);
   }
+
+  bool get isSimulationPaused => _wasPaused;
 }

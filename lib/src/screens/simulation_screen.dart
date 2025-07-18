@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 import '../services/simulation_provider.dart';
 import '../widgets/trading_view_chart.dart';
 import '../routes.dart';
@@ -39,16 +40,31 @@ class _SimulationScreenState extends State<SimulationScreen> {
       // Conectar el callback para enviar ticks al chart
       simulationProvider.setTickCallback((tickData) {
         if (_chartKey.currentState != null) {
-          _chartKey.currentState!.sendTickToWebView(
-            candle:
-                tickData['candle'] ??
-                tickData['tick'], // Soporte tanto candle como tick
-            trades: tickData['trades'] != null
+          // Verificar si es una señal de control (pausa/restauración)
+          if (tickData.containsKey('pause') ||
+              tickData.containsKey('restore')) {
+            // Es una señal de control, enviar directamente al WebView
+            debugPrint(
+              '🔥 CALLBACK: Enviando señal de control al WebView: $tickData',
+            );
+            _chartKey.currentState!.sendMessageToWebView(tickData);
+          } else {
+            // Es un tick normal con vela
+            final candle = tickData['candle'] ?? tickData['tick'];
+            final trades = tickData['trades'] != null
                 ? List<Map<String, dynamic>>.from(tickData['trades'])
-                : null,
-            stopLoss: tickData['stopLoss'],
-            takeProfit: tickData['takeProfit'],
-          );
+                : null;
+            final stopLoss = tickData['stopLoss'];
+            final takeProfit = tickData['takeProfit'];
+
+            // Enviar al WebView
+            _chartKey.currentState!.sendTickToWebView(
+              candle: candle,
+              trades: trades,
+              stopLoss: stopLoss,
+              takeProfit: takeProfit,
+            );
+          }
         }
       });
 
@@ -247,6 +263,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     currentCandleIndex: data.item2,
                     stopLoss: simulationProvider.manualStopLossPrice,
                     takeProfit: simulationProvider.manualTakeProfitPrice,
+                    isRunning: simulationProvider.isSimulationRunning,
                   );
                 },
               ),
@@ -682,36 +699,27 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               child: ElevatedButton.icon(
                                 onPressed:
                                     (simulationProvider.currentSetup != null &&
-                                        !simulationProvider.isSimulationRunning)
-                                    ? () {
-                                        // Si no está corriendo, verificar si hay una simulación pausada
-                                        if (simulationProvider
-                                                .currentCandleIndex >
-                                            0) {
-                                          // Reanudar simulación existente
-                                          simulationProvider
-                                              .resumeTickSimulation();
-                                        } else {
-                                          // Iniciar nueva simulación
-                                          simulationProvider
-                                              .startTickSimulation(
-                                                simulationProvider
-                                                    .currentSetup!,
-                                                simulationProvider
-                                                    .historicalData
-                                                    .first
-                                                    .timestamp,
-                                                simulationProvider
-                                                    .simulationSpeed,
-                                                simulationProvider
-                                                    .currentBalance,
-                                              );
-                                        }
-                                      }
+                                        simulationProvider.isSimulationPaused)
+                                    ? () => simulationProvider
+                                          .resumeTickSimulation()
+                                    : (simulationProvider.currentSetup !=
+                                              null &&
+                                          !simulationProvider
+                                              .isSimulationRunning)
+                                    ? () => simulationProvider
+                                          .startTickSimulation(
+                                            simulationProvider.currentSetup!,
+                                            simulationProvider
+                                                .historicalData
+                                                .first
+                                                .timestamp,
+                                            simulationProvider.simulationSpeed,
+                                            simulationProvider.currentBalance,
+                                          )
                                     : null,
                                 icon: const Icon(Icons.play_arrow),
                                 label: Text(
-                                  simulationProvider.currentCandleIndex > 0
+                                  simulationProvider.isSimulationPaused
                                       ? 'Reanudar'
                                       : 'Iniciar',
                                 ),

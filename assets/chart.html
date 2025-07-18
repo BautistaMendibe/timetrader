@@ -48,6 +48,7 @@
         let isFirstLoad = true;
         let slPriceLine = null;
         let tpPriceLine = null;
+        let isChartPaused = false; // Nueva variable para controlar el estado de pausa
 
         function checkLightweightCharts() {
             if (typeof LightweightCharts === 'undefined') {
@@ -257,9 +258,191 @@
         // Listen for messages from Flutter
         window.addEventListener('message', (event) => {
             try {
+                console.log('📨 HTML: Mensaje recibido:', event.data);
                 const data = JSON.parse(event.data);
+                console.log('📨 HTML: Datos parseados:', data);
+                
+                // --- SOPORTE SEÑALES DE PAUSA/REANUDACIÓN ---
+                if (data.hasOwnProperty('pause')) {
+                    if (data.pause === true) {
+                        console.log('⏸️ HTML: Gráfico pausado - manteniendo estado actual');
+                        console.log('⏸️ HTML: Datos de pausa:', data);
+                        isChartPaused = true; // Marcar el gráfico como pausado
+                        console.log('⏸️ HTML: Estado de pausa activado');
+                    } else if (data.pause === false) {
+                        console.log('▶️ HTML: Gráfico reanudado - desactivando pausa');
+                        isChartPaused = false; // Desmarcar el gráfico como pausado
+                        console.log('▶️ HTML: Estado de pausa desactivado');
+                        console.log('▶️ HTML: Gráfico listo para recibir velas en tiempo real');
+                        return; // Salir después de desactivar la pausa
+                    }
+                    // Solo actualizar trades y price lines, no modificar velas
+                    if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
+                        const markers = data.trades.map(trade => {
+                            const formattedTime = formatTime(trade.time);
+                            if (formattedTime === null) {
+                                return null;
+                            }
+                            const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
+                            const lev = trade.leverage ? `x${trade.leverage}` : '';
+                            let text;
+                            if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
+                                text = `CLOSE`;
+                                if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
+                                    const pnl = parseFloat(trade.pnl).toFixed(2);
+                                    text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
+                                }
+                            } else {
+                                text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
+                            }
+                            return {
+                                time: formattedTime,
+                                position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
+                                color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
+                                shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
+                                text: text,
+                                size: 1,
+                            };
+                        }).filter(marker => marker !== null);
+                        if (markers.length > 0) {
+                            candlestickSeries.setMarkers(markers);
+                        }
+                    }
+                    // Price lines SL/TP
+                    if (slPriceLine) {
+                        candlestickSeries.removePriceLine(slPriceLine);
+                        slPriceLine = null;
+                    }
+                    if (tpPriceLine) {
+                        candlestickSeries.removePriceLine(tpPriceLine);
+                        tpPriceLine = null;
+                    }
+                    if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
+                        slPriceLine = candlestickSeries.createPriceLine({
+                            price: data.stopLoss,
+                            color: '#FF5A5F',
+                            lineWidth: 2,
+                            lineStyle: LightweightCharts.LineStyle.Dotted,
+                            axisLabelVisible: true,
+                            title: 'SL',
+                            labelVisible: true,
+                            text: 'SL',
+                            axisLabelColor: '#FF5A5F',
+                            axisLabelTextColor: '#FFFFFF',
+                            axisLabelBackgroundColor: '#FF5A5F',
+                        });
+                    }
+                    if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
+                        tpPriceLine = candlestickSeries.createPriceLine({
+                            price: data.takeProfit,
+                            color: '#21CE99',
+                            lineWidth: 2,
+                            lineStyle: LightweightCharts.LineStyle.Dotted,
+                            axisLabelVisible: true,
+                            title: 'TP',
+                            labelVisible: true,
+                            text: 'TP',
+                            axisLabelColor: '#21CE99',
+                            axisLabelTextColor: '#FFFFFF',
+                            axisLabelBackgroundColor: '#21CE99',
+                        });
+                    }
+                    return;
+                }
+                
+                if (data.restore) {
+                    console.log('🔄 HTML: Restaurando estado del gráfico');
+                    console.log('🔄 HTML: Datos de restauración:', data.restore);
+                    isChartPaused = false; // Desmarcar el gráfico como pausado
+                    console.log('🔄 HTML: Estado de pausa desactivado');
+                    // Solo restaurar el estado de pausa, no modificar velas
+                    console.log('🔄 HTML: Gráfico reanudado - esperando velas en tiempo real');
+                    
+                    // Actualizar trades y price lines
+                    if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
+                        const markers = data.trades.map(trade => {
+                            const formattedTime = formatTime(trade.time);
+                            if (formattedTime === null) {
+                                return null;
+                            }
+                            const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
+                            const lev = trade.leverage ? `x${trade.leverage}` : '';
+                            let text;
+                            if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
+                                text = `CLOSE`;
+                                if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
+                                    const pnl = parseFloat(trade.pnl).toFixed(2);
+                                    text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
+                                }
+                            } else {
+                                text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
+                            }
+                            return {
+                                time: formattedTime,
+                                position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
+                                color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
+                                shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
+                                text: text,
+                                size: 1,
+                            };
+                        }).filter(marker => marker !== null);
+                        if (markers.length > 0) {
+                            candlestickSeries.setMarkers(markers);
+                        }
+                    }
+                    // Price lines SL/TP
+                    if (slPriceLine) {
+                        candlestickSeries.removePriceLine(slPriceLine);
+                        slPriceLine = null;
+                    }
+                    if (tpPriceLine) {
+                        candlestickSeries.removePriceLine(tpPriceLine);
+                        tpPriceLine = null;
+                    }
+                    if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
+                        slPriceLine = candlestickSeries.createPriceLine({
+                            price: data.stopLoss,
+                            color: '#FF5A5F',
+                            lineWidth: 2,
+                            lineStyle: LightweightCharts.LineStyle.Dotted,
+                            axisLabelVisible: true,
+                            title: 'SL',
+                            labelVisible: true,
+                            text: 'SL',
+                            axisLabelColor: '#FF5A5F',
+                            axisLabelTextColor: '#FFFFFF',
+                            axisLabelBackgroundColor: '#FF5A5F',
+                        });
+                    }
+                    if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
+                        tpPriceLine = candlestickSeries.createPriceLine({
+                            price: data.takeProfit,
+                            color: '#21CE99',
+                            lineWidth: 2,
+                            lineStyle: LightweightCharts.LineStyle.Dotted,
+                            axisLabelVisible: true,
+                            title: 'TP',
+                            labelVisible: true,
+                            text: 'TP',
+                            axisLabelColor: '#21CE99',
+                            axisLabelTextColor: '#FFFFFF',
+                            axisLabelBackgroundColor: '#21CE99',
+                        });
+                    }
+                    return;
+                }
+                
                 // --- SOPORTE VELAS EN TIEMPO REAL ---
                 if (data.candle) {
+                    console.log('🕯️ HTML: Recibida vela en tiempo real:', data.candle);
+                    console.log('🕯️ HTML: Estado de pausa:', isChartPaused);
+                    
+                    // No procesar velas si el gráfico está pausado
+                    if (isChartPaused) {
+                        console.log('🕯️ HTML: Gráfico pausado, ignorando vela en tiempo real');
+                        return;
+                    }
+                    
                     // Actualizar el chart con una vela OHLC completa
                     const c = data.candle;
                     const candleBar = {
@@ -269,11 +452,16 @@
                         low: parseFloat(c.low),
                         close: parseFloat(c.close),
                     };
+                    console.log('🕯️ HTML: Vela procesada:', candleBar);
+                    console.log('🕯️ HTML: seriesLastTime actual:', window.seriesLastTime);
+                    
                     if (!window.seriesLastTime || c.time > window.seriesLastTime) {
+                        console.log('🕯️ HTML: Actualizando vela (nueva o más reciente)');
                         candlestickSeries.update(candleBar);
                         window.seriesLastTime = c.time;
                     } else {
                         // Si el tiempo es igual, reemplazar el último
+                        console.log('🕯️ HTML: Reemplazando vela existente');
                         candlestickSeries.update(candleBar);
                     }
                     // Markers y price lines igual que antes

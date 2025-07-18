@@ -10,6 +10,7 @@ class TradingViewChart extends StatefulWidget {
   final int? currentCandleIndex;
   final double? stopLoss;
   final double? takeProfit;
+  final bool isRunning; // Flag para controlar si la simulación está corriendo
 
   const TradingViewChart({
     required this.candles,
@@ -17,6 +18,7 @@ class TradingViewChart extends StatefulWidget {
     this.currentCandleIndex,
     this.stopLoss,
     this.takeProfit,
+    this.isRunning = true, // Por defecto está corriendo
     super.key,
   });
 
@@ -74,7 +76,9 @@ class TradingViewChartState extends State<TradingViewChart> {
   @override
   void didUpdateWidget(covariant TradingViewChart oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Solo reenviar datos automáticamente si la simulación está corriendo
     if (_isWebViewReady &&
+        widget.isRunning &&
         (oldWidget.candles != widget.candles ||
             oldWidget.trades != widget.trades ||
             oldWidget.currentCandleIndex != widget.currentCandleIndex ||
@@ -130,8 +134,8 @@ class TradingViewChartState extends State<TradingViewChart> {
                         1000, // Convert to seconds since epoch
                     'type': t.type,
                     'price': t.price,
-                    'amount': t.amount,
-                    'leverage': t.leverage,
+                    'amount': t.amount ?? 0.0,
+                    'leverage': t.leverage ?? 1,
                   },
                 )
                 .toList() ??
@@ -168,23 +172,61 @@ class TradingViewChartState extends State<TradingViewChart> {
   /// [candle] debe ser un Map con 'time' (segundos epoch), 'open', 'high', 'low', 'close'.
   /// [trades], [stopLoss], [takeProfit] son opcionales.
   Future<void> sendTickToWebView({
-    required Map<String, dynamic> candle,
+    Map<String, dynamic>? candle,
     List<Map<String, dynamic>>? trades,
     double? stopLoss,
     double? takeProfit,
   }) async {
     if (!_isWebViewReady) return;
-    final msg = {
-      'candle': candle,
-      'trades': trades ?? [],
-      'stopLoss': (stopLoss != null && stopLoss > 0) ? stopLoss : null,
-      'takeProfit': (takeProfit != null && takeProfit > 0) ? takeProfit : null,
-    };
+    final msg = <String, dynamic>{};
+
+    // Solo agregar candle si no es null
+    if (candle != null) {
+      msg['candle'] = candle;
+    }
+
+    // Agregar trades si existen
+    if (trades != null && trades.isNotEmpty) {
+      msg['trades'] = trades;
+    }
+
+    // Agregar stopLoss y takeProfit si son válidos
+    if (stopLoss != null && stopLoss > 0) {
+      msg['stopLoss'] = stopLoss;
+    }
+    if (takeProfit != null && takeProfit > 0) {
+      msg['takeProfit'] = takeProfit;
+    }
+
+    // Agregar señales especiales si no hay candle
+    if (candle == null) {
+      // Determinar si es señal de pausa o restauración basado en el contexto
+      // Si hay trades, es probablemente una señal de control
+      if (trades != null && trades.isNotEmpty) {
+        // Por ahora, asumimos que es pausa si no hay vela
+        // La lógica específica se maneja en el callback de Flutter
+        msg['pause'] = true; // Señal de pausa por defecto
+      }
+    }
+
     final jsonData = jsonEncode(msg);
     try {
       await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
     } catch (e) {
       // Ignorar errores de JS
+    }
+  }
+
+  /// Envía un mensaje directo al WebView (para señales de control)
+  Future<void> sendMessageToWebView(Map<String, dynamic> message) async {
+    if (!_isWebViewReady) return;
+    final jsonData = jsonEncode(message);
+    debugPrint('🔥 WebView: Enviando mensaje directo: $jsonData');
+    try {
+      await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
+      debugPrint('🔥 WebView: Mensaje enviado exitosamente');
+    } catch (e) {
+      debugPrint('🔥 WebView: Error enviando mensaje: $e');
     }
   }
 
