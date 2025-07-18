@@ -4,7 +4,6 @@ import '../models/candle.dart';
 import '../models/setup.dart';
 import 'dart:async';
 import 'dart:math';
-import 'dart:convert';
 
 // --- MODELO TICK ---
 class Tick {
@@ -1674,33 +1673,6 @@ class SimulationProvider with ChangeNotifier {
 
   void setTickCallback(Function(Map<String, dynamic>) callback) {
     _tickCallback = callback;
-  }
-
-  void _sendTickToChart(Tick tick) {
-    if (_tickCallback == null) return;
-
-    final msg = {
-      'tick': {
-        'time': tick.time.millisecondsSinceEpoch ~/ 1000,
-        'price': tick.price,
-      },
-      'trades': _currentTrades
-          .map(
-            (t) => {
-              'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
-              'type': t.type,
-              'price': t.price,
-              'amount': t.amount ?? 0.0,
-              'leverage': t.leverage ?? 1,
-              'reason': t.reason ?? '',
-            },
-          )
-          .toList(),
-      'stopLoss': stopLossPrice > 0 ? stopLossPrice : null,
-      'takeProfit': takeProfitPrice > 0 ? takeProfitPrice : null,
-    };
-
-    _tickCallback!(msg);
   }
 
   bool get isSimulationPaused => _wasPaused;

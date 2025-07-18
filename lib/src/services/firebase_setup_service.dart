@@ -306,16 +306,10 @@ class FirebaseSetupService {
         .where('isExample', isEqualTo: false)
         .snapshots()
         .map((snapshot) {
-          final setups = snapshot.docs
-              .where((doc) {
-                final data = doc.data();
-                return data != null && data is Map<String, dynamic>;
-              })
-              .map((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                return Setup.fromJson({...data, 'id': doc.id});
-              })
-              .toList();
+          final setups = snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Setup.fromJson({...data, 'id': doc.id});
+          }).toList();
 
           // Ordenar localmente
           setups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -329,16 +323,10 @@ class FirebaseSetupService {
         .where('isExample', isEqualTo: false)
         .snapshots()
         .map((snapshot) {
-          final userSetups = snapshot.docs
-              .where((doc) {
-                final data = doc.data();
-                return data != null && data is Map<String, dynamic>;
-              })
-              .map((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                return Setup.fromJson({...data, 'id': doc.id});
-              })
-              .toList();
+          final userSetups = snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Setup.fromJson({...data, 'id': doc.id});
+          }).toList();
 
           // Ordenar localmente en lugar de en la consulta
           userSetups.sort((a, b) => b.createdAt.compareTo(a.createdAt));

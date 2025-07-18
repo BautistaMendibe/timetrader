@@ -44,9 +44,6 @@ class SimulationSummaryScreen extends StatelessWidget {
         final winningTrades = completedOperations
             .where((t) => t.totalPnL > 0)
             .length;
-        final winRate = totalCompletedOperations > 0
-            ? winningTrades / totalCompletedOperations
-            : 0.0;
 
         return Scaffold(
           appBar: AppBar(
