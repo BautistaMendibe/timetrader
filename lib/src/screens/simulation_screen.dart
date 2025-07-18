@@ -757,6 +757,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ),
                               ),
                             ),
+                            // Botón de detener comentado temporalmente
+                            /*
                             const SizedBox(width: 8),
                             Expanded(
                               child: ElevatedButton.icon(
@@ -782,6 +784,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ),
                               ),
                             ),
+                            */
                           ],
                         ),
 
