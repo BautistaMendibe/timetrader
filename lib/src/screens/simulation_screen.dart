@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import '../services/simulation_provider.dart';
 import '../widgets/trading_view_chart.dart';
 import '../routes.dart';
@@ -682,8 +681,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 }).toList(),
                                 onChanged: (tf) {
                                   setState(() => _selectedTimeframe = tf);
-                                  if (tf != null)
+                                  if (tf != null) {
                                     simulationProvider.setTimeframe(tf);
+                                  }
                                 },
                               ),
                             ),
@@ -757,6 +757,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ),
                               ),
                             ),
+                            // Botón de detener comentado temporalmente
+                            /*
                             const SizedBox(width: 8),
                             Expanded(
                               child: ElevatedButton.icon(
@@ -782,6 +784,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 ),
                               ),
                             ),
+                            */
                           ],
                         ),
 
@@ -866,8 +869,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.orange.withOpacity(
-                                              0.2,
+                                            color: Colors.orange.withValues(
+                                              alpha: 0.2,
                                             ),
                                             borderRadius: BorderRadius.circular(
                                               4,
@@ -1730,120 +1733,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  Widget _buildSetupDetailCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Inter',
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 10,
-              fontFamily: 'Inter',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRuleItem(Rule rule) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: rule.isActive
-              ? const Color(0xFF21CE99).withValues(alpha: 0.3)
-              : Colors.grey.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _getRuleIcon(rule.type),
-            color: rule.isActive ? const Color(0xFF21CE99) : Colors.grey,
-            size: 16,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rule.name,
-                  style: TextStyle(
-                    color: rule.isActive ? Colors.white : Colors.grey[400],
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
-                  ),
-                ),
-                Text(
-                  rule.description,
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 12,
-                    fontFamily: 'Inter',
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: rule.isActive
-                  ? const Color(0xFF21CE99).withValues(alpha: 0.2)
-                  : Colors.grey.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              rule.isActive ? 'Activa' : 'Inactiva',
-              style: TextStyle(
-                color: rule.isActive ? const Color(0xFF21CE99) : Colors.grey,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Inter',
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCompactSetupDetail(
     String title,
     String value,
@@ -1969,52 +1858,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
         return Icons.schedule;
       case RuleType.other:
         return Icons.rule;
-      default:
-        return Icons.rule;
     }
-  }
-
-  Widget _buildSetupInfoItem(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Inter',
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 9,
-              fontFamily: 'Inter',
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
