@@ -2,13 +2,39 @@ import 'package:flutter/foundation.dart';
 import '../models/simulation_result.dart';
 import '../models/candle.dart';
 import '../models/setup.dart';
+import 'dart:async';
+import 'dart:math';
+import 'dart:convert';
+
+// --- MODELO TICK ---
+class Tick {
+  final DateTime time;
+  final double price;
+  Tick(this.time, this.price);
+}
 
 enum SimulationMode { automatic, manual }
+
+// --- TIMEFRAMES ---
+enum Timeframe { D1, H1, M15, M5, M1 }
 
 class SimulationProvider with ChangeNotifier {
   SimulationResult? _currentSimulation;
   final List<SimulationResult> _simulationHistory = [];
-  List<Candle> _historicalData = [];
+
+  // --- MULTI-TIMEFRAME DATA ---
+  late Map<Timeframe, List<Candle>> _allTimeframes;
+  Timeframe _activeTf = Timeframe.H1;
+
+  // Mapa de ticks por vela para cada timeframe
+  static const Map<Timeframe, int> _ticksPerCandleMap = {
+    Timeframe.D1: 1440,
+    Timeframe.H1: 60,
+    Timeframe.M15: 15,
+    Timeframe.M5: 5,
+    Timeframe.M1: 1,
+  };
+
   bool _isSimulationRunning = false;
   int _currentCandleIndex = 0;
   double _currentBalance = 10000.0;
@@ -50,6 +76,23 @@ class SimulationProvider with ChangeNotifier {
   bool _stopLossEnabled = false;
   bool _takeProfitEnabled = false;
 
+  // --- TICK SIMULATION STATE ---
+  List<Tick> _syntheticTicks = [];
+  int _currentTickIndex = 0;
+  int _ticksPerCandle = 100;
+  Timer? _tickTimer;
+  double _ticksPerSecondFactor = 1.0; // Para ajustar velocidad
+
+  // --- ACUMULACIÓN DE TICKS PARA VELAS ---
+  List<Tick> _currentCandleTicks = [];
+  DateTime? _currentCandleStartTime;
+
+  // --- ESTADO DE PAUSA ---
+  bool _wasPaused = false;
+  int _pausedTickIndex = 0;
+  List<Tick> _pausedCandleTicks = [];
+  DateTime? _pausedCandleStartTime;
+
   double? get calculatedPositionSize => _calculatedPositionSize;
   double? get calculatedLeverage => _calculatedLeverage;
   double? get calculatedStopLossPrice => _calculatedStopLossPrice;
@@ -62,7 +105,12 @@ class SimulationProvider with ChangeNotifier {
 
   SimulationResult? get currentSimulation => _currentSimulation;
   List<SimulationResult> get simulationHistory => _simulationHistory;
-  List<Candle> get historicalData => _historicalData;
+
+  // --- MULTI-TIMEFRAME GETTERS ---
+  List<Candle> get historicalData => _allTimeframes[_activeTf]!;
+  Timeframe get activeTimeframe => _activeTf;
+  Map<Timeframe, List<Candle>> get allTimeframes => _allTimeframes;
+
   bool get isSimulationRunning => _isSimulationRunning;
   int get currentCandleIndex => _currentCandleIndex;
   double get currentBalance => _currentBalance;
@@ -150,7 +198,7 @@ class SimulationProvider with ChangeNotifier {
     if (!_inPosition || _currentTrades.isEmpty) return 0.0;
 
     final lastTrade = _currentTrades.last;
-    final currentPrice = _historicalData[_currentCandleIndex].close;
+    final currentPrice = historicalData[_currentCandleIndex].close;
 
     if (lastTrade.type == 'buy') {
       return (currentPrice - lastTrade.price) *
@@ -181,8 +229,138 @@ class SimulationProvider with ChangeNotifier {
         '🔥 SimulationProvider: Última vela: ${data.last.timestamp} - ${data.last.close}',
       );
     }
-    _historicalData = data;
-    notifyListeners();
+    loadRawData(data);
+  }
+
+  // --- MULTI-TIMEFRAME METHODS ---
+  void loadRawData(List<Candle> raw) {
+    debugPrint(
+      '🔥 SimulationProvider: loadRawData() - Procesando ${raw.length} velas raw',
+    );
+
+    // Reagrupar datos en todos los timeframes
+    _allTimeframes = {
+      Timeframe.D1: reaggregate(raw, const Duration(days: 1)),
+      Timeframe.H1: reaggregate(raw, const Duration(hours: 1)),
+      Timeframe.M15: reaggregate(raw, const Duration(minutes: 15)),
+      Timeframe.M5: reaggregate(raw, const Duration(minutes: 5)),
+      Timeframe.M1: reaggregate(raw, const Duration(minutes: 1)),
+    };
+
+    // Inicializar con H1 por defecto
+    _activeTf = Timeframe.H1;
+    _currentCandleIndex = 0;
+
+    // Actualizar _ticksPerCandle según el timeframe inicial
+    _ticksPerCandle = _ticksPerCandleMap[_activeTf]!;
+    debugPrint(
+      '🔥 SimulationProvider: _ticksPerCandle inicializado a $_ticksPerCandle para ${_activeTf.name}',
+    );
+
+    debugPrint('🔥 SimulationProvider: Timeframes generados:');
+    for (final tf in Timeframe.values) {
+      debugPrint('  ${tf.name}: ${_allTimeframes[tf]!.length} velas');
+    }
+
+    _notifyChartReset();
+  }
+
+  List<Candle> reaggregate(List<Candle> raw, Duration interval) {
+    if (raw.isEmpty) return [];
+
+    final List<Candle> aggregated = [];
+    final Map<DateTime, List<Candle>> grouped = {};
+
+    // Agrupar velas por intervalo
+    for (final candle in raw) {
+      final intervalStart = DateTime(
+        candle.timestamp.year,
+        candle.timestamp.month,
+        candle.timestamp.day,
+        candle.timestamp.hour,
+        candle.timestamp.minute -
+            (candle.timestamp.minute % interval.inMinutes),
+      );
+
+      grouped.putIfAbsent(intervalStart, () => []).add(candle);
+    }
+
+    // Crear velas agregadas
+    final sortedKeys = grouped.keys.toList()..sort();
+    for (final key in sortedKeys) {
+      final candles = grouped[key]!;
+      if (candles.isEmpty) continue;
+
+      final open = candles.first.open;
+      final close = candles.last.close;
+      final high = candles.map((c) => c.high).reduce((a, b) => a > b ? a : b);
+      final low = candles.map((c) => c.low).reduce((a, b) => a < b ? a : b);
+      final volume = candles.map((c) => c.volume).reduce((a, b) => a + b);
+
+      aggregated.add(
+        Candle(
+          timestamp: key,
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          volume: volume,
+        ),
+      );
+    }
+
+    return aggregated;
+  }
+
+  void setTimeframe(Timeframe tf) {
+    if (tf == _activeTf) return;
+
+    debugPrint(
+      '🔥 SimulationProvider: setTimeframe() - Cambiando de ${_activeTf.name} a ${tf.name}',
+    );
+
+    // Capturar timestamp actual
+    final currentTimestamp =
+        historicalData.isNotEmpty && _currentCandleIndex < historicalData.length
+        ? historicalData[_currentCandleIndex].timestamp
+        : DateTime.now();
+
+    // Cambiar timeframe
+    _activeTf = tf;
+
+    // Actualizar _ticksPerCandle según el nuevo timeframe
+    _ticksPerCandle = _ticksPerCandleMap[tf]!;
+    debugPrint(
+      '🔥 SimulationProvider: _ticksPerCandle actualizado a $_ticksPerCandle para ${tf.name}',
+    );
+
+    // Buscar índice más cercano en el nuevo timeframe
+    final newData = _allTimeframes[tf]!;
+    int closestIndex = 0;
+    int minDifference = double.maxFinite.toInt();
+
+    for (int i = 0; i < newData.length; i++) {
+      final difference = (newData[i].timestamp.difference(
+        currentTimestamp,
+      )).abs().inMilliseconds;
+      if (difference < minDifference) {
+        minDifference = difference;
+        closestIndex = i;
+      }
+    }
+
+    _currentCandleIndex = closestIndex;
+
+    debugPrint(
+      '🔥 SimulationProvider: Índice ajustado a $closestIndex (${newData[closestIndex].timestamp})',
+    );
+
+    // Regenerar ticks si la simulación está corriendo
+    if (_isSimulationRunning) {
+      _setupTicksForCurrentCandle();
+    }
+
+    _notifyChartReset();
   }
 
   void startSimulation(
@@ -226,35 +404,35 @@ class SimulationProvider with ChangeNotifier {
     _stopLossEnabled = false;
     _takeProfitEnabled = false;
 
-    notifyListeners();
+    _notifyChartReset();
   }
 
   void pauseSimulation() {
     _isSimulationRunning = false;
-    notifyListeners();
+    _notifySimulationState();
   }
 
   void resumeSimulation() {
     _isSimulationRunning = true;
-    notifyListeners();
+    _notifySimulationState();
   }
 
   void stopSimulation() {
     _isSimulationRunning = false;
     _finalizeSimulation();
-    notifyListeners();
+    _notifySimulationState();
   }
 
   // Process next candle in simulation
   void processNextCandle() {
     if (!_isSimulationRunning ||
-        _currentCandleIndex >= _historicalData.length - 1) {
+        _currentCandleIndex >= historicalData.length - 1) {
       stopSimulation();
       return;
     }
 
     _currentCandleIndex++;
-    final currentCandle = _historicalData[_currentCandleIndex];
+    final currentCandle = historicalData[_currentCandleIndex];
 
     debugPrint(
       '🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}',
@@ -272,7 +450,7 @@ class SimulationProvider with ChangeNotifier {
 
     // Update equity curve
     _equityCurve.add(_currentBalance);
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void _checkStopLossAndTakeProfit(Candle candle) {
@@ -307,13 +485,13 @@ class SimulationProvider with ChangeNotifier {
       return; // Need at least 20 candles for analysis
 
     final lookbackPeriod = 20;
-    final highPrices = _historicalData
+    final highPrices = historicalData
         .skip(_currentCandleIndex - lookbackPeriod)
         .take(lookbackPeriod)
         .map((c) => c.high)
         .toList();
 
-    final lowPrices = _historicalData
+    final lowPrices = historicalData
         .skip(_currentCandleIndex - lookbackPeriod)
         .take(lookbackPeriod)
         .map((c) => c.low)
@@ -333,7 +511,7 @@ class SimulationProvider with ChangeNotifier {
   }
 
   double _getAverageVolume(int period) {
-    final volumes = _historicalData
+    final volumes = historicalData
         .skip(_currentCandleIndex - period)
         .take(period)
         .map((c) => c.volume)
@@ -402,7 +580,7 @@ class SimulationProvider with ChangeNotifier {
     // Crear trade de cierre con el mismo tradeGroupId
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      timestamp: historicalData[_currentCandleIndex].timestamp,
       type: closeType,
       price: price,
       quantity: lastTrade.quantity,
@@ -471,7 +649,7 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 SimulationProvider: Posición cerrada - Precio: $price, Razón: $reason, P&L: $pnl',
     );
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void executeTrade(
@@ -482,7 +660,7 @@ class SimulationProvider with ChangeNotifier {
   ]) {
     final trade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      timestamp: historicalData[_currentCandleIndex].timestamp,
       type: type,
       price: price,
       quantity: quantity,
@@ -494,7 +672,7 @@ class SimulationProvider with ChangeNotifier {
     // El P&L se calculará cuando se cierre la posición
     // No calcular P&L aquí para evitar duplicación
 
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void _finalizeSimulation() {
@@ -512,8 +690,8 @@ class SimulationProvider with ChangeNotifier {
     _currentSimulation = SimulationResult(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       setupId: _currentSetup?.id ?? 'unknown',
-      startDate: _historicalData.first.timestamp,
-      endDate: _historicalData.last.timestamp,
+      startDate: historicalData.first.timestamp,
+      endDate: historicalData.last.timestamp,
       initialBalance: 10000.0,
       finalBalance: _currentBalance,
       netPnL: _currentBalance - 10000.0,
@@ -563,13 +741,13 @@ class SimulationProvider with ChangeNotifier {
     _positionSize = 0.0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
-    notifyListeners();
+    _notifyChartReset();
   }
 
   void setSimulationMode(SimulationMode mode) {
     _simulationMode = mode;
     debugPrint('🔥 SimulationProvider: Modo de simulación cambiado a: $mode');
-    notifyListeners();
+    _notifySimulationState();
   }
 
   void setSimulationSpeed(double speed) {
@@ -577,7 +755,7 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 SimulationProvider: Velocidad de simulación cambiada a: $speed',
     );
-    notifyListeners();
+    _notifySimulationState();
   }
 
   void advanceCandle() {
@@ -588,7 +766,7 @@ class SimulationProvider with ChangeNotifier {
       return;
     }
 
-    if (_currentCandleIndex >= _historicalData.length - 1) {
+    if (_currentCandleIndex >= historicalData.length - 1) {
       debugPrint('🔥 SimulationProvider: Ya se llegó al final de los datos');
       return;
     }
@@ -600,12 +778,12 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void _advanceCandleManually() {
-    if (_currentCandleIndex >= _historicalData.length - 1) {
+    if (_currentCandleIndex >= historicalData.length - 1) {
       return;
     }
 
     _currentCandleIndex++;
-    final currentCandle = _historicalData[_currentCandleIndex];
+    final currentCandle = historicalData[_currentCandleIndex];
 
     debugPrint(
       '🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}',
@@ -619,7 +797,7 @@ class SimulationProvider with ChangeNotifier {
     // En modo manual, NO ejecutar lógica automática de stop loss/take profit ni señales de entrada
     // Solo actualizar la equity curve
     _equityCurve.add(_currentBalance);
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void _checkManualStopLossAndTakeProfit(Candle candle) {
@@ -684,7 +862,7 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void goToCandle(int index) {
-    if (index < 0 || index >= _historicalData.length) {
+    if (index < 0 || index >= historicalData.length) {
       debugPrint('🔥 SimulationProvider: Índice de vela inválido: $index');
       return;
     }
@@ -703,7 +881,7 @@ class SimulationProvider with ChangeNotifier {
     }
 
     debugPrint('🔥 SimulationProvider: Saltando a vela: $index');
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void executeManualTrade({
@@ -721,7 +899,7 @@ class SimulationProvider with ChangeNotifier {
       return;
     }
 
-    final candle = _historicalData[_currentCandleIndex];
+    final candle = historicalData[_currentCandleIndex];
     final price = candle.close;
 
     final trade = Trade(
@@ -776,7 +954,7 @@ class SimulationProvider with ChangeNotifier {
       '🔥 SimulationProvider: executeManualTrade - SL Price: ${manualStopLossPrice}, TP Price: ${manualTakeProfitPrice}',
     );
 
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   double _manualMargin = 0.0;
@@ -797,7 +975,7 @@ class SimulationProvider with ChangeNotifier {
 
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      timestamp: historicalData[_currentCandleIndex].timestamp,
       type: closeType,
       price: exitPrice,
       quantity: lastTrade.quantity,
@@ -864,7 +1042,7 @@ class SimulationProvider with ChangeNotifier {
     _setupParametersCalculated = false;
 
     _currentTrades.clear();
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void setManualSLTP({double? stopLossPercent, double? takeProfitPercent}) {
@@ -885,7 +1063,7 @@ class SimulationProvider with ChangeNotifier {
       _manualTakeProfitPercent = null;
     }
 
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   // Métodos separados para manejar SL y TP de forma independiente
@@ -903,7 +1081,7 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 SimulationProvider: setManualStopLoss - SL: $_manualStopLossPercent%, Enabled: $_stopLossEnabled',
     );
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   void setManualTakeProfit(double? takeProfitPercent) {
@@ -920,7 +1098,7 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 SimulationProvider: setManualTakeProfit - TP: $_manualTakeProfitPercent%, Enabled: $_takeProfitEnabled',
     );
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   // Cierre parcial de la posición abierta
@@ -928,7 +1106,7 @@ class SimulationProvider with ChangeNotifier {
     if (!_inPosition || percent <= 0 || percent > 100) return;
     final lastTrade = _currentTrades.last;
     final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
-    final currentPrice = _historicalData[_currentCandleIndex].close;
+    final currentPrice = historicalData[_currentCandleIndex].close;
     final qtyToClose = lastTrade.quantity * (percent / 100);
     final pnl = lastTrade.type == 'buy'
         ? (currentPrice - lastTrade.price) *
@@ -942,7 +1120,7 @@ class SimulationProvider with ChangeNotifier {
 
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: _historicalData[_currentCandleIndex].timestamp,
+      timestamp: historicalData[_currentCandleIndex].timestamp,
       type: closeType,
       price: currentPrice,
       quantity: qtyToClose,
@@ -1009,17 +1187,17 @@ class SimulationProvider with ChangeNotifier {
       _positionSize = newQty;
       _manualMargin = _manualMargin * (1 - percent / 100);
     }
-    notifyListeners();
+    _notifyUIUpdate();
   }
 
   // New methods for automatic setup parameter reading and position calculation
   void calculatePositionParameters(String tradeType) {
-    if (_currentSetup == null || _historicalData.isEmpty) {
+    if (_currentSetup == null || historicalData.isEmpty) {
       _setupParametersCalculated = false;
       return;
     }
 
-    final currentPrice = _historicalData[_currentCandleIndex].close;
+    final currentPrice = historicalData[_currentCandleIndex].close;
 
     // 1. Calculate risk amount
     final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
@@ -1081,7 +1259,7 @@ class SimulationProvider with ChangeNotifier {
 
   // Validate if position can be calculated
   bool canCalculatePosition() {
-    if (_currentSetup == null || _historicalData.isEmpty) return false;
+    if (_currentSetup == null || historicalData.isEmpty) return false;
 
     final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
     if (riskAmount <= 0) return false;
@@ -1105,5 +1283,442 @@ class SimulationProvider with ChangeNotifier {
 
     final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
     return 'Posición: ${_calculatedPositionSize!.toStringAsFixed(4)} unidades @ ${_calculatedLeverage!.toStringAsFixed(0)}x (riesgo ${_currentSetup!.riskPercent.toStringAsFixed(1)}% = \$${riskAmount.toStringAsFixed(0)})';
+  }
+
+  // Exponer configuración para la UI
+  int get ticksPerCandle => _ticksPerCandle;
+  set ticksPerCandle(int value) {
+    _ticksPerCandle = value;
+    _notifySimulationState();
+  }
+
+  double get ticksPerSecondFactor => _ticksPerSecondFactor;
+  set ticksPerSecondFactor(double value) {
+    _ticksPerSecondFactor = value;
+    _notifySimulationState();
+  }
+
+  // --- GENERADOR DE TICKS ---
+  static List<Tick> generateSyntheticTicks(
+    Candle candle,
+    int steps, [
+    int? nextCandleMs,
+  ]) {
+    final List<Tick> ticks = [];
+    // Calcular duración de la vela
+    final durationMs = nextCandleMs != null
+        ? nextCandleMs - candle.timestamp.millisecondsSinceEpoch
+        : 60 * 60 * 1000; // fallback: 1h
+    final dt = durationMs ~/ steps;
+    final range = candle.high - candle.low;
+    final Random rnd = Random(candle.timestamp.millisecondsSinceEpoch);
+    for (int i = 0; i < steps; i++) {
+      final base =
+          candle.open + (candle.close - candle.open) * (i / (steps - 1));
+      final jitter =
+          (rnd.nextDouble() * 2 - 1) * (range * 0.2); // ±20% del rango
+      final price = (base + jitter).clamp(candle.low, candle.high);
+      final time = candle.timestamp.add(Duration(milliseconds: dt * i));
+      ticks.add(Tick(time, price));
+    }
+    return ticks;
+  }
+
+  // --- INICIAR SIMULACIÓN TICK A TICK ---
+  void startTickSimulation(
+    Setup setup,
+    DateTime startDate,
+    double speed,
+    double initialBalance,
+  ) {
+    debugPrint('🔥🔥🔥 INICIANDO SIMULACIÓN TICK A TICK 🔥🔥🔥');
+    debugPrint('🔥 Setup: ${setup.name}');
+    debugPrint('🔥 Velocidad: $speed');
+    debugPrint('🔥 Balance inicial: $initialBalance');
+    debugPrint(
+      '🔥 Datos históricos disponibles: ${historicalData.length} velas',
+    );
+    debugPrint('🔥 Timeframe activo: ${_activeTf.name}');
+    debugPrint('🔥 Ticks por vela: $_ticksPerCandle');
+
+    // Reinicializar todo para nueva simulación
+    _currentSimulation = null;
+    _currentCandleIndex = 0;
+    _currentBalance = initialBalance;
+    _currentTrades = [];
+    _completedTrades = [];
+    _completedOperations = [];
+    _equityCurve = [initialBalance];
+
+    // Reset trading state
+    _inPosition = false;
+    _entryPrice = 0.0;
+    _positionSize = 0.0;
+    _stopLossPrice = 0.0;
+    _takeProfitPrice = 0.0;
+
+    // Reset calculated parameters
+    _calculatedPositionSize = null;
+    _calculatedLeverage = null;
+    _calculatedStopLossPrice = null;
+    _calculatedTakeProfitPrice = null;
+    _setupParametersCalculated = false;
+    _defaultStopLossPercent = null;
+    _defaultTakeProfitPercent = null;
+    _stopLossEnabled = false;
+    _takeProfitEnabled = false;
+
+    // Reset tick simulation state
+    _currentCandleTicks.clear();
+    _currentCandleStartTime = null;
+    _currentTickIndex = 0;
+    _wasPaused = false;
+    _pausedTickIndex = 0;
+    _pausedCandleTicks.clear();
+    _pausedCandleStartTime = null;
+
+    _isSimulationRunning = false;
+    _currentSetup = setup;
+    _simulationSpeed = speed;
+    _ticksPerSecondFactor = 1.0;
+
+    // Configurar ticks para la vela actual
+    _setupTicksForCurrentCandle();
+    notifyListeners();
+    _isSimulationRunning = true;
+    debugPrint('🔥 Simulación marcada como corriendo: $_isSimulationRunning');
+    _startTickTimer();
+    notifyListeners();
+    debugPrint('🔥🔥🔥 SIMULACIÓN INICIADA COMPLETAMENTE 🔥🔥🔥');
+  }
+
+  void _setupTicksForCurrentCandle() {
+    if (_currentCandleIndex >= historicalData.length) {
+      debugPrint(
+        '🔥 SimulationProvider: _setupTicksForCurrentCandle - índice fuera de rango: $_currentCandleIndex',
+      );
+      return;
+    }
+
+    final candle = historicalData[_currentCandleIndex];
+    debugPrint(
+      '🔥 SimulationProvider: Configurando ticks para vela $_currentCandleIndex: ${candle.timestamp} - OHLC: ${candle.open}/${candle.high}/${candle.low}/${candle.close}',
+    );
+
+    int? nextMs;
+    if (_currentCandleIndex < historicalData.length - 1) {
+      nextMs = historicalData[_currentCandleIndex + 1]
+          .timestamp
+          .millisecondsSinceEpoch;
+    }
+
+    _syntheticTicks = generateSyntheticTicks(candle, _ticksPerCandle, nextMs);
+    debugPrint(
+      '🔥 SimulationProvider: Generados ${_syntheticTicks.length} ticks para la vela',
+    );
+
+    // Solo reiniciar si no estamos reanudando desde pausa
+    if (!_wasPaused) {
+      _currentTickIndex = 0;
+      debugPrint('🔥 SimulationProvider: Iniciando desde tick 0');
+    } else {
+      debugPrint(
+        '🔥 SimulationProvider: Manteniendo tick index $_currentTickIndex (reanudando)',
+      );
+    }
+  }
+
+  void _startTickTimer() {
+    _tickTimer?.cancel();
+    if (!_isSimulationRunning) {
+      debugPrint(
+        '🔥 SimulationProvider: No se puede iniciar timer - simulación no está corriendo',
+      );
+      return; // Verificar que esté corriendo
+    }
+
+    final intervalMs = (1000 ~/ (_simulationSpeed * _ticksPerSecondFactor))
+        .clamp(1, 1000);
+
+    debugPrint(
+      '🔥 SimulationProvider: Iniciando timer con intervalo ${intervalMs}ms, velocidad: $_simulationSpeed, factor: $_ticksPerSecondFactor',
+    );
+
+    _tickTimer = Timer.periodic(Duration(milliseconds: intervalMs), (_) {
+      debugPrint(
+        '🔥 Timer callback ejecutado - isSimulationRunning: $_isSimulationRunning',
+      );
+      if (_isSimulationRunning) {
+        debugPrint('🔥 SimulationProvider: Procesando tick...');
+        _processNextTick();
+      } else {
+        debugPrint(
+          '🔥 SimulationProvider: Timer activo pero simulación no está corriendo',
+        );
+      }
+    });
+
+    debugPrint('🔥 Timer creado exitosamente con ID: ${_tickTimer.hashCode}');
+  }
+
+  void stopTickSimulation() {
+    _tickTimer?.cancel();
+    stopSimulation();
+  }
+
+  void pauseTickSimulation() {
+    debugPrint('🔥 PAUSE: Iniciando pausa de simulación');
+
+    // Guardar estado actual antes de pausar
+    _wasPaused = true;
+    _pausedTickIndex = _currentTickIndex;
+    _pausedCandleTicks = List.from(_currentCandleTicks);
+    _pausedCandleStartTime = _currentCandleStartTime;
+
+    debugPrint(
+      '🔥 PAUSE: Estado guardado - tick: $_pausedTickIndex, ticks acumulados: ${_pausedCandleTicks.length}',
+    );
+
+    // Detener timer
+    _tickTimer?.cancel();
+
+    // Enviar señal de pausa al gráfico
+    if (_tickCallback != null) {
+      final msg = {
+        'pause': true,
+        'trades': _currentTrades
+            .map(
+              (t) => {
+                'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
+                'type': t.type,
+                'price': t.price,
+                'amount': t.amount ?? 0.0,
+                'leverage': t.leverage ?? 1,
+                'reason': t.reason ?? '',
+              },
+            )
+            .toList(),
+        'stopLoss': stopLossPrice > 0 ? stopLossPrice : null,
+        'takeProfit': takeProfitPrice > 0 ? takeProfitPrice : null,
+      };
+      debugPrint('🔥 PAUSE: Enviando señal de pausa al gráfico');
+      _tickCallback!(msg);
+    }
+
+    // Pausar simulación
+    pauseSimulation();
+    debugPrint('🔥 PAUSE: Simulación pausada');
+  }
+
+  void resumeTickSimulation() {
+    debugPrint('🔥 RESUME: Método resumeTickSimulation() llamado');
+
+    if (!_wasPaused) {
+      debugPrint('🔥 RESUME: No estaba pausado, saliendo');
+      return;
+    }
+
+    debugPrint('🔥 RESUME: Restaurando estado guardado');
+
+    // Restaurar estado guardado
+    _currentTickIndex = _pausedTickIndex;
+    _currentCandleTicks = List.from(_pausedCandleTicks);
+    _currentCandleStartTime = _pausedCandleStartTime;
+
+    debugPrint(
+      '🔥 RESUME: Estado restaurado - tick: $_currentTickIndex, ticks acumulados: ${_currentCandleTicks.length}',
+    );
+
+    // Marcar como corriendo
+    _isSimulationRunning = true;
+
+    // Reiniciar timer
+    _startTickTimer();
+
+    // Enviar señal de reanudación al gráfico
+    if (_tickCallback != null) {
+      final resumeMsg = {'pause': false};
+      debugPrint('🔥 RESUME: Enviando señal de reanudación al chart');
+      _tickCallback!(resumeMsg);
+    }
+
+    // Limpiar estado de pausa
+    _wasPaused = false;
+    _pausedTickIndex = 0;
+    _pausedCandleTicks.clear();
+    _pausedCandleStartTime = null;
+
+    // Notificar cambios
+    _notifySimulationState();
+    debugPrint('🔥 RESUME: Simulación reanudada');
+  }
+
+  // --- LOOP DE SIMULACIÓN POR TICK ---
+  void _processNextTick() {
+    if (!_isSimulationRunning) {
+      debugPrint(
+        '🔥 SimulationProvider: _processNextTick - simulación no está corriendo',
+      );
+      return;
+    }
+
+    debugPrint(
+      '🔥 SimulationProvider: _processNextTick - tick $_currentTickIndex de ${_syntheticTicks.length}',
+    );
+
+    if (_currentTickIndex >= _syntheticTicks.length) {
+      debugPrint('🔥 SimulationProvider: Cambiando a siguiente vela');
+      _currentCandleIndex++;
+      if (_currentCandleIndex >= historicalData.length) {
+        debugPrint('🔥 SimulationProvider: Fin de datos alcanzado');
+        stopTickSimulation();
+        return;
+      }
+      _setupTicksForCurrentCandle();
+    }
+
+    if (_currentTickIndex < _syntheticTicks.length) {
+      final tick = _syntheticTicks[_currentTickIndex++];
+      debugPrint(
+        '🔥 SimulationProvider: Procesando tick ${tick.price} a las ${tick.time}',
+      );
+      _accumulateTickForCandle(tick);
+    } else {
+      debugPrint('🔥 SimulationProvider: Índice de tick fuera de rango');
+    }
+  }
+
+  void _accumulateTickForCandle(Tick tick) {
+    debugPrint(
+      '🔥 TICK: Procesando tick - precio: ${tick.price}, tiempo: ${tick.time}',
+    );
+    debugPrint(
+      '🔥 TICK: Estado de simulación - isSimulationRunning: $_isSimulationRunning',
+    );
+
+    // Verificar que la simulación esté corriendo antes de procesar
+    if (!_isSimulationRunning) {
+      debugPrint('🔥 TICK: Simulación pausada, no procesando tick');
+      return;
+    }
+
+    // Inicializar tiempo de inicio de la vela si es el primer tick
+    if (_currentCandleTicks.isEmpty) {
+      _currentCandleStartTime = tick.time;
+      debugPrint('🔥 TICK: Iniciando nueva vela a las ${tick.time}');
+    }
+
+    // Agregar tick a la vela actual
+    _currentCandleTicks.add(tick);
+    debugPrint(
+      '🔥 TICK: Tick agregado. Total acumulados: ${_currentCandleTicks.length}',
+    );
+
+    // Calcular OHLC de los ticks acumulados hasta ahora
+    final prices = _currentCandleTicks.map((t) => t.price).toList();
+    final o = prices.first, c = prices.last;
+    final h = prices.reduce((a, b) => a > b ? a : b);
+    final l = prices.reduce((a, b) => a < b ? a : b);
+    final ts =
+        (_currentCandleStartTime ?? tick.time).millisecondsSinceEpoch ~/ 1000;
+
+    debugPrint(
+      '🔥 TICK: Vela actualizada - OHLC: $o/$h/$l/$c, ticks: ${_currentCandleTicks.length}/$_ticksPerCandle',
+    );
+    debugPrint('🔥 TICK: Timestamp de vela: $ts');
+
+    // Solo enviar vela actualizada al gráfico si la simulación está corriendo
+    if (_isSimulationRunning && _tickCallback != null) {
+      final msg = {
+        'candle': {'time': ts, 'open': o, 'high': h, 'low': l, 'close': c},
+        'trades': _currentTrades
+            .map(
+              (t) => {
+                'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
+                'type': t.type,
+                'price': t.price,
+                'amount': t.amount ?? 0.0,
+                'leverage': t.leverage ?? 1,
+                'reason': t.reason ?? '',
+              },
+            )
+            .toList(),
+        'stopLoss': stopLossPrice > 0 ? stopLossPrice : null,
+        'takeProfit': takeProfitPrice > 0 ? takeProfitPrice : null,
+      };
+
+      debugPrint('🔥 TICK: Enviando vela al chart: $msg');
+      _tickCallback!(msg); // sólo enviamos al WebView
+    } else {
+      debugPrint(
+        '🔥 TICK: No enviando vela - simulación pausada o callback null',
+      );
+    }
+
+    // Si hemos acumulado suficientes ticks, finalizar la vela y pasar a la siguiente
+    if (_currentCandleTicks.length >= _ticksPerCandle) {
+      debugPrint('🔥 TICK: Vela completada, limpiando ticks acumulados');
+      _currentCandleTicks.clear();
+      _currentCandleStartTime = null;
+    }
+  }
+
+  // --- MODO MANUAL: AVANZAR UN TICK ---
+  void advanceTick() {
+    if (_simulationMode != SimulationMode.manual) return;
+    _processNextTick();
+  }
+
+  // --- ENVÍO DE TICK AL CHART (mantener para compatibilidad) ---
+  Function(Map<String, dynamic>)? _tickCallback;
+
+  void setTickCallback(Function(Map<String, dynamic>) callback) {
+    _tickCallback = callback;
+  }
+
+  void _sendTickToChart(Tick tick) {
+    if (_tickCallback == null) return;
+
+    final msg = {
+      'tick': {
+        'time': tick.time.millisecondsSinceEpoch ~/ 1000,
+        'price': tick.price,
+      },
+      'trades': _currentTrades
+          .map(
+            (t) => {
+              'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
+              'type': t.type,
+              'price': t.price,
+              'amount': t.amount ?? 0.0,
+              'leverage': t.leverage ?? 1,
+              'reason': t.reason ?? '',
+            },
+          )
+          .toList(),
+      'stopLoss': stopLossPrice > 0 ? stopLossPrice : null,
+      'takeProfit': takeProfitPrice > 0 ? takeProfitPrice : null,
+    };
+
+    _tickCallback!(msg);
+  }
+
+  bool get isSimulationPaused => _wasPaused;
+
+  // --- NOTIFICACIONES GRANULARES ---
+
+  /// Notifica cambios que NO requieren reinicio del gráfico
+  void _notifyUIUpdate() {
+    notifyListeners();
+  }
+
+  /// Notifica cambios que SÍ requieren reinicio del gráfico (solo cuando cambian las velas base)
+  void _notifyChartReset() {
+    notifyListeners();
+  }
+
+  /// Notifica cambios de estado de simulación sin reiniciar gráfico
+  void _notifySimulationState() {
+    notifyListeners();
   }
 }

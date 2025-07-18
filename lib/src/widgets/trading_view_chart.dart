@@ -10,21 +10,23 @@ class TradingViewChart extends StatefulWidget {
   final int? currentCandleIndex;
   final double? stopLoss;
   final double? takeProfit;
-  
+  final bool isRunning; // Flag para controlar si la simulación está corriendo
+
   const TradingViewChart({
     required this.candles,
     this.trades,
     this.currentCandleIndex,
     this.stopLoss,
     this.takeProfit,
+    this.isRunning = true, // Por defecto está corriendo
     super.key,
   });
 
   @override
-  State<TradingViewChart> createState() => _TradingViewChartState();
+  State<TradingViewChart> createState() => TradingViewChartState();
 }
 
-class _TradingViewChartState extends State<TradingViewChart> {
+class TradingViewChartState extends State<TradingViewChart> {
   late final WebViewController _controller;
   bool _isWebViewReady = false;
   String _status = 'Inicializando...';
@@ -67,20 +69,70 @@ class _TradingViewChartState extends State<TradingViewChart> {
           },
         ),
       );
-    
+
     _controller.loadFlutterAsset('assets/chart.html');
   }
 
   @override
   void didUpdateWidget(covariant TradingViewChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_isWebViewReady && 
-        (oldWidget.candles != widget.candles || 
-         oldWidget.trades != widget.trades ||
-         oldWidget.currentCandleIndex != widget.currentCandleIndex ||
-         oldWidget.stopLoss != widget.stopLoss ||
-         oldWidget.takeProfit != widget.takeProfit)) {
-      _sendDataToWebView();
+
+    // Solo reenviar datos automáticamente si la simulación está corriendo
+    if (_isWebViewReady && widget.isRunning) {
+      // Verificar si realmente necesitamos reiniciar el gráfico
+      bool needsFullReset = false;
+
+      // Solo reiniciar si cambian las velas base (no los trades o índices)
+      if (oldWidget.candles != widget.candles) {
+        needsFullReset = true;
+      }
+
+      // Si necesitamos reinicio completo, hacerlo
+      if (needsFullReset) {
+        _sendDataToWebView();
+      }
+      // Si no necesitamos reinicio completo, solo actualizar trades y SL/TP si han cambiado
+      else if (oldWidget.trades != widget.trades ||
+          oldWidget.stopLoss != widget.stopLoss ||
+          oldWidget.takeProfit != widget.takeProfit) {
+        // Enviar solo los trades y SL/TP actualizados sin reiniciar el gráfico
+        _sendTradesAndSLTPOnly();
+      }
+    }
+  }
+
+  /// Envía solo trades y SL/TP sin reiniciar el gráfico completo
+  void _sendTradesAndSLTPOnly() async {
+    if (!_isWebViewReady) return;
+
+    try {
+      final data = {
+        'trades':
+            widget.trades
+                ?.map(
+                  (t) => {
+                    'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
+                    'type': t.type,
+                    'price': t.price,
+                    'amount': t.amount ?? 0.0,
+                    'leverage': t.leverage ?? 1,
+                  },
+                )
+                .toList() ??
+            [],
+        'stopLoss': (widget.stopLoss != null && widget.stopLoss! > 0)
+            ? widget.stopLoss
+            : null,
+        'takeProfit': (widget.takeProfit != null && widget.takeProfit! > 0)
+            ? widget.takeProfit
+            : null,
+        'updateOnly': true, // Señal para indicar que es solo actualización
+      };
+
+      final jsonData = jsonEncode(data);
+      await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
+    } catch (e) {
+      // Ignorar errores
     }
   }
 
@@ -99,52 +151,130 @@ class _TradingViewChartState extends State<TradingViewChart> {
       if (_status.contains('Enviando datos')) {
         setState(() => _status = 'Renderizando gráfico...');
       }
-      
+
       // Determine which candles to show
-      final candlesToShow = widget.currentCandleIndex != null 
+      final candlesToShow = widget.currentCandleIndex != null
           ? widget.candles.take(widget.currentCandleIndex! + 1).toList()
           : widget.candles;
-      
+
       // Prepare data structure
       final data = {
-        'candles': candlesToShow.map((c) => {
-          'time': c.timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to seconds since epoch
-          'open': c.open,
-          'high': c.high,
-          'low': c.low,
-          'close': c.close,
-          'volume': c.volume,
-        }).toList(),
-        'trades': widget.trades?.map((t) => {
-          'time': t.timestamp.millisecondsSinceEpoch ~/ 1000, // Convert to seconds since epoch
-          'type': t.type,
-          'price': t.price,
-          'amount': t.amount,
-          'leverage': t.leverage,
-        }).toList() ?? [],
-        'stopLoss': (widget.stopLoss != null && widget.stopLoss! > 0) ? widget.stopLoss : null,
-        'takeProfit': (widget.takeProfit != null && widget.takeProfit! > 0) ? widget.takeProfit : null,
+        'candles': candlesToShow
+            .map(
+              (c) => {
+                'time':
+                    c.timestamp.millisecondsSinceEpoch ~/
+                    1000, // Convert to seconds since epoch
+                'open': c.open,
+                'high': c.high,
+                'low': c.low,
+                'close': c.close,
+                'volume': c.volume,
+              },
+            )
+            .toList(),
+        'trades':
+            widget.trades
+                ?.map(
+                  (t) => {
+                    'time':
+                        t.timestamp.millisecondsSinceEpoch ~/
+                        1000, // Convert to seconds since epoch
+                    'type': t.type,
+                    'price': t.price,
+                    'amount': t.amount ?? 0.0,
+                    'leverage': t.leverage ?? 1,
+                  },
+                )
+                .toList() ??
+            [],
+        'stopLoss': (widget.stopLoss != null && widget.stopLoss! > 0)
+            ? widget.stopLoss
+            : null,
+        'takeProfit': (widget.takeProfit != null && widget.takeProfit! > 0)
+            ? widget.takeProfit
+            : null,
       };
 
-
-
       final jsonData = jsonEncode(data);
-      
+
       // Test JavaScript execution
       try {
         await _controller.runJavaScriptReturningResult('1 + 1');
       } catch (e) {
         // Ignore test errors
       }
-      
+
       await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
-      
+
       // Update status to "Gráfico listo" on first load
       if (_status == 'Renderizando gráfico...') {
         setState(() => _status = 'Gráfico listo');
       }
     } catch (e) {
       setState(() => _status = 'Error: $e');
+    }
+  }
+
+  /// Envía una vela OHLC completa al WebView para actualización en tiempo real.
+  /// [candle] debe ser un Map con 'time' (segundos epoch), 'open', 'high', 'low', 'close'.
+  /// [trades], [stopLoss], [takeProfit] son opcionales.
+  Future<void> sendTickToWebView({
+    Map<String, dynamic>? candle,
+    List<Map<String, dynamic>>? trades,
+    double? stopLoss,
+    double? takeProfit,
+  }) async {
+    if (!_isWebViewReady) return;
+    final msg = <String, dynamic>{};
+
+    // Solo agregar candle si no es null
+    if (candle != null) {
+      msg['candle'] = candle;
+    }
+
+    // Agregar trades si existen
+    if (trades != null && trades.isNotEmpty) {
+      msg['trades'] = trades;
+    }
+
+    // Agregar stopLoss y takeProfit si son válidos
+    if (stopLoss != null && stopLoss > 0) {
+      msg['stopLoss'] = stopLoss;
+    }
+    if (takeProfit != null && takeProfit > 0) {
+      msg['takeProfit'] = takeProfit;
+    }
+
+    // Agregar señales especiales si no hay candle
+    if (candle == null) {
+      // Determinar si es señal de pausa o restauración basado en el contexto
+      // Si hay trades, es probablemente una señal de control
+      if (trades != null && trades.isNotEmpty) {
+        // Por ahora, asumimos que es pausa si no hay vela
+        // La lógica específica se maneja en el callback de Flutter
+        msg['pause'] = true; // Señal de pausa por defecto
+      }
+    }
+
+    final jsonData = jsonEncode(msg);
+    try {
+      await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
+    } catch (e) {
+      // Ignorar errores de JS
+    }
+  }
+
+  /// Envía un mensaje directo al WebView (para señales de control)
+  Future<void> sendMessageToWebView(Map<String, dynamic> message) async {
+    if (!_isWebViewReady) return;
+    final jsonData = jsonEncode(message);
+    debugPrint('🔥 WebView: Enviando mensaje directo: $jsonData');
+    try {
+      await _controller.runJavaScript("window.postMessage('$jsonData', '*')");
+      debugPrint('🔥 WebView: Mensaje enviado exitosamente');
+    } catch (e) {
+      debugPrint('🔥 WebView: Error enviando mensaje: $e');
     }
   }
 
@@ -169,9 +299,7 @@ class _TradingViewChartState extends State<TradingViewChart> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(
-                        color: Color(0xFF21CE99),
-                      ),
+                      const CircularProgressIndicator(color: Color(0xFF21CE99)),
                       const SizedBox(height: 16),
                       Text(
                         _status,
@@ -205,4 +333,4 @@ class _TradingViewChartState extends State<TradingViewChart> {
       ),
     );
   }
-} 
+}
