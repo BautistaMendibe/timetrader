@@ -92,6 +92,8 @@ class SimulationProvider with ChangeNotifier {
   List<Tick> _pausedCandleTicks = [];
   DateTime? _pausedCandleStartTime;
 
+  int _tfRemainder = 0;
+
   double? get calculatedPositionSize => _calculatedPositionSize;
   double? get calculatedLeverage => _calculatedLeverage;
   double? get calculatedStopLossPrice => _calculatedStopLossPrice;
@@ -311,55 +313,96 @@ class SimulationProvider with ChangeNotifier {
     return aggregated;
   }
 
-  void setTimeframe(Timeframe tf) {
-    if (tf == _activeTf) return;
-
-    debugPrint(
-      '🔥 SimulationProvider: setTimeframe() - Cambiando de ${_activeTf.name} a ${tf.name}',
-    );
-
-    // Capturar timestamp actual
-    final currentTimestamp =
-        historicalData.isNotEmpty && _currentCandleIndex < historicalData.length
-        ? historicalData[_currentCandleIndex].timestamp
-        : DateTime.now();
-
-    // Cambiar timeframe
-    _activeTf = tf;
-
-    // Actualizar _ticksPerCandle según el nuevo timeframe
-    _ticksPerCandle = _ticksPerCandleMap[tf]!;
-    debugPrint(
-      '🔥 SimulationProvider: _ticksPerCandle actualizado a $_ticksPerCandle para ${tf.name}',
-    );
-
-    // Buscar índice más cercano en el nuevo timeframe
-    final newData = _allTimeframes[tf]!;
+  int _findClosestByTimestamp(List<Candle> candles, DateTime ts) {
     int closestIndex = 0;
     int minDifference = double.maxFinite.toInt();
-
-    for (int i = 0; i < newData.length; i++) {
-      final difference = (newData[i].timestamp.difference(
-        currentTimestamp,
+    for (int i = 0; i < candles.length; i++) {
+      final difference = (candles[i].timestamp.difference(
+        ts,
       )).abs().inMilliseconds;
       if (difference < minDifference) {
         minDifference = difference;
         closestIndex = i;
       }
     }
+    return closestIndex;
+  }
 
-    _currentCandleIndex = closestIndex;
+  void setTimeframe(Timeframe tf) {
+    if (tf == _activeTf) return;
 
-    debugPrint(
-      '🔥 SimulationProvider: Índice ajustado a $closestIndex (${newData[closestIndex].timestamp})',
-    );
+    final oldTf = _activeTf;
+    final oldIndex = _currentCandleIndex;
+    final oldTicks = _ticksPerCandleMap[oldTf]!;
+    final newTicks = _ticksPerCandleMap[tf]!;
 
-    // Regenerar ticks si la simulación está corriendo
-    if (_isSimulationRunning) {
-      _setupTicksForCurrentCandle();
+    // 1) cambia TF y _ticksPerCandle
+    _activeTf = tf;
+    _ticksPerCandle = newTicks;
+
+    int newIndex;
+    if (newTicks > oldTicks) {
+      // paso de TF menor → mayor: agrupo “factor” velas y guardo el resto
+      final factor = newTicks ~/ oldTicks;
+      final fullGroups = oldIndex ~/ factor;
+      _tfRemainder = oldIndex % factor;
+      newIndex = fullGroups;
+    } else {
+      // paso de TF mayor → menor: subdivido y reaplico el resto
+      final factor = oldTicks ~/ newTicks;
+      newIndex = oldIndex * factor + _tfRemainder;
+      _tfRemainder = 0;
     }
 
+    // 2) clamp y notifica
+    final maxIdx = _allTimeframes[tf]!.length - 1;
+    _currentCandleIndex = newIndex.clamp(0, maxIdx);
+
+    _setupTicksForCurrentCandle();
     _notifyChartReset();
+  }
+
+  Duration _durationForTimeframe(Timeframe tf) {
+    switch (tf) {
+      case Timeframe.M1:
+        return const Duration(minutes: 1);
+      case Timeframe.M5:
+        return const Duration(minutes: 5);
+      case Timeframe.M15:
+        return const Duration(minutes: 15);
+      case Timeframe.H1:
+        return const Duration(hours: 1);
+      case Timeframe.D1:
+        return const Duration(days: 1);
+    }
+  }
+
+  void _setupTicksForCurrentCandle() {
+    if (_currentCandleIndex >= historicalData.length) {
+      debugPrint(
+        '🔥 SimulationProvider: _setupTicksForCurrentCandle - índice fuera de rango: $_currentCandleIndex',
+      );
+      return;
+    }
+    final candle = historicalData[_currentCandleIndex];
+    debugPrint(
+      '🔥 SimulationProvider: Configurando ticks para vela $_currentCandleIndex: ${candle.timestamp} - OHLC: ${candle.open}/${candle.high}/${candle.low}/${candle.close}',
+    );
+    int? nextMs;
+    if (_currentCandleIndex < historicalData.length - 1) {
+      nextMs = historicalData[_currentCandleIndex + 1]
+          .timestamp
+          .millisecondsSinceEpoch;
+    }
+    // Generar exactamente _ticksPerCandle ticks por vela
+    _syntheticTicks = generateSyntheticTicks(candle, _ticksPerCandle, nextMs);
+    debugPrint(
+      '🔥 SimulationProvider: Generados ${_syntheticTicks.length} ticks para la vela',
+    );
+    // Reiniciar tick index y ticks acumulados
+    _currentTickIndex = 0;
+    _currentCandleTicks.clear();
+    _currentCandleStartTime = null;
   }
 
   void startSimulation(
@@ -1389,42 +1432,6 @@ class SimulationProvider with ChangeNotifier {
     _startTickTimer();
     notifyListeners();
     debugPrint('🔥🔥🔥 SIMULACIÓN INICIADA COMPLETAMENTE 🔥🔥🔥');
-  }
-
-  void _setupTicksForCurrentCandle() {
-    if (_currentCandleIndex >= historicalData.length) {
-      debugPrint(
-        '🔥 SimulationProvider: _setupTicksForCurrentCandle - índice fuera de rango: $_currentCandleIndex',
-      );
-      return;
-    }
-
-    final candle = historicalData[_currentCandleIndex];
-    debugPrint(
-      '🔥 SimulationProvider: Configurando ticks para vela $_currentCandleIndex: ${candle.timestamp} - OHLC: ${candle.open}/${candle.high}/${candle.low}/${candle.close}',
-    );
-
-    int? nextMs;
-    if (_currentCandleIndex < historicalData.length - 1) {
-      nextMs = historicalData[_currentCandleIndex + 1]
-          .timestamp
-          .millisecondsSinceEpoch;
-    }
-
-    _syntheticTicks = generateSyntheticTicks(candle, _ticksPerCandle, nextMs);
-    debugPrint(
-      '🔥 SimulationProvider: Generados ${_syntheticTicks.length} ticks para la vela',
-    );
-
-    // Solo reiniciar si no estamos reanudando desde pausa
-    if (!_wasPaused) {
-      _currentTickIndex = 0;
-      debugPrint('🔥 SimulationProvider: Iniciando desde tick 0');
-    } else {
-      debugPrint(
-        '🔥 SimulationProvider: Manteniendo tick index $_currentTickIndex (reanudando)',
-      );
-    }
   }
 
   void _startTickTimer() {
