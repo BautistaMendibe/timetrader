@@ -87,6 +87,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
     SimulationProvider simulationProvider,
     bool isBuy,
   ) {
+    // Pausar la simulación al abrir el panel de orden
+    simulationProvider.pauseSimulation();
     // Calculate position parameters when showing the order container
     simulationProvider.calculatePositionParameters(isBuy ? 'buy' : 'sell');
 
