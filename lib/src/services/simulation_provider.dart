@@ -25,13 +25,15 @@ class SimulationProvider with ChangeNotifier {
   late Map<Timeframe, List<Candle>> _allTimeframes;
   Timeframe _activeTf = Timeframe.H1;
 
+  static const int baseTicksPerMinute = 10;
+
   // Mapa de ticks por vela para cada timeframe
-  static const Map<Timeframe, int> _ticksPerCandleMap = {
-    Timeframe.D1: 1440,
-    Timeframe.H1: 60,
-    Timeframe.M15: 15,
-    Timeframe.M5: 5,
-    Timeframe.M1: 1,
+  static final Map<Timeframe, int> _ticksPerCandleMap = {
+    Timeframe.M1: baseTicksPerMinute * 1, // 10 ticks por 1 m
+    Timeframe.M5: baseTicksPerMinute * 5, // 50 ticks por 5 m = 5×10
+    Timeframe.M15: baseTicksPerMinute * 15, // 150 ticks por 15 m = 15×10
+    Timeframe.H1: baseTicksPerMinute * 60, // 600 ticks por 1 h = 60×10
+    Timeframe.D1: baseTicksPerMinute * 1440, // 14400 ticks por 1 d = 1440×10
   };
 
   bool _isSimulationRunning = false;
