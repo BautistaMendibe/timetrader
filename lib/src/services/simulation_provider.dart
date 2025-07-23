@@ -18,15 +18,22 @@ enum SimulationMode { manual }
 enum Timeframe { D1, H1, M15, M5, M1 }
 
 class SimulationProvider with ChangeNotifier {
-  /// Valores de pip para los 7 pares más tradeados
+  /// Valores de pip para los pares más tradeados
   static const Map<String, double> _pipValues = {
     'EURUSD': 0.0001,
+    'EUR/USD': 0.0001,
     'GBPUSD': 0.0001,
+    'GBP/USD': 0.0001,
     'USDJPY': 0.01,
+    'USD/JPY': 0.01,
     'AUDUSD': 0.0001,
+    'AUD/USD': 0.0001,
     'USDCAD': 0.0001,
+    'USD/CAD': 0.0001,
     'NZDUSD': 0.0001,
+    'NZD/USD': 0.0001,
     'BTCUSD': 1.0,
+    'BTC/USD': 1.0,
   };
 
   String? _activeSymbol;
@@ -94,7 +101,25 @@ class SimulationProvider with ChangeNotifier {
   /// Fija el símbolo activo (desde SimulationSetupScreen)
   void setActiveSymbol(String symbol) {
     _activeSymbol = symbol;
+    final pipValue = _pipValue;
     debugPrint('🔥 SimulationProvider: símbolo activo = $_activeSymbol');
+    debugPrint('🔥 SimulationProvider: pip value = $pipValue');
+
+    // Mostrar información específica del par
+    if (_activeSymbol != null) {
+      if (_activeSymbol!.contains('EUR') ||
+          _activeSymbol!.contains('GBP') ||
+          _activeSymbol!.contains('AUD') ||
+          _activeSymbol!.contains('NZD')) {
+        debugPrint(
+          '🔥 SimulationProvider: Par de divisas mayor - pip value = 0.0001',
+        );
+      } else if (_activeSymbol!.contains('JPY')) {
+        debugPrint('🔥 SimulationProvider: Par con JPY - pip value = 0.01');
+      } else if (_activeSymbol!.contains('BTC')) {
+        debugPrint('🔥 SimulationProvider: Criptomoneda - pip value = 1.0');
+      }
+    }
   }
 
   double get _pipValue =>
@@ -572,12 +597,34 @@ class SimulationProvider with ChangeNotifier {
     // 5. Calculate stop loss and take profit prices using ENTRY PRICE
     final takeProfitRR = _currentSetup!.getEffectiveTakeProfitRatio();
 
+    debugPrint(
+      '🔥 SimulationProvider: DEBUG - Entry Price: $entryPrice, Price Distance: $priceDistance, Take Profit RR: $takeProfitRR',
+    );
+    debugPrint(
+      '🔥 SimulationProvider: DEBUG - Setup Take Profit Ratio: ${_currentSetup!.takeProfitRatio}, Custom Value: ${_currentSetup!.customTakeProfitRatio}',
+    );
+
+    // Mostrar cálculo de pips para mayor claridad
+    if (_currentSetup!.stopLossType == StopLossType.pips) {
+      final pipsDistance = _currentSetup!.stopLossDistance;
+      final calculatedPips = priceDistance / _pipValue;
+      debugPrint(
+        '🔥 SimulationProvider: DEBUG - Pips calculation: ${pipsDistance} pips × ${_pipValue} pip value = ${calculatedPips} price distance',
+      );
+    }
+
     if (type == 'buy') {
       _calculatedStopLossPrice = entryPrice - priceDistance;
       _calculatedTakeProfitPrice = entryPrice + (priceDistance * takeProfitRR);
+      debugPrint(
+        '🔥 SimulationProvider: DEBUG - BUY - SL: $_calculatedStopLossPrice (${entryPrice} - ${priceDistance}), TP: $_calculatedTakeProfitPrice (${entryPrice} + ${priceDistance} * ${takeProfitRR})',
+      );
     } else {
       _calculatedStopLossPrice = entryPrice + priceDistance;
       _calculatedTakeProfitPrice = entryPrice - (priceDistance * takeProfitRR);
+      debugPrint(
+        '🔥 SimulationProvider: DEBUG - SELL - SL: $_calculatedStopLossPrice (${entryPrice} + ${priceDistance}), TP: $_calculatedTakeProfitPrice (${entryPrice} - ${priceDistance} * ${takeProfitRR})',
+      );
     }
 
     _setupParametersCalculated = true;
@@ -805,6 +852,22 @@ class SimulationProvider with ChangeNotifier {
         '• Calculated SL Price: ${_calculatedStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}\n';
     info +=
         '• Calculated TP Price: ${_calculatedTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}';
+
+    // Agregar información de diferencias para mayor claridad
+    if (_calculatedStopLossPrice != null &&
+        _calculatedTakeProfitPrice != null &&
+        _entryPrice > 0) {
+      final slDiff = _calculatedStopLossPrice! - _entryPrice;
+      final tpDiff = _calculatedTakeProfitPrice! - _entryPrice;
+      final slPercent = (slDiff / _entryPrice) * 100;
+      final tpPercent = (tpDiff / _entryPrice) * 100;
+
+      info +=
+          '\n• SL Distance: ${slDiff.toStringAsFixed(6)} (${slPercent.toStringAsFixed(4)}%)\n';
+      info +=
+          '• TP Distance: ${tpDiff.toStringAsFixed(6)} (${tpPercent.toStringAsFixed(4)}%)\n';
+      info += '• TP/SL Ratio: ${(tpDiff / slDiff).abs().toStringAsFixed(2)}:1';
+    }
 
     return info;
   }

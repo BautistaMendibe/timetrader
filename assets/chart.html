@@ -48,6 +48,7 @@
         let lastStopLoss = NaN;
         let lastTakeProfit = NaN;
         let lastPrice = NaN;
+        let isForexPair = false; // Flag to detect forex pairs
 
         function checkLightweightCharts() {
             if (typeof LightweightCharts === 'undefined') {
@@ -67,6 +68,23 @@
                 return null;
             }
             return Math.floor(date.getTime() / 1000); // Convert to seconds since epoch
+        }
+
+        function detectAssetType(candles) {
+            if (!candles || candles.length === 0) return false;
+            
+            // Check if it's a forex pair by looking at the price range
+            const firstPrice = candles[0].close;
+            const lastPrice = candles[candles.length - 1].close;
+            
+            // Forex pairs typically have prices between 0.5 and 2.0
+            if (firstPrice >= 0.5 && firstPrice <= 2.0 && lastPrice >= 0.5 && lastPrice <= 2.0) {
+                console.log('📊 Chart: Detected forex pair - adjusting scale for better visibility');
+                return true;
+            }
+            
+            console.log('📊 Chart: Detected crypto/other asset - using default scale');
+            return false;
         }
 
         function initChart() {
@@ -104,17 +122,23 @@
                         borderColor: 'transparent',
                         textColor: '#CCCCCC',
                         scaleMargins: {
-                            top: 0.3,    // Reduce top margin
-                            bottom: 0.3, // Reduce bottom margin
+                            top: 0.2,    // Reduce top margin for better visibility
+                            bottom: 0.2, // Reduce bottom margin for better visibility
                         },
                         autoScale: true,
                         autoScaleInfoProvider: () => ({
                             priceRange: null,
                             margins: {
-                                above: 0.3,  // Reduce space above price range
-                                below: 0.3,  // Reduce space below price range
+                                above: 0.2,  // Reduce space above price range
+                                below: 0.2,  // Reduce space below price range
                             },
                         }),
+                        // Better price formatting for forex
+                        priceFormat: {
+                            type: 'price',
+                            precision: 5, // Show 5 decimal places for forex
+                            minMove: 0.00001, // Minimum price movement
+                        },
                     },
                     timeScale: {
                         borderColor: 'transparent',
@@ -135,6 +159,11 @@
                     borderUpColor: '#21CE99',
                     wickDownColor: '#FF5A5F',
                     wickUpColor: '#21CE99',
+                    priceFormat: {
+                        type: 'price',
+                        precision: 5, // Show 5 decimal places for forex
+                        minMove: 0.00001, // Minimum price movement
+                    },
                 });
 
                 isInitialized = true;
@@ -164,6 +193,54 @@
 
                 if (!data || !data.candles || !Array.isArray(data.candles)) {
                     return;
+                }
+
+                // Detect asset type and adjust chart configuration
+                isForexPair = detectAssetType(data.candles);
+                
+                // Adjust chart configuration based on asset type
+                if (isForexPair && candlestickSeries) {
+                    candlestickSeries.applyOptions({
+                        priceFormat: {
+                            type: 'price',
+                            precision: 5, // Show 5 decimal places for forex
+                            minMove: 0.00001, // Minimum price movement
+                        },
+                    });
+                    
+                    // Adjust price scale for forex
+                    chart.priceScale('right').applyOptions({
+                        scaleMargins: {
+                            top: 0.1,  // Less margin for forex
+                            bottom: 0.1,
+                        },
+                        priceFormat: {
+                            type: 'price',
+                            precision: 5,
+                            minMove: 0.00001,
+                        },
+                    });
+                } else if (!isForexPair && candlestickSeries) {
+                    candlestickSeries.applyOptions({
+                        priceFormat: {
+                            type: 'price',
+                            precision: 2, // Show 2 decimal places for crypto
+                            minMove: 0.01, // Minimum price movement
+                        },
+                    });
+                    
+                    // Adjust price scale for crypto
+                    chart.priceScale('right').applyOptions({
+                        scaleMargins: {
+                            top: 0.2,  // More margin for crypto
+                            bottom: 0.2,
+                        },
+                        priceFormat: {
+                            type: 'price',
+                            precision: 2,
+                            minMove: 0.01,
+                        },
+                    });
                 }
 
                 // Process candlestick data following official documentation format
@@ -247,9 +324,9 @@
         // Listen for messages from Flutter
         window.addEventListener('message', (event) => {
             try {
-                console.log('📨 HTML: Mensaje recibido:', event.data);
+                //console.log('📨 HTML: Mensaje recibido:', event.data);
                 const data = JSON.parse(event.data);
-                console.log('📨 HTML: Datos parseados:', data);
+                //console.log('📨 HTML: Datos parseados:', data);
 
                 // 1) Si viene la señal de cerrar orden, limpiar y borrar líneas
                 if (data.closeOrder === true) {
@@ -274,7 +351,7 @@
                 
                 // 3) Si viene una vela, actualizar el chart y luego las líneas de precio
                 if (data.candle) {
-                    console.log('🕯️ HTML: Recibida vela en tiempo real:', data.candle);
+                    //console.log('🕯️ HTML: Recibida vela en tiempo real:', data.candle);
                     
                     // Actualizar el chart con una vela OHLC completa
                     const c = data.candle;
@@ -286,15 +363,15 @@
                         close: parseFloat(c.close),
                     };
                     lastPrice = candleBar.close;
-                    console.log('🕯️ HTML: Vela procesada:', candleBar);
+                    //console.log('🕯️ HTML: Vela procesada:', candleBar);
                     
                     if (!window.seriesLastTime || c.time > window.seriesLastTime) {
-                        console.log('🕯️ HTML: Actualizando vela (nueva o más reciente)');
+                        //console.log('🕯️ HTML: Actualizando vela (nueva o más reciente)');
                         candlestickSeries.update(candleBar);
                         window.seriesLastTime = c.time;
                     } else {
                         // Si el tiempo es igual, reemplazar el último
-                        console.log('🕯️ HTML: Reemplazando vela existente');
+                        //console.log('🕯️ HTML: Reemplazando vela existente');
                         candlestickSeries.update(candleBar);
                     }
                     
@@ -350,6 +427,10 @@
             if (tpPriceLine)  { candlestickSeries.removePriceLine(tpPriceLine);  tpPriceLine  = null; }
             if (entryPriceLine) { candlestickSeries.removePriceLine(entryPriceLine); entryPriceLine = null; }
 
+            // Determine precision based on asset type
+            const precision = isForexPair ? 5 : 3;
+            const priceFormat = isForexPair ? entry.toFixed(5) : entry.toFixed(3);
+
             // 2) Línea de ENTRADA: siempre en el precio de entry, pero con título dinámico (% respecto a currentPrice)
             if (!isNaN(entry) && !isNaN(currentPrice)) {
                 const pctMove = (currentPrice - entry) / entry * 100;
@@ -359,35 +440,37 @@
                     lineWidth: 2,
                     lineStyle: LightweightCharts.LineStyle.Dotted,
                     axisLabelVisible: true,
-                    // Ej: "119.546 (+1.23%)" o "119.546 (–2.45%)"
-                    title: `${entry.toFixed(3)} (${pctMove>=0?'+':''}${pctMove.toFixed(2)}%)`,
+                    // Ej: "1.08500 (+0.12%)" para forex o "49951.285 (+1.23%)" para crypto
+                    title: `${priceFormat} (${pctMove>=0?'+':''}${pctMove.toFixed(2)}%)`,
                 });
             }
 
             // 3) Stop Loss: solo si es válido, mayor a 0 y diferente de entry
             if (!isNaN(entry) && !isNaN(sl) && sl > 0 && sl !== entry) {
                 const pctSL = (sl - entry) / entry * 100;
+                const slFormat = isForexPair ? sl.toFixed(5) : sl.toFixed(3);
                 slPriceLine = candlestickSeries.createPriceLine({
                     price: sl,
                     color: '#FF5A5F',
                     lineWidth: 2,
                     lineStyle: LightweightCharts.LineStyle.Dotted,
                     axisLabelVisible: true,
-                    // Ej: "–1.50%"
-                    title: `${pctSL>=0?'+':''}${pctSL.toFixed(2)}%`,
+                    // Ej: "1.08000 (–0.46%)" para forex
+                    title: `${slFormat} (${pctSL>=0?'+':''}${pctSL.toFixed(2)}%)`,
                 });
             }
 
             // 4) Take Profit: solo si es válido, mayor a 0 y diferente de entry
             if (!isNaN(entry) && !isNaN(tp) && tp > 0 && tp !== entry) {
                 const pctTP = (tp - entry) / entry * 100;
+                const tpFormat = isForexPair ? tp.toFixed(5) : tp.toFixed(3);
                 tpPriceLine = candlestickSeries.createPriceLine({
                     price: tp,
                     color: '#21CE99',
                     lineWidth: 2,
                     lineStyle: LightweightCharts.LineStyle.Dotted,
                     axisLabelVisible: true,
-                    title: `${pctTP>=0?'+':''}${pctTP.toFixed(2)}%`,
+                    title: `${tpFormat} (${pctTP>=0?'+':''}${pctTP.toFixed(2)}%)`,
                 });
             }
         }
