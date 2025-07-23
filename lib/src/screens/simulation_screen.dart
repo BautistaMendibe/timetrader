@@ -723,6 +723,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               simulationProvider
                                                   .simulationSpeed,
                                               simulationProvider.currentBalance,
+                                              simulationProvider.activeSymbol ??
+                                                  'BTCUSD', // fallback to BTCUSD if no symbol set
                                             )
                                       : null,
                                   icon: const Icon(Icons.play_arrow),

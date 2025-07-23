@@ -18,6 +18,19 @@ enum SimulationMode { automatic, manual }
 enum Timeframe { D1, H1, M15, M5, M1 }
 
 class SimulationProvider with ChangeNotifier {
+  /// Valores de pip para los 7 pares más tradeados
+  static const Map<String, double> _pipValues = {
+    'EURUSD': 0.0001,
+    'GBPUSD': 0.0001,
+    'USDJPY': 0.01,
+    'AUDUSD': 0.0001,
+    'USDCAD': 0.0001,
+    'NZDUSD': 0.0001,
+    'BTCUSD': 1.0,
+  };
+
+  String? _activeSymbol;
+
   SimulationResult? _currentSimulation;
   final List<SimulationResult> _simulationHistory = [];
 
@@ -95,6 +108,17 @@ class SimulationProvider with ChangeNotifier {
   DateTime? _pausedCandleStartTime;
 
   int _tfRemainder = 0;
+
+  /// Fija el símbolo activo (desde SimulationSetupScreen)
+  void setActiveSymbol(String symbol) {
+    _activeSymbol = symbol;
+    debugPrint('🔥 SimulationProvider: símbolo activo = $_activeSymbol');
+  }
+
+  double get _pipValue =>
+      _pipValues[_activeSymbol] ?? 0.0001; // fallback genérico
+
+  String? get activeSymbol => _activeSymbol;
 
   double? get calculatedPositionSize => _calculatedPositionSize;
   double? get calculatedLeverage => _calculatedLeverage;
@@ -1249,8 +1273,8 @@ class SimulationProvider with ChangeNotifier {
     // 2. Calculate stop loss distance in price
     double slPriceDistance;
     if (_currentSetup!.stopLossType == StopLossType.pips) {
-      // Convert pips to price (assuming 1 pip = 0.0001 for most pairs)
-      const double pipValue = 0.0001;
+      // Convert pips to price using the appropriate pip value for the active symbol
+      final double pipValue = _pipValue;
       slPriceDistance = _currentSetup!.stopLossDistance * pipValue;
     } else {
       // Use price distance directly
@@ -1310,7 +1334,7 @@ class SimulationProvider with ChangeNotifier {
 
     double slPriceDistance;
     if (_currentSetup!.stopLossType == StopLossType.pips) {
-      const double pipValue = 0.0001;
+      final double pipValue = _pipValue;
       slPriceDistance = _currentSetup!.stopLossDistance * pipValue;
     } else {
       slPriceDistance = _currentSetup!.stopLossDistance;
@@ -1374,7 +1398,9 @@ class SimulationProvider with ChangeNotifier {
     DateTime startDate,
     double speed,
     double initialBalance,
+    String symbol,
   ) {
+    setActiveSymbol(symbol);
     debugPrint('🔥🔥🔥 INICIANDO SIMULACIÓN TICK A TICK 🔥🔥🔥');
     debugPrint('🔥 Setup: ${setup.name}');
     debugPrint('🔥 Velocidad: $speed');
