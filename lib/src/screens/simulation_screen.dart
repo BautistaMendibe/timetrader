@@ -89,8 +89,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
   ) {
     // Pausar la simulación al abrir el panel de orden
     simulationProvider.pauseSimulation();
-    // Calculate position parameters when showing the order container
-    simulationProvider.calculatePositionParameters(isBuy ? 'buy' : 'sell');
+    // NO calcular parámetros aquí - se calcularán después de ejecutar la orden
 
     setState(() {
       _showOrderContainerInline = true;
@@ -264,6 +263,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     currentCandleIndex: data.item2,
                     stopLoss: simulationProvider.manualStopLossPrice,
                     takeProfit: simulationProvider.manualTakeProfitPrice,
+                    entryPrice: simulationProvider.entryPrice > 0
+                        ? simulationProvider.entryPrice
+                        : null,
                     isRunning: simulationProvider.isSimulationRunning,
                   );
                 },
@@ -313,7 +315,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       size: 20,
                                     ),
                                     onPressed: () {
-                                      simulationProvider.resumeSimulation();
+                                      simulationProvider.cancelOrder();
                                       setState(() {
                                         _showOrderContainerInline = false;
                                       });
@@ -329,50 +331,31 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   onPressed:
                                       simulationProvider.canCalculatePosition()
                                       ? () {
-                                          // Calculate position parameters before executing
+                                          // Calcular parámetros con el precio actual del tick
                                           simulationProvider
                                               .calculatePositionParameters(
                                                 _isBuyOrder ? 'buy' : 'sell',
+                                                simulationProvider
+                                                    .currentTickPrice,
                                               );
 
-                                          if (simulationProvider
-                                              .setupParametersCalculated) {
-                                            simulationProvider.executeManualTrade(
-                                              type: _isBuyOrder
-                                                  ? 'buy'
-                                                  : 'sell',
-                                              amount:
-                                                  simulationProvider
-                                                      .calculatedPositionSize ??
-                                                  0.0,
-                                              leverage:
-                                                  simulationProvider
-                                                      .calculatedLeverage
-                                                      ?.toInt() ??
-                                                  1,
-                                            );
-                                            simulationProvider
-                                                .resumeSimulation();
-                                            setState(() {
-                                              _showOrderContainerInline = false;
-                                            });
-                                          } else {
-                                            // Show error snackbar
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: const Text(
-                                                  'No se puede calcular la posición: verifica tu setup.',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontFamily: 'Inter',
-                                                  ),
-                                                ),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
-                                          }
+                                          // Ejecutar el trade manual
+                                          simulationProvider.executeManualTrade(
+                                            type: _isBuyOrder ? 'buy' : 'sell',
+                                            amount:
+                                                simulationProvider
+                                                    .calculatedPositionSize ??
+                                                0.0,
+                                            leverage:
+                                                simulationProvider
+                                                    .calculatedLeverage
+                                                    ?.toInt() ??
+                                                1,
+                                          );
+                                          simulationProvider.resumeSimulation();
+                                          setState(() {
+                                            _showOrderContainerInline = false;
+                                          });
                                         }
                                       : null,
                                   style: ElevatedButton.styleFrom(
@@ -400,9 +383,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
                               const SizedBox(height: 16),
 
-                              // Position summary
-                              if (simulationProvider
-                                  .setupParametersCalculated) ...[
+                              // Position summary - solo mostrar después de ejecutar la orden
+                              if (simulationProvider.inPosition) ...[
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
@@ -427,7 +409,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Stop Loss: ${simulationProvider.calculatedStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                        'Stop Loss: ${simulationProvider.manualStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
                                         style: const TextStyle(
                                           color: Colors.red,
                                           fontSize: 12,
@@ -435,7 +417,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                         ),
                                       ),
                                       Text(
-                                        'Take Profit: ${simulationProvider.calculatedTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                        'Take Profit: ${simulationProvider.manualTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
                                         style: const TextStyle(
                                           color: Colors.green,
                                           fontSize: 12,
@@ -553,12 +535,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     onPressed: () {
-                                      final currentCandle =
-                                          simulationProvider
-                                              .historicalData[simulationProvider
-                                              .currentCandleIndex];
                                       simulationProvider.closeManualPosition(
-                                        currentCandle.close,
+                                        simulationProvider.currentTickPrice,
                                       );
                                     },
                                     icon: const Icon(Icons.close),
@@ -605,6 +583,52 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Debug Button (temporary)
+                    if (simulationProvider.setupParametersCalculated) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E1E),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey[600]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.bug_report,
+                                  color: Colors.orange,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Debug Info',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              simulationProvider.getDebugSLTPInfo(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ],
 
                   // --- Control de simulación con timeframe integrado ---

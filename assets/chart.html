@@ -36,11 +36,6 @@
 </head>
 <body>
     <div id="chart"></div>
-    <!--
-    <div id="attribution">
-        Powered by <a href="https://www.tradingview.com" target="_blank">Lightweight Charts™</a>
-    </div>
-    -->
 
     <script>
         let chart, candlestickSeries;
@@ -48,7 +43,11 @@
         let isFirstLoad = true;
         let slPriceLine = null;
         let tpPriceLine = null;
-        let isChartPaused = false; // Nueva variable para controlar el estado de pausa
+        let entryPriceLine = null;
+        let lastEntryPrice = NaN;
+        let lastStopLoss = NaN;
+        let lastTakeProfit = NaN;
+        let lastPrice = NaN;
 
         function checkLightweightCharts() {
             if (typeof LightweightCharts === 'undefined') {
@@ -240,47 +239,6 @@
                     }, 100);
                     isFirstLoad = false;
                 }
-
-                // Remove previous price lines
-                if (slPriceLine) {
-                    candlestickSeries.removePriceLine(slPriceLine);
-                    slPriceLine = null;
-                }
-                if (tpPriceLine) {
-                    candlestickSeries.removePriceLine(tpPriceLine);
-                    tpPriceLine = null;
-                }
-                // Draw SL/TP price lines if present and valid (not 0 or null)
-                if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
-                    slPriceLine = candlestickSeries.createPriceLine({
-                        price: data.stopLoss,
-                        color: '#FF5A5F',
-                        lineWidth: 2,
-                        lineStyle: LightweightCharts.LineStyle.Dotted,
-                        axisLabelVisible: true,
-                        title: 'SL',
-                        labelVisible: true,
-                        text: 'SL',
-                        axisLabelColor: '#FF5A5F',
-                        axisLabelTextColor: '#FFFFFF',
-                        axisLabelBackgroundColor: '#FF5A5F',
-                    });
-                }
-                if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
-                    tpPriceLine = candlestickSeries.createPriceLine({
-                        price: data.takeProfit,
-                        color: '#21CE99',
-                        lineWidth: 2,
-                        lineStyle: LightweightCharts.LineStyle.Dotted,
-                        axisLabelVisible: true,
-                        title: 'TP',
-                        labelVisible: true,
-                        text: 'TP',
-                        axisLabelColor: '#21CE99',
-                        axisLabelTextColor: '#FFFFFF',
-                        axisLabelBackgroundColor: '#21CE99',
-                    });
-                }
             } catch (error) {
                 console.error('Error rendering chart:', error);
             }
@@ -292,187 +250,31 @@
                 console.log('📨 HTML: Mensaje recibido:', event.data);
                 const data = JSON.parse(event.data);
                 console.log('📨 HTML: Datos parseados:', data);
-                
-                // --- SOPORTE SEÑALES DE PAUSA/REANUDACIÓN ---
-                if (data.hasOwnProperty('pause')) {
-                    if (data.pause === true) {
-                        console.log('⏸️ HTML: Gráfico pausado - manteniendo estado actual');
-                        console.log('⏸️ HTML: Datos de pausa:', data);
-                        isChartPaused = true; // Marcar el gráfico como pausado
-                        console.log('⏸️ HTML: Estado de pausa activado');
-                    } else if (data.pause === false) {
-                        console.log('▶️ HTML: Gráfico reanudado - desactivando pausa');
-                        isChartPaused = false; // Desmarcar el gráfico como pausado
-                        console.log('▶️ HTML: Estado de pausa desactivado');
-                        console.log('▶️ HTML: Gráfico listo para recibir velas en tiempo real');
-                        return; // Salir después de desactivar la pausa
-                    }
-                    // Solo actualizar trades y price lines, no modificar velas
-                    if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
-                        const markers = data.trades.map(trade => {
-                            const formattedTime = formatTime(trade.time);
-                            if (formattedTime === null) {
-                                return null;
-                            }
-                            const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
-                            const lev = trade.leverage ? `x${trade.leverage}` : '';
-                            let text;
-                            if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
-                                text = `CLOSE`;
-                                if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
-                                    const pnl = parseFloat(trade.pnl).toFixed(2);
-                                    text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
-                                }
-                            } else {
-                                text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
-                            }
-                            return {
-                                time: formattedTime,
-                                position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
-                                color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
-                                shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
-                                text: text,
-                                size: 1,
-                            };
-                        }).filter(marker => marker !== null);
-                        if (markers.length > 0) {
-                            candlestickSeries.setMarkers(markers);
-                        }
-                    }
-                    // Price lines SL/TP
-                    if (slPriceLine) {
-                        candlestickSeries.removePriceLine(slPriceLine);
-                        slPriceLine = null;
-                    }
-                    if (tpPriceLine) {
-                        candlestickSeries.removePriceLine(tpPriceLine);
-                        tpPriceLine = null;
-                    }
-                    if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
-                        slPriceLine = candlestickSeries.createPriceLine({
-                            price: data.stopLoss,
-                            color: '#FF5A5F',
-                            lineWidth: 2,
-                            lineStyle: LightweightCharts.LineStyle.Dotted,
-                            axisLabelVisible: true,
-                            title: 'SL',
-                            labelVisible: true,
-                            text: 'SL',
-                            axisLabelColor: '#FF5A5F',
-                            axisLabelTextColor: '#FFFFFF',
-                            axisLabelBackgroundColor: '#FF5A5F',
-                        });
-                    }
-                    if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
-                        tpPriceLine = candlestickSeries.createPriceLine({
-                            price: data.takeProfit,
-                            color: '#21CE99',
-                            lineWidth: 2,
-                            lineStyle: LightweightCharts.LineStyle.Dotted,
-                            axisLabelVisible: true,
-                            title: 'TP',
-                            labelVisible: true,
-                            text: 'TP',
-                            axisLabelColor: '#21CE99',
-                            axisLabelTextColor: '#FFFFFF',
-                            axisLabelBackgroundColor: '#21CE99',
-                        });
-                    }
+
+                // 1) Si viene la señal de cerrar orden, limpiar y borrar líneas
+                if (data.closeOrder === true) {
+                    lastEntryPrice = NaN;
+                    lastStopLoss = NaN;
+                    lastTakeProfit = NaN;
+                    lastPrice = NaN;
+                    updatePriceLines(NaN, NaN, NaN, NaN);
                     return;
                 }
-                
-                if (data.restore) {
-                    console.log('🔄 HTML: Restaurando estado del gráfico');
-                    console.log('🔄 HTML: Datos de restauración:', data.restore);
-                    isChartPaused = false; // Desmarcar el gráfico como pausado
-                    console.log('🔄 HTML: Estado de pausa desactivado');
-                    // Solo restaurar el estado de pausa, no modificar velas
-                    console.log('🔄 HTML: Gráfico reanudado - esperando velas en tiempo real');
+
+                // 2) Si vienen datos de posición (entryPrice, stopLoss, takeProfit)
+                if (data.entryPrice != null || data.stopLoss != null || data.takeProfit != null) {
+                    // Guardar los valores recibidos
+                    if (data.entryPrice != null) lastEntryPrice = parseFloat(data.entryPrice);
+                    if (data.stopLoss != null) lastStopLoss = parseFloat(data.stopLoss);
+                    if (data.takeProfit != null) lastTakeProfit = parseFloat(data.takeProfit);
                     
-                    // Actualizar trades y price lines
-                    if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
-                        const markers = data.trades.map(trade => {
-                            const formattedTime = formatTime(trade.time);
-                            if (formattedTime === null) {
-                                return null;
-                            }
-                            const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
-                            const lev = trade.leverage ? `x${trade.leverage}` : '';
-                            let text;
-                            if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
-                                text = `CLOSE`;
-                                if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
-                                    const pnl = parseFloat(trade.pnl).toFixed(2);
-                                    text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
-                                }
-                            } else {
-                                text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
-                            }
-                            return {
-                                time: formattedTime,
-                                position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
-                                color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
-                                shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
-                                text: text,
-                                size: 1,
-                            };
-                        }).filter(marker => marker !== null);
-                        if (markers.length > 0) {
-                            candlestickSeries.setMarkers(markers);
-                        }
-                    }
-                    // Price lines SL/TP
-                    if (slPriceLine) {
-                        candlestickSeries.removePriceLine(slPriceLine);
-                        slPriceLine = null;
-                    }
-                    if (tpPriceLine) {
-                        candlestickSeries.removePriceLine(tpPriceLine);
-                        tpPriceLine = null;
-                    }
-                    if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
-                        slPriceLine = candlestickSeries.createPriceLine({
-                            price: data.stopLoss,
-                            color: '#FF5A5F',
-                            lineWidth: 2,
-                            lineStyle: LightweightCharts.LineStyle.Dotted,
-                            axisLabelVisible: true,
-                            title: 'SL',
-                            labelVisible: true,
-                            text: 'SL',
-                            axisLabelColor: '#FF5A5F',
-                            axisLabelTextColor: '#FFFFFF',
-                            axisLabelBackgroundColor: '#FF5A5F',
-                        });
-                    }
-                    if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
-                        tpPriceLine = candlestickSeries.createPriceLine({
-                            price: data.takeProfit,
-                            color: '#21CE99',
-                            lineWidth: 2,
-                            lineStyle: LightweightCharts.LineStyle.Dotted,
-                            axisLabelVisible: true,
-                            title: 'TP',
-                            labelVisible: true,
-                            text: 'TP',
-                            axisLabelColor: '#21CE99',
-                            axisLabelTextColor: '#FFFFFF',
-                            axisLabelBackgroundColor: '#21CE99',
-                        });
-                    }
-                    return;
+                    // Actualizar las líneas de precio
+                    updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice);
                 }
                 
-                // --- SOPORTE VELAS EN TIEMPO REAL ---
+                // 3) Si viene una vela, actualizar el chart y luego las líneas de precio
                 if (data.candle) {
                     console.log('🕯️ HTML: Recibida vela en tiempo real:', data.candle);
-                    console.log('🕯️ HTML: Estado de pausa:', isChartPaused);
-                    
-                    // No procesar velas si el gráfico está pausado
-                    if (isChartPaused) {
-                        console.log('🕯️ HTML: Gráfico pausado, ignorando vela en tiempo real');
-                        return;
-                    }
                     
                     // Actualizar el chart con una vela OHLC completa
                     const c = data.candle;
@@ -483,8 +285,8 @@
                         low: parseFloat(c.low),
                         close: parseFloat(c.close),
                     };
+                    lastPrice = candleBar.close;
                     console.log('🕯️ HTML: Vela procesada:', candleBar);
-                    console.log('🕯️ HTML: seriesLastTime actual:', window.seriesLastTime);
                     
                     if (!window.seriesLastTime || c.time > window.seriesLastTime) {
                         console.log('🕯️ HTML: Actualizando vela (nueva o más reciente)');
@@ -495,7 +297,8 @@
                         console.log('🕯️ HTML: Reemplazando vela existente');
                         candlestickSeries.update(candleBar);
                     }
-                    // Markers y price lines igual que antes
+                    
+                    // Actualizar trades si están disponibles
                     if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
                         const markers = data.trades.map(trade => {
                             const formattedTime = formatTime(trade.time);
@@ -527,146 +330,67 @@
                             candlestickSeries.setMarkers(markers);
                         }
                     }
-                    // Price lines SL/TP
-                    if (slPriceLine) {
-                        candlestickSeries.removePriceLine(slPriceLine);
-                        slPriceLine = null;
-                    }
-                    if (tpPriceLine) {
-                        candlestickSeries.removePriceLine(tpPriceLine);
-                        tpPriceLine = null;
-                    }
-                    if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
-                        slPriceLine = candlestickSeries.createPriceLine({
-                            price: data.stopLoss,
-                            color: '#FF5A5F',
-                            lineWidth: 2,
-                            lineStyle: LightweightCharts.LineStyle.Dotted,
-                            axisLabelVisible: true,
-                            title: 'SL',
-                            labelVisible: true,
-                            text: 'SL',
-                            axisLabelColor: '#FF5A5F',
-                            axisLabelTextColor: '#FFFFFF',
-                            axisLabelBackgroundColor: '#FF5A5F',
-                        });
-                    }
-                    if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
-                        tpPriceLine = candlestickSeries.createPriceLine({
-                            price: data.takeProfit,
-                            color: '#21CE99',
-                            lineWidth: 2,
-                            lineStyle: LightweightCharts.LineStyle.Dotted,
-                            axisLabelVisible: true,
-                            title: 'TP',
-                            labelVisible: true,
-                            text: 'TP',
-                            axisLabelColor: '#21CE99',
-                            axisLabelTextColor: '#FFFFFF',
-                            axisLabelBackgroundColor: '#21CE99',
-                        });
-                    }
+                    
+                    // Actualizar las líneas de precio después de actualizar la vela
+                    updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice);
                     return;
                 }
-                // --- FIN SOPORTE VELAS EN TIEMPO REAL ---
-                // --- SOPORTE TICK A TICK (mantener compatibilidad) ---
-                if (data.tick) {
-                    // Actualizar el chart punto a punto usando LightweightCharts
-                    const t = data.tick;
-                    const tickBar = {
-                        time: t.time, // segundos epoch
-                        open: t.price,
-                        high: t.price,
-                        low: t.price,
-                        close: t.price,
-                    };
-                    if (!window.seriesLastTime || t.time > window.seriesLastTime) {
-                        candlestickSeries.update(tickBar);
-                        window.seriesLastTime = t.time;
-                    } else {
-                        // Si el tiempo es igual, reemplazar el último
-                        candlestickSeries.update(tickBar);
-                    }
-                    // Markers y price lines igual que antes
-                    if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
-                        const markers = data.trades.map(trade => {
-                            const formattedTime = formatTime(trade.time);
-                            if (formattedTime === null) {
-                                return null;
-                            }
-                            const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
-                            const lev = trade.leverage ? `x${trade.leverage}` : '';
-                            let text;
-                            if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
-                                text = `CLOSE`;
-                                if (typeof trade.pnl !== 'undefined' && trade.pnl !== null) {
-                                    const pnl = parseFloat(trade.pnl).toFixed(2);
-                                    text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
-                                }
-                            } else {
-                                text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
-                            }
-                            return {
-                                time: formattedTime,
-                                position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
-                                color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
-                                shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
-                                text: text,
-                                size: 1,
-                            };
-                        }).filter(marker => marker !== null);
-                        if (markers.length > 0) {
-                            candlestickSeries.setMarkers(markers);
-                        }
-                    }
-                    // Price lines SL/TP
-                    if (slPriceLine) {
-                        candlestickSeries.removePriceLine(slPriceLine);
-                        slPriceLine = null;
-                    }
-                    if (tpPriceLine) {
-                        candlestickSeries.removePriceLine(tpPriceLine);
-                        tpPriceLine = null;
-                    }
-                    if (typeof data.stopLoss === 'number' && data.stopLoss > 0) {
-                        slPriceLine = candlestickSeries.createPriceLine({
-                            price: data.stopLoss,
-                            color: '#FF5A5F',
-                            lineWidth: 2,
-                            lineStyle: LightweightCharts.LineStyle.Dotted,
-                            axisLabelVisible: true,
-                            title: 'SL',
-                            labelVisible: true,
-                            text: 'SL',
-                            axisLabelColor: '#FF5A5F',
-                            axisLabelTextColor: '#FFFFFF',
-                            axisLabelBackgroundColor: '#FF5A5F',
-                        });
-                    }
-                    if (typeof data.takeProfit === 'number' && data.takeProfit > 0) {
-                        tpPriceLine = candlestickSeries.createPriceLine({
-                            price: data.takeProfit,
-                            color: '#21CE99',
-                            lineWidth: 2,
-                            lineStyle: LightweightCharts.LineStyle.Dotted,
-                            axisLabelVisible: true,
-                            title: 'TP',
-                            labelVisible: true,
-                            text: 'TP',
-                            axisLabelColor: '#21CE99',
-                            axisLabelTextColor: '#FFFFFF',
-                            axisLabelBackgroundColor: '#21CE99',
-                        });
-                    }
-                    return;
-                }
-                // --- FIN SOPORTE TICK ---
-                // Soporte tradicional de velas
+                
+                // 4) Soporte tradicional de velas (para carga inicial)
                 renderChart(data);
+                updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice);
             } catch (error) {
                 console.error('Error parsing message from Flutter:', error);
             }
         });
+
+        function updatePriceLines(entry, sl, tp, currentPrice) {
+            // 1) Borrar líneas viejas
+            if (slPriceLine)  { candlestickSeries.removePriceLine(slPriceLine);  slPriceLine  = null; }
+            if (tpPriceLine)  { candlestickSeries.removePriceLine(tpPriceLine);  tpPriceLine  = null; }
+            if (entryPriceLine) { candlestickSeries.removePriceLine(entryPriceLine); entryPriceLine = null; }
+
+            // 2) Línea de ENTRADA: siempre en el precio de entry, pero con título dinámico (% respecto a currentPrice)
+            if (!isNaN(entry) && !isNaN(currentPrice)) {
+                const pctMove = (currentPrice - entry) / entry * 100;
+                entryPriceLine = candlestickSeries.createPriceLine({
+                    price: entry,
+                    color: '#2176FF',
+                    lineWidth: 2,
+                    lineStyle: LightweightCharts.LineStyle.Dotted,
+                    axisLabelVisible: true,
+                    // Ej: "119.546 (+1.23%)" o "119.546 (–2.45%)"
+                    title: `${entry.toFixed(3)} (${pctMove>=0?'+':''}${pctMove.toFixed(2)}%)`,
+                });
+            }
+
+            // 3) Stop Loss: solo si es válido, mayor a 0 y diferente de entry
+            if (!isNaN(entry) && !isNaN(sl) && sl > 0 && sl !== entry) {
+                const pctSL = (sl - entry) / entry * 100;
+                slPriceLine = candlestickSeries.createPriceLine({
+                    price: sl,
+                    color: '#FF5A5F',
+                    lineWidth: 2,
+                    lineStyle: LightweightCharts.LineStyle.Dotted,
+                    axisLabelVisible: true,
+                    // Ej: "–1.50%"
+                    title: `${pctSL>=0?'+':''}${pctSL.toFixed(2)}%`,
+                });
+            }
+
+            // 4) Take Profit: solo si es válido, mayor a 0 y diferente de entry
+            if (!isNaN(entry) && !isNaN(tp) && tp > 0 && tp !== entry) {
+                const pctTP = (tp - entry) / entry * 100;
+                tpPriceLine = candlestickSeries.createPriceLine({
+                    price: tp,
+                    color: '#21CE99',
+                    lineWidth: 2,
+                    lineStyle: LightweightCharts.LineStyle.Dotted,
+                    axisLabelVisible: true,
+                    title: `${pctTP>=0?'+':''}${pctTP.toFixed(2)}%`,
+                });
+            }
+        }
 
         // Initialize chart when page loads
         document.addEventListener('DOMContentLoaded', () => {

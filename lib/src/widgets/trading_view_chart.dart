@@ -10,6 +10,7 @@ class TradingViewChart extends StatefulWidget {
   final int? currentCandleIndex;
   final double? stopLoss;
   final double? takeProfit;
+  final double? entryPrice;
   final bool isRunning; // Flag para controlar si la simulación está corriendo
 
   const TradingViewChart({
@@ -18,6 +19,7 @@ class TradingViewChart extends StatefulWidget {
     this.currentCandleIndex,
     this.stopLoss,
     this.takeProfit,
+    this.entryPrice,
     this.isRunning = true, // Por defecto está corriendo
     super.key,
   });
@@ -126,6 +128,9 @@ class TradingViewChartState extends State<TradingViewChart> {
         'takeProfit': (widget.takeProfit != null && widget.takeProfit! > 0)
             ? widget.takeProfit
             : null,
+        'entryPrice': (widget.entryPrice != null && widget.entryPrice! > 0)
+            ? widget.entryPrice
+            : null,
         'updateOnly': true, // Señal para indicar que es solo actualización
       };
 
@@ -194,6 +199,9 @@ class TradingViewChartState extends State<TradingViewChart> {
         'takeProfit': (widget.takeProfit != null && widget.takeProfit! > 0)
             ? widget.takeProfit
             : null,
+        'entryPrice': (widget.entryPrice != null && widget.entryPrice! > 0)
+            ? widget.entryPrice
+            : null,
       };
 
       final jsonData = jsonEncode(data);
@@ -224,6 +232,7 @@ class TradingViewChartState extends State<TradingViewChart> {
     List<Map<String, dynamic>>? trades,
     double? stopLoss,
     double? takeProfit,
+    double? entryPrice,
   }) async {
     if (!_isWebViewReady) return;
     final msg = <String, dynamic>{};
@@ -244,6 +253,9 @@ class TradingViewChartState extends State<TradingViewChart> {
     }
     if (takeProfit != null && takeProfit > 0) {
       msg['takeProfit'] = takeProfit;
+    }
+    if (entryPrice != null && entryPrice > 0) {
+      msg['entryPrice'] = entryPrice;
     }
 
     // Agregar señales especiales si no hay candle
