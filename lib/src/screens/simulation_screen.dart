@@ -87,6 +87,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
     SimulationProvider simulationProvider,
     bool isBuy,
   ) {
+    // Pausar la simulación al abrir el panel de orden
+    simulationProvider.pauseSimulation();
     // Calculate position parameters when showing the order container
     simulationProvider.calculatePositionParameters(isBuy ? 'buy' : 'sell');
 
@@ -311,6 +313,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       size: 20,
                                     ),
                                     onPressed: () {
+                                      simulationProvider.resumeSimulation();
                                       setState(() {
                                         _showOrderContainerInline = false;
                                       });
@@ -348,6 +351,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                       ?.toInt() ??
                                                   1,
                                             );
+                                            simulationProvider
+                                                .resumeSimulation();
                                             setState(() {
                                               _showOrderContainerInline = false;
                                             });
@@ -603,334 +608,339 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   ],
 
                   // --- Control de simulación con timeframe integrado ---
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2C2C2C),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[700]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header con título y timeframe
-                        Row(
-                          children: [
-                            const Icon(Icons.speed, color: Color(0xFF21CE99)),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Control de simulación',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const Spacer(),
-                            // Dropdown de timeframe integrado
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1E1E1E),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: Colors.grey[600]!),
-                              ),
-                              child: DropdownButton<Timeframe>(
-                                value: _selectedTimeframe,
-                                dropdownColor: const Color(0xFF2C2C2C),
-                                underline: Container(), // Sin línea
-                                icon: const Icon(
-                                  Icons.arrow_drop_down,
-                                  color: Colors.grey,
-                                  size: 16,
-                                ),
-                                items: Timeframe.values.map((tf) {
-                                  String label;
-                                  switch (tf) {
-                                    case Timeframe.D1:
-                                      label = '1D';
-                                      break;
-                                    case Timeframe.H1:
-                                      label = '1H';
-                                      break;
-                                    case Timeframe.M15:
-                                      label = '15M';
-                                      break;
-                                    case Timeframe.M5:
-                                      label = '5M';
-                                      break;
-                                    case Timeframe.M1:
-                                      label = '1M';
-                                      break;
-                                  }
-                                  return DropdownMenuItem(
-                                    value: tf,
-                                    child: Text(
-                                      label,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (tf) {
-                                  setState(() => _selectedTimeframe = tf);
-                                  if (tf != null) {
-                                    simulationProvider.setTimeframe(tf);
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // --- Botones de control principales ---
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    (simulationProvider.currentSetup != null &&
-                                        simulationProvider.isSimulationPaused)
-                                    ? () => simulationProvider
-                                          .resumeTickSimulation()
-                                    : (simulationProvider.currentSetup !=
-                                              null &&
-                                          !simulationProvider
-                                              .isSimulationRunning)
-                                    ? () => simulationProvider
-                                          .startTickSimulation(
-                                            simulationProvider.currentSetup!,
-                                            simulationProvider
-                                                .historicalData
-                                                .first
-                                                .timestamp,
-                                            simulationProvider.simulationSpeed,
-                                            simulationProvider.currentBalance,
-                                          )
-                                    : null,
-                                icon: const Icon(Icons.play_arrow),
-                                label: Text(
-                                  simulationProvider.isSimulationPaused
-                                      ? 'Reanudar'
-                                      : 'Iniciar',
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF21CE99),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                  if (!_showOrderContainerInline) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2C2C2C),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[700]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header con título y timeframe
+                          Row(
+                            children: [
+                              const Icon(Icons.speed, color: Color(0xFF21CE99)),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Control de simulación',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Inter',
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    simulationProvider.isSimulationRunning
-                                    ? () => simulationProvider
-                                          .pauseTickSimulation()
-                                    : null,
-                                icon: const Icon(Icons.pause),
-                                label: const Text('Pausar'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                              const Spacer(),
+                              // Dropdown de timeframe integrado
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
                                 ),
-                              ),
-                            ),
-                            // Botón de detener comentado temporalmente
-                            /*
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    simulationProvider.isSimulationRunning
-                                    ? () {
-                                        _isAdjustingSpeed =
-                                            false; // Resetear estado de ajuste
-                                        simulationProvider.stopTickSimulation();
-                                      }
-                                    : null,
-                                icon: const Icon(Icons.stop),
-                                label: const Text('Detener'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFF6B6B),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E1E1E),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: Colors.grey[600]!),
                                 ),
-                              ),
-                            ),
-                            */
-                          ],
-                        ),
-
-                        // --- Botones de siguiente vela y siguiente tick ---
-                        // -- Por el momento esto se comentara, ya que no funciona correctamente y no es escencial en el MVP.
-                        /*
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    simulationProvider.simulationMode ==
-                                        SimulationMode.manual
-                                    ? () => simulationProvider.advanceCandle()
-                                    : null,
-                                icon: const Icon(Icons.skip_next),
-                                label: const Text('Siguiente Vela'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2C2C2C),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
+                                child: DropdownButton<Timeframe>(
+                                  value: _selectedTimeframe,
+                                  dropdownColor: const Color(0xFF2C2C2C),
+                                  underline: Container(), // Sin línea
+                                  icon: const Icon(
+                                    Icons.arrow_drop_down,
+                                    color: Colors.grey,
+                                    size: 16,
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    side: BorderSide(color: Colors.grey[700]!),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    simulationProvider.simulationMode ==
-                                        SimulationMode.manual
-                                    ? () => simulationProvider.advanceTick()
-                                    : null,
-                                icon: const Icon(Icons.arrow_forward),
-                                label: const Text('Siguiente Tick'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2C2C2C),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    side: BorderSide(color: Colors.grey[700]!),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        */
-                        const SizedBox(height: 16),
-
-                        // Factor de velocidad
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'Velocidad: ${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                                  items: Timeframe.values.map((tf) {
+                                    String label;
+                                    switch (tf) {
+                                      case Timeframe.D1:
+                                        label = '1D';
+                                        break;
+                                      case Timeframe.H1:
+                                        label = '1H';
+                                        break;
+                                      case Timeframe.M15:
+                                        label = '15M';
+                                        break;
+                                      case Timeframe.M5:
+                                        label = '5M';
+                                        break;
+                                      case Timeframe.M1:
+                                        label = '1M';
+                                        break;
+                                    }
+                                    return DropdownMenuItem(
+                                      value: tf,
+                                      child: Text(
+                                        label,
                                         style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontFamily: 'Inter',
                                         ),
                                       ),
-                                      if (_isAdjustingSpeed) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange.withValues(
-                                              alpha: 0.2,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.orange,
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'PAUSADO',
-                                            style: TextStyle(
-                                              color: Colors.orange,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (tf) {
+                                    setState(() => _selectedTimeframe = tf);
+                                    if (tf != null) {
+                                      simulationProvider.setTimeframe(tf);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // --- Controles de simulación ---
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      (simulationProvider.currentSetup !=
+                                              null &&
+                                          simulationProvider.isSimulationPaused)
+                                      ? () => simulationProvider
+                                            .resumeTickSimulation()
+                                      : (simulationProvider.currentSetup !=
+                                                null &&
+                                            !simulationProvider
+                                                .isSimulationRunning)
+                                      ? () => simulationProvider
+                                            .startTickSimulation(
+                                              simulationProvider.currentSetup!,
+                                              simulationProvider
+                                                  .historicalData
+                                                  .first
+                                                  .timestamp,
+                                              simulationProvider
+                                                  .simulationSpeed,
+                                              simulationProvider.currentBalance,
+                                            )
+                                      : null,
+                                  icon: const Icon(Icons.play_arrow),
+                                  label: Text(
+                                    simulationProvider.isSimulationPaused
+                                        ? 'Reanudar'
+                                        : 'Iniciar',
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF21CE99),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      simulationProvider.isSimulationRunning
+                                      ? () => simulationProvider
+                                            .pauseTickSimulation()
+                                      : null,
+                                  icon: const Icon(Icons.pause),
+                                  label: const Text('Pausar'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Botón de detener comentado temporalmente
+                              /*
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      simulationProvider.isSimulationRunning
+                                      ? () {
+                                          _isAdjustingSpeed =
+                                              false; // Resetear estado de ajuste
+                                          simulationProvider.stopTickSimulation();
+                                        }
+                                      : null,
+                                  icon: const Icon(Icons.stop),
+                                  label: const Text('Detener'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF6B6B),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              */
+                            ],
+                          ),
+
+                          // --- Botones de siguiente vela y siguiente tick ---
+                          // -- Por el momento esto se comentara, ya que no funciona correctamente y no es escencial en el MVP.
+                          /*
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      simulationProvider.simulationMode ==
+                                          SimulationMode.manual
+                                      ? () => simulationProvider.advanceCandle()
+                                      : null,
+                                  icon: const Icon(Icons.skip_next),
+                                  label: const Text('Siguiente Vela'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2C2C2C),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      side: BorderSide(color: Colors.grey[700]!),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      simulationProvider.simulationMode ==
+                                          SimulationMode.manual
+                                      ? () => simulationProvider.advanceTick()
+                                      : null,
+                                  icon: const Icon(Icons.arrow_forward),
+                                  label: const Text('Siguiente Tick'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2C2C2C),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      side: BorderSide(color: Colors.grey[700]!),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          */
+                          const SizedBox(height: 16),
+
+                          // Factor de velocidad
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Velocidad: ${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontFamily: 'Inter',
                                           ),
                                         ),
+                                        if (_isAdjustingSpeed) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.withValues(
+                                                alpha: 0.2,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              border: Border.all(
+                                                color: Colors.orange,
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              'PAUSADO',
+                                              style: TextStyle(
+                                                color: Colors.orange,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ],
-                                    ],
-                                  ),
-                                  Slider(
-                                    value:
-                                        simulationProvider.ticksPerSecondFactor,
-                                    min: 0.1,
-                                    max: 5.0,
-                                    divisions: 49,
-                                    activeColor: const Color(0xFF21CE99),
-                                    onChanged: (value) {
-                                      // Pausar temporalmente mientras se ajusta la velocidad
-                                      if (!_isAdjustingSpeed &&
+                                    ),
+                                    Slider(
+                                      value: simulationProvider
+                                          .ticksPerSecondFactor,
+                                      min: 0.1,
+                                      max: 5.0,
+                                      divisions: 49,
+                                      activeColor: const Color(0xFF21CE99),
+                                      onChanged: (value) {
+                                        // Pausar temporalmente mientras se ajusta la velocidad
+                                        if (!_isAdjustingSpeed &&
+                                            simulationProvider
+                                                .isSimulationRunning) {
+                                          _isAdjustingSpeed = true;
                                           simulationProvider
-                                              .isSimulationRunning) {
-                                        _isAdjustingSpeed = true;
-                                        simulationProvider
-                                            .pauseTickSimulation();
-                                      }
+                                              .pauseTickSimulation();
+                                        }
 
-                                      simulationProvider.ticksPerSecondFactor =
-                                          value;
-                                    },
-                                    onChangeEnd: (value) {
-                                      // Reanudar después de ajustar la velocidad
-                                      if (_isAdjustingSpeed &&
-                                          simulationProvider.currentSetup !=
-                                              null) {
-                                        _isAdjustingSpeed = false;
                                         simulationProvider
-                                            .resumeTickSimulation();
-                                      }
-                                    },
-                                  ),
-                                ],
+                                                .ticksPerSecondFactor =
+                                            value;
+                                      },
+                                      onChangeEnd: (value) {
+                                        // Reanudar después de ajustar la velocidad
+                                        if (_isAdjustingSpeed &&
+                                            simulationProvider.currentSetup !=
+                                                null) {
+                                          _isAdjustingSpeed = false;
+                                          simulationProvider
+                                              .resumeTickSimulation();
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                  ],
                   // Setup Details Section (below controls)
                   if (simulationProvider.currentSetup != null &&
                       !_showOrderContainerInline &&
