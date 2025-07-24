@@ -51,9 +51,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
       false; // Para controlar pausa durante ajuste de velocidad
   // Flag para mostrar sliders SL/TP en el panel de orden
   bool _showSlTpOnOrderInline = false;
-  double? _slValue;
-  double? _tpValue;
-  double? _slMin, _slMax, _tpMin, _tpMax;
+  // NUEVO: Porcentajes de SL y TP
+  double _slRiskPercent = 1.0;
+  double _tpRiskPercent = 2.0;
 
   @override
   void initState() {
@@ -133,69 +133,18 @@ class _SimulationScreenState extends State<SimulationScreen> {
     final slSetup = simulationProvider.calculatedStopLossPrice;
     final tpSetup = simulationProvider.calculatedTakeProfitPrice;
 
-    double? slMin, slMax, tpMin, tpMax;
-    if (simulationProvider.currentSetup != null &&
-        simulationProvider.currentSetup!.stopLossType == StopLossType.pips) {
-      final pipValue = simulationProvider.activeSymbol != null
-          ? _pipValues[simulationProvider.activeSymbol] ?? 0.0001
-          : 0.0001;
-      final pips = 20.0;
-      if (slSetup != null && tpSetup != null && _clickPrice != null) {
-        if (isBuy) {
-          slMin =
-              _clickPrice! -
-              (simulationProvider.currentSetup!.stopLossDistance + pips) *
-                  pipValue;
-          slMax =
-              _clickPrice! -
-              (simulationProvider.currentSetup!.stopLossDistance - pips) *
-                  pipValue;
-          tpMin =
-              _clickPrice! +
-              (simulationProvider.currentSetup!.stopLossDistance - pips) *
-                  pipValue;
-          tpMax =
-              _clickPrice! +
-              (simulationProvider.currentSetup!.stopLossDistance + pips * 2) *
-                  pipValue;
-        } else {
-          slMin =
-              _clickPrice! +
-              (simulationProvider.currentSetup!.stopLossDistance - pips) *
-                  pipValue;
-          slMax =
-              _clickPrice! +
-              (simulationProvider.currentSetup!.stopLossDistance + pips) *
-                  pipValue;
-          tpMin =
-              _clickPrice! -
-              (simulationProvider.currentSetup!.stopLossDistance + pips * 2) *
-                  pipValue;
-          tpMax =
-              _clickPrice! -
-              (simulationProvider.currentSetup!.stopLossDistance - pips) *
-                  pipValue;
-        }
-      }
-    } else {
-      if (_clickPrice != null) {
-        slMin = _clickPrice! * 0.98;
-        slMax = _clickPrice! * 1.02;
-        tpMin = _clickPrice! * 0.98;
-        tpMax = _clickPrice! * 1.05;
-      }
+    // Inicializar porcentajes de SL y TP
+    if (_clickPrice != null && slSetup != null && tpSetup != null) {
+      // Inicializar como % de balance arriesgado y potencial
+      // Por defecto, 1% riesgo, 2% potencial
+      _slRiskPercent = 1.0;
+      _tpRiskPercent = 2.0;
     }
 
     setState(() {
       _showOrderContainerInline = true;
       _isBuyOrder = isBuy;
       _showSlTpOnOrderInline = true;
-      _slValue = slSetup;
-      _tpValue = tpSetup;
-      _slMin = slMin;
-      _slMax = slMax;
-      _tpMin = tpMin;
-      _tpMax = tpMax;
     });
 
     // Dibujar líneas en el gráfico al abrir el panel
@@ -426,12 +375,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   setState(() {
                                     _showOrderContainerInline = false;
                                     _showSlTpOnOrderInline = false;
-                                    _slValue = null;
-                                    _tpValue = null;
-                                    _slMin = null;
-                                    _slMax = null;
-                                    _tpMin = null;
-                                    _tpMax = null;
                                   });
                                 },
                               ),
@@ -445,34 +388,18 @@ class _SimulationScreenState extends State<SimulationScreen> {
                           ),
                           if (_showSlTpOnOrderInline) ...[
                             const SizedBox(height: 16),
-                            // Slider Stop Loss
+                            // Stop Loss % Slider
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Stop Loss:  ${_slValue?.toStringAsFixed(5) ?? "--"}',
-                                  style: const TextStyle(color: Colors.red),
-                                ),
-                                if (_slValue != null &&
-                                    _clickPrice != null &&
+                                if (_clickPrice != null &&
                                     simulationProvider.calculatedPositionSize !=
                                         null &&
                                     simulationProvider.currentBalance > 0)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 4.0),
                                     child: Text(
-                                      () {
-                                        final riesgoSL =
-                                            (_clickPrice! - _slValue!).abs() *
-                                            simulationProvider
-                                                .calculatedPositionSize!;
-                                        final riesgoSLPercent =
-                                            (riesgoSL /
-                                                simulationProvider
-                                                    .currentBalance) *
-                                            100;
-                                        return 'Riesgo: -${riesgoSLPercent.toStringAsFixed(2)}% (\$${riesgoSL.toStringAsFixed(2)})';
-                                      }(),
+                                      'Riesgo: ${_slRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)})',
                                       style: const TextStyle(
                                         color: Colors.red,
                                         fontSize: 12,
@@ -480,101 +407,56 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       ),
                                     ),
                                   ),
-                                Builder(
-                                  builder: (context) {
-                                    final slSliderValue =
-                                        _slValue != null &&
-                                            _slMin != null &&
-                                            _slMax != null
-                                        ? _slValue!.clamp(_slMin!, _slMax!)
-                                        : (_slValue ?? _clickPrice!);
-                                    final slMin =
-                                        _slMin ?? (_clickPrice! * 0.98);
-                                    final slMax =
-                                        _slMax ?? (_clickPrice! * 1.02);
-                                    final slStep = _activePipValue(
-                                      simulationProvider,
-                                    );
-                                    return Row(
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.remove,
-                                            size: 18,
-                                          ),
-                                          splashRadius: 18,
-                                          onPressed: () {
-                                            final newValue =
-                                                (slSliderValue - slStep).clamp(
-                                                  slMin,
-                                                  slMax,
-                                                );
-                                            setState(() => _slValue = newValue);
-                                            simulationProvider
-                                                .updateManualStopLoss(newValue);
-                                          },
-                                        ),
-                                        Expanded(
-                                          child: Slider(
-                                            value: slSliderValue,
-                                            min: slMin,
-                                            max: slMax,
-                                            onChanged: (v) {
-                                              setState(() => _slValue = v);
-                                              simulationProvider
-                                                  .updateManualStopLoss(v);
-                                            },
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.add, size: 18),
-                                          splashRadius: 18,
-                                          onPressed: () {
-                                            final newValue =
-                                                (slSliderValue + slStep).clamp(
-                                                  slMin,
-                                                  slMax,
-                                                );
-                                            setState(() => _slValue = newValue);
-                                            simulationProvider
-                                                .updateManualStopLoss(newValue);
-                                          },
-                                        ),
-                                      ],
-                                    );
+                                Slider(
+                                  value: _slRiskPercent.clamp(0.1, 100),
+                                  min: 0.1,
+                                  max: 100,
+                                  divisions: 999,
+                                  label:
+                                      '${_slRiskPercent.toStringAsFixed(1)}%',
+                                  activeColor: Colors.red,
+                                  inactiveColor: Colors.red.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  onChanged: (newPercent) {
+                                    setState(() => _slRiskPercent = newPercent);
+                                    if (simulationProvider
+                                                .calculatedPositionSize !=
+                                            null &&
+                                        simulationProvider
+                                                .calculatedPositionSize! >
+                                            0) {
+                                      final riskAmount =
+                                          simulationProvider.currentBalance *
+                                          (_slRiskPercent / 100);
+                                      final priceDistance =
+                                          riskAmount /
+                                          simulationProvider
+                                              .calculatedPositionSize!;
+                                      final slPrice = _isBuyOrder
+                                          ? _clickPrice! - priceDistance
+                                          : _clickPrice! + priceDistance;
+                                      simulationProvider.updateManualStopLoss(
+                                        slPrice,
+                                      );
+                                    }
                                   },
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            // Slider Take Profit
+                            // Take Profit % Slider
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Take Profit: ${_tpValue?.toStringAsFixed(5) ?? "--"}',
-                                  style: const TextStyle(color: Colors.green),
-                                ),
-                                if (_tpValue != null &&
-                                    _clickPrice != null &&
+                                if (_clickPrice != null &&
                                     simulationProvider.calculatedPositionSize !=
                                         null &&
                                     simulationProvider.currentBalance > 0)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 4.0),
                                     child: Text(
-                                      () {
-                                        final gananciaTP =
-                                            (_tpValue! - _clickPrice!).abs() *
-                                            simulationProvider
-                                                .calculatedPositionSize!;
-                                        final gananciaTPPercent =
-                                            (gananciaTP /
-                                                simulationProvider
-                                                    .currentBalance) *
-                                            100;
-                                        return 'Potencial: +${gananciaTPPercent.toStringAsFixed(2)}% (\$${gananciaTP.toStringAsFixed(2)})';
-                                      }(),
+                                      'Potencial: ${_tpRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)})',
                                       style: const TextStyle(
                                         color: Colors.green,
                                         fontSize: 12,
@@ -582,72 +464,39 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       ),
                                     ),
                                   ),
-                                Builder(
-                                  builder: (context) {
-                                    final tpSliderValue =
-                                        _tpValue != null &&
-                                            _tpMin != null &&
-                                            _tpMax != null
-                                        ? _tpValue!.clamp(_tpMin!, _tpMax!)
-                                        : (_tpValue ?? _clickPrice!);
-                                    final tpMin =
-                                        _tpMin ?? (_clickPrice! * 1.00);
-                                    final tpMax =
-                                        _tpMax ?? (_clickPrice! * 1.05);
-                                    final tpStep = _activePipValue(
-                                      simulationProvider,
-                                    );
-                                    return Row(
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.remove,
-                                            size: 18,
-                                          ),
-                                          splashRadius: 18,
-                                          onPressed: () {
-                                            final newValue =
-                                                (tpSliderValue - tpStep).clamp(
-                                                  tpMin,
-                                                  tpMax,
-                                                );
-                                            setState(() => _tpValue = newValue);
-                                            simulationProvider
-                                                .updateManualTakeProfit(
-                                                  newValue,
-                                                );
-                                          },
-                                        ),
-                                        Expanded(
-                                          child: Slider(
-                                            value: tpSliderValue,
-                                            min: tpMin,
-                                            max: tpMax,
-                                            onChanged: (v) {
-                                              setState(() => _tpValue = v);
-                                              simulationProvider
-                                                  .updateManualTakeProfit(v);
-                                            },
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.add, size: 18),
-                                          splashRadius: 18,
-                                          onPressed: () {
-                                            final newValue =
-                                                (tpSliderValue + tpStep).clamp(
-                                                  tpMin,
-                                                  tpMax,
-                                                );
-                                            setState(() => _tpValue = newValue);
-                                            simulationProvider
-                                                .updateManualTakeProfit(
-                                                  newValue,
-                                                );
-                                          },
-                                        ),
-                                      ],
-                                    );
+                                Slider(
+                                  value: _tpRiskPercent.clamp(0.1, 100),
+                                  min: 0.1,
+                                  max: 100,
+                                  divisions: 999,
+                                  label:
+                                      '+${_tpRiskPercent.toStringAsFixed(1)}%',
+                                  activeColor: Colors.green,
+                                  inactiveColor: Colors.green.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  onChanged: (newPercent) {
+                                    setState(() => _tpRiskPercent = newPercent);
+                                    if (simulationProvider
+                                                .calculatedPositionSize !=
+                                            null &&
+                                        simulationProvider
+                                                .calculatedPositionSize! >
+                                            0) {
+                                      final potentialAmount =
+                                          simulationProvider.currentBalance *
+                                          (_tpRiskPercent / 100);
+                                      final priceDistance =
+                                          potentialAmount /
+                                          simulationProvider
+                                              .calculatedPositionSize!;
+                                      final tpPrice = _isBuyOrder
+                                          ? _clickPrice! + priceDistance
+                                          : _clickPrice! - priceDistance;
+                                      simulationProvider.updateManualTakeProfit(
+                                        tpPrice,
+                                      );
+                                    }
                                   },
                                 ),
                               ],
@@ -661,23 +510,50 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               onPressed:
                                   simulationProvider.canCalculatePosition() &&
                                       _clickPrice != null &&
-                                      _slValue != null &&
-                                      _tpValue != null
+                                      _slRiskPercent > 0 &&
+                                      _tpRiskPercent > 0
                                   ? () {
                                       debugPrint(
-                                        '🔥 [CONFIRMAR] Valores antes de confirmar: SL slider = ${_slValue}, TP slider = ${_tpValue}',
+                                        '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = ${_slRiskPercent}, TP % = ${_tpRiskPercent}',
                                       );
-                                      // Usar los valores de los sliders como SL y TP reales
+                                      // Calcular precios a partir de los porcentajes de riesgo/potencial
+                                      final riskAmount =
+                                          simulationProvider.currentBalance *
+                                          (_slRiskPercent / 100);
+                                      final tpAmount =
+                                          simulationProvider.currentBalance *
+                                          (_tpRiskPercent / 100);
+                                      final slPrice = _isBuyOrder
+                                          ? _clickPrice! -
+                                                (riskAmount /
+                                                    (simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1))
+                                          : _clickPrice! +
+                                                (riskAmount /
+                                                    (simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1));
+                                      final tpPrice = _isBuyOrder
+                                          ? _clickPrice! +
+                                                (tpAmount /
+                                                    (simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1))
+                                          : _clickPrice! -
+                                                (tpAmount /
+                                                    (simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1));
                                       simulationProvider.updateManualStopLoss(
-                                        _slValue!,
+                                        slPrice,
                                       );
                                       simulationProvider.updateManualTakeProfit(
-                                        _tpValue!,
+                                        tpPrice,
                                       );
                                       debugPrint(
-                                        '🔥 [CONFIRMAR] Valores después de updateManual: SL calculado = ${simulationProvider.calculatedStopLossPrice}, TP calculado = ${simulationProvider.calculatedTakeProfitPrice}',
+                                        '🔥 [CONFIRMAR] Orden ejecutada. SL final = $slPrice, TP final = $tpPrice',
                                       );
-                                      // Ejecutar la orden (los métodos updateManualStopLoss/TakeProfit ya enviaron los valores al chart)
                                       simulationProvider.executeManualTrade(
                                         type: _isBuyOrder ? 'buy' : 'sell',
                                         amount:
@@ -691,10 +567,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                             1,
                                         entryPrice: _clickPrice!,
                                       );
-                                      debugPrint(
-                                        '🔥 [CONFIRMAR] Orden ejecutada. SL final = ${simulationProvider.calculatedStopLossPrice}, TP final = ${simulationProvider.calculatedTakeProfitPrice}',
-                                      );
-                                      // Solo después de ejecutar el trade, reanudar la simulación
                                       Future.delayed(
                                         const Duration(milliseconds: 100),
                                         () {
@@ -704,13 +576,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       setState(() {
                                         _showOrderContainerInline = false;
                                         _showSlTpOnOrderInline = false;
-                                        _slValue = null;
-                                        _tpValue = null;
                                         _clickPrice = null;
-                                        _slMin = null;
-                                        _slMax = null;
-                                        _tpMin = null;
-                                        _tpMax = null;
                                       });
                                     }
                                   : null,
