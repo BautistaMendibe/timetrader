@@ -466,7 +466,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                 simulationProvider
                                                     .currentBalance) *
                                             100;
-                                        return 'Riesgo: -${riesgoSLPercent.toStringAsFixed(2)}%';
+                                        return 'Riesgo: -${riesgoSLPercent.toStringAsFixed(2)}% (\$${riesgoSL.toStringAsFixed(2)})';
                                       }(),
                                       style: const TextStyle(
                                         color: Colors.red,
@@ -517,7 +517,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                 simulationProvider
                                                     .currentBalance) *
                                             100;
-                                        return 'Potencial: +${gananciaTPPercent.toStringAsFixed(2)}%';
+                                        return 'Potencial: +${gananciaTPPercent.toStringAsFixed(2)}% (\$${gananciaTP.toStringAsFixed(2)})';
                                       }(),
                                       style: const TextStyle(
                                         color: Colors.green,
