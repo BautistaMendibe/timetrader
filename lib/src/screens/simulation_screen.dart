@@ -448,6 +448,33 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   'Stop Loss:  ${_slValue?.toStringAsFixed(5) ?? "--"}',
                                   style: const TextStyle(color: Colors.red),
                                 ),
+                                if (_slValue != null &&
+                                    _clickPrice != null &&
+                                    simulationProvider.calculatedPositionSize !=
+                                        null &&
+                                    simulationProvider.currentBalance > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                    child: Text(
+                                      () {
+                                        final riesgoSL =
+                                            (_clickPrice! - _slValue!).abs() *
+                                            simulationProvider
+                                                .calculatedPositionSize!;
+                                        final riesgoSLPercent =
+                                            (riesgoSL /
+                                                simulationProvider
+                                                    .currentBalance) *
+                                            100;
+                                        return 'Riesgo: -${riesgoSLPercent.toStringAsFixed(2)}%';
+                                      }(),
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                                 Builder(
                                   builder: (context) => Slider(
                                     value: _slValue ?? _clickPrice!,
@@ -472,6 +499,33 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   'Take Profit: ${_tpValue?.toStringAsFixed(5) ?? "--"}',
                                   style: const TextStyle(color: Colors.green),
                                 ),
+                                if (_tpValue != null &&
+                                    _clickPrice != null &&
+                                    simulationProvider.calculatedPositionSize !=
+                                        null &&
+                                    simulationProvider.currentBalance > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                    child: Text(
+                                      () {
+                                        final gananciaTP =
+                                            (_tpValue! - _clickPrice!).abs() *
+                                            simulationProvider
+                                                .calculatedPositionSize!;
+                                        final gananciaTPPercent =
+                                            (gananciaTP /
+                                                simulationProvider
+                                                    .currentBalance) *
+                                            100;
+                                        return 'Potencial: +${gananciaTPPercent.toStringAsFixed(2)}%';
+                                      }(),
+                                      style: const TextStyle(
+                                        color: Colors.green,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                                 Builder(
                                   builder: (context) => Slider(
                                     value: _tpValue ?? _clickPrice!,
