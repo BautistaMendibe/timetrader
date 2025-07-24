@@ -161,10 +161,28 @@ class SimulationProvider with ChangeNotifier {
   double get currentTickPrice {
     if (_syntheticTicks.isEmpty ||
         _currentTickIndex >= _syntheticTicks.length) {
-      // Fallback to candle close if no ticks available
-      return historicalData[_currentCandleIndex].close;
+      final fallbackPrice = historicalData[_currentCandleIndex].close;
+      debugPrint(
+        '🔥 SimulationProvider: currentTickPrice - usando precio de vela: $fallbackPrice (no hay ticks disponibles)',
+      );
+      return fallbackPrice;
     }
-    return _syntheticTicks[_currentTickIndex].price;
+    final tickPrice = _syntheticTicks[_currentTickIndex].price;
+    debugPrint(
+      '🔥 SimulationProvider: currentTickPrice - tick $_currentTickIndex: $tickPrice (simulación ${_isSimulationRunning ? 'corriendo' : 'pausada'})',
+    );
+    return tickPrice;
+  }
+
+  // Nuevo: obtener el precio del tick visible (el tick anterior al actual)
+  double get lastVisibleTickPrice {
+    if (_syntheticTicks.isEmpty) return 0.0;
+    final idx = _currentTickIndex > 0 ? _currentTickIndex - 1 : 0;
+    final price = _syntheticTicks[idx].price;
+    debugPrint(
+      '🔥 SimulationProvider: lastVisibleTickPrice - idx: $idx, price: $price',
+    );
+    return price;
   }
 
   // Calcula el P&L flotante basado en el precio actual del tick
@@ -638,21 +656,41 @@ class SimulationProvider with ChangeNotifier {
     required String type,
     required double amount,
     required int leverage,
+    double? entryPrice, // Precio de entrada específico (opcional)
   }) {
     if (_currentSetup == null) return;
 
-    // Use current tick price for more accurate entry
-    final price = currentTickPrice;
-    final currentTime =
-        _syntheticTicks.isNotEmpty && _currentTickIndex < _syntheticTicks.length
-        ? _syntheticTicks[_currentTickIndex].time
-        : historicalData[_currentCandleIndex].timestamp;
+    // Use provided entry price or current tick price
+    final price = entryPrice ?? currentTickPrice;
+
+    // Si se proporciona un precio específico, usar el tiempo del tick actual
+    // para mantener la sincronización temporal
+    final currentTime = entryPrice != null
+        ? (_syntheticTicks.isNotEmpty &&
+                  _currentTickIndex < _syntheticTicks.length
+              ? _syntheticTicks[_currentTickIndex].time
+              : historicalData[_currentCandleIndex].timestamp)
+        : (_syntheticTicks.isNotEmpty &&
+                  _currentTickIndex < _syntheticTicks.length
+              ? _syntheticTicks[_currentTickIndex].time
+              : historicalData[_currentCandleIndex].timestamp);
 
     debugPrint(
-      '🔥 SimulationProvider: executeManualTrade - Using price: $price (tick price)',
+      '🔥 SimulationProvider: executeManualTrade - Using price: $price (${entryPrice != null ? 'provided entry price' : 'current tick price'})',
     );
+    debugPrint(
+      '🔥 SimulationProvider: executeManualTrade - Current tick index: $_currentTickIndex, Total ticks: ${_syntheticTicks.length}',
+    );
+    if (entryPrice != null) {
+      debugPrint(
+        '🔥 SimulationProvider: executeManualTrade - Entry price provided: $entryPrice, will use this exact price',
+      );
+    }
 
     // Calcular parámetros de posición con el precio de entrada real
+    debugPrint(
+      '🔥 SimulationProvider: executeManualTrade - Calculando parámetros con precio: $price',
+    );
     calculatePositionParameters(type, price);
 
     final trade = Trade(

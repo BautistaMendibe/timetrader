@@ -18,6 +18,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
   bool _showSLTPContainer = false;
+  double? _clickPrice; // Precio capturado en el momento del clic
   // GlobalKey para acceder al TradingViewChart
   final GlobalKey<TradingViewChartState> _chartKey =
       GlobalKey<TradingViewChartState>();
@@ -87,14 +88,20 @@ class _SimulationScreenState extends State<SimulationScreen> {
     SimulationProvider simulationProvider,
     bool isBuy,
   ) {
-    // Pausar la simulación al abrir el panel de orden
+    // Primero pausar la simulación para congelar el precio
     simulationProvider.pauseSimulation();
-    // NO calcular parámetros aquí - se calcularán después de ejecutar la orden
+
+    // Luego capturar el precio exacto del tick visible (el tick anterior al actual)
+    _clickPrice = simulationProvider.lastVisibleTickPrice;
 
     setState(() {
       _showOrderContainerInline = true;
       _isBuyOrder = isBuy;
     });
+
+    debugPrint(
+      '🔥 SimulationScreen: Simulación pausada y precio capturado: $_clickPrice',
+    );
   }
 
   void _showManageSLTPContainer(
@@ -329,17 +336,22 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 width: double.infinity,
                                 child: ElevatedButton(
                                   onPressed:
-                                      simulationProvider.canCalculatePosition()
+                                      simulationProvider
+                                              .canCalculatePosition() &&
+                                          _clickPrice != null
                                       ? () {
-                                          // Calcular parámetros con el precio actual del tick
+                                          debugPrint(
+                                            '🔥 SimulationScreen: Calculando parámetros con precio del clic: $_clickPrice',
+                                          );
+
+                                          // Calcular parámetros con el precio capturado en el clic
                                           simulationProvider
                                               .calculatePositionParameters(
                                                 _isBuyOrder ? 'buy' : 'sell',
-                                                simulationProvider
-                                                    .currentTickPrice,
+                                                _clickPrice!,
                                               );
 
-                                          // Ejecutar el trade manual
+                                          // Ejecutar el trade manual con el precio del clic
                                           simulationProvider.executeManualTrade(
                                             type: _isBuyOrder ? 'buy' : 'sell',
                                             amount:
@@ -351,10 +363,22 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     .calculatedLeverage
                                                     ?.toInt() ??
                                                 1,
+                                            entryPrice:
+                                                _clickPrice!, // Pasar el precio del clic
                                           );
-                                          simulationProvider.resumeSimulation();
+
+                                          // Solo después de ejecutar el trade, reanudar la simulación
+                                          Future.delayed(
+                                            const Duration(milliseconds: 100),
+                                            () {
+                                              simulationProvider
+                                                  .resumeSimulation();
+                                            },
+                                          );
                                           setState(() {
                                             _showOrderContainerInline = false;
+                                            _clickPrice =
+                                                null; // Limpiar el precio capturado
                                           });
                                         }
                                       : null,
