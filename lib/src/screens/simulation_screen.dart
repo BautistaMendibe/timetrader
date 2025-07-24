@@ -386,6 +386,53 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             'Precio de entrada: ${_clickPrice?.toStringAsFixed(5) ?? "--"}',
                             style: const TextStyle(color: Colors.white),
                           ),
+                          if (_clickPrice != null &&
+                              simulationProvider.calculatedPositionSize !=
+                                  null &&
+                              simulationProvider.calculatedPositionSize! >
+                                  0) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Precio de SL: ' +
+                                  (() {
+                                    final riskAmount =
+                                        simulationProvider.currentBalance *
+                                        (_slRiskPercent / 100);
+                                    final priceDistance =
+                                        riskAmount /
+                                        simulationProvider
+                                            .calculatedPositionSize!;
+                                    final slPrice = _isBuyOrder
+                                        ? _clickPrice! - priceDistance
+                                        : _clickPrice! + priceDistance;
+                                    return slPrice.toStringAsFixed(5);
+                                  })(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              'Precio de TP: ' +
+                                  (() {
+                                    final potentialAmount =
+                                        simulationProvider.currentBalance *
+                                        (_tpRiskPercent / 100);
+                                    final priceDistance =
+                                        potentialAmount /
+                                        simulationProvider
+                                            .calculatedPositionSize!;
+                                    final tpPrice = _isBuyOrder
+                                        ? _clickPrice! + priceDistance
+                                        : _clickPrice! - priceDistance;
+                                    return tpPrice.toStringAsFixed(5);
+                                  })(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                           if (_showSlTpOnOrderInline) ...[
                             const SizedBox(height: 16),
                             // Stop Loss % Slider
