@@ -687,11 +687,18 @@ class SimulationProvider with ChangeNotifier {
       );
     }
 
-    // Calcular parámetros de posición con el precio de entrada real
-    debugPrint(
-      '🔥 SimulationProvider: executeManualTrade - Calculando parámetros con precio: $price',
-    );
-    calculatePositionParameters(type, price);
+    // Solo calcular parámetros si SL o TP no fueron seteados manualmente
+    if (_calculatedStopLossPrice == null ||
+        _calculatedTakeProfitPrice == null) {
+      debugPrint(
+        '🔥 SimulationProvider: executeManualTrade - Calculando parámetros con precio: $price (no hay SL/TP manual)',
+      );
+      calculatePositionParameters(type, price);
+    } else {
+      debugPrint(
+        '🔥 SimulationProvider: executeManualTrade - Usando SL/TP manual: SL=$_calculatedStopLossPrice, TP=$_calculatedTakeProfitPrice',
+      );
+    }
 
     final trade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -1203,6 +1210,31 @@ class SimulationProvider with ChangeNotifier {
   // --- ENVÍO DE TICK AL CHART ---
   void setTickCallback(Function(Map<String, dynamic>) callback) {
     _tickCallback = callback;
+  }
+
+  // --- NUEVOS MÉTODOS PARA SL/TP MANUAL ---
+  void updateManualStopLoss(double price) {
+    _calculatedStopLossPrice = price;
+    if (_tickCallback != null && _entryPrice > 0) {
+      _tickCallback!({
+        'entryPrice': _entryPrice,
+        'stopLoss': _calculatedStopLossPrice,
+        'takeProfit': _calculatedTakeProfitPrice,
+      });
+    }
+    notifyListeners();
+  }
+
+  void updateManualTakeProfit(double price) {
+    _calculatedTakeProfitPrice = price;
+    if (_tickCallback != null && _entryPrice > 0) {
+      _tickCallback!({
+        'entryPrice': _entryPrice,
+        'stopLoss': _calculatedStopLossPrice,
+        'takeProfit': _calculatedTakeProfitPrice,
+      });
+    }
+    notifyListeners();
   }
 
   // --- NOTIFICACIONES GRANULARES ---
