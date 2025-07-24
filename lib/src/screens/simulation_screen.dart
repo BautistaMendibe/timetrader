@@ -399,7 +399,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 4.0),
                                     child: Text(
-                                      'Riesgo: ${_slRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)})',
+                                      'Stop Loss: ${_slRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)})',
                                       style: const TextStyle(
                                         color: Colors.red,
                                         fontSize: 12,
@@ -456,7 +456,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 4.0),
                                     child: Text(
-                                      'Potencial: ${_tpRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)})',
+                                      'Take Profit: ${_tpRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)})',
                                       style: const TextStyle(
                                         color: Colors.green,
                                         fontSize: 12,
