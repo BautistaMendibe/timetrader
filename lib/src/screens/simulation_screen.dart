@@ -34,6 +34,11 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
+  double _activePipValue(SimulationProvider simulationProvider) {
+    final symbol = simulationProvider.activeSymbol;
+    return symbol != null ? _pipValues[symbol] ?? 0.0001 : 0.0001;
+  }
+
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
   bool _showSLTPContainer = false;
@@ -476,17 +481,68 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     ),
                                   ),
                                 Builder(
-                                  builder: (context) => Slider(
-                                    value: _slValue ?? _clickPrice!,
-                                    min: _slMin ?? (_clickPrice! * 0.98),
-                                    max: _slMax ?? (_clickPrice! * 1.02),
-                                    onChanged: (v) {
-                                      setState(() => _slValue = v);
-                                      simulationProvider.updateManualStopLoss(
-                                        v,
-                                      );
-                                    },
-                                  ),
+                                  builder: (context) {
+                                    final slSliderValue =
+                                        _slValue != null &&
+                                            _slMin != null &&
+                                            _slMax != null
+                                        ? _slValue!.clamp(_slMin!, _slMax!)
+                                        : (_slValue ?? _clickPrice!);
+                                    final slMin =
+                                        _slMin ?? (_clickPrice! * 0.98);
+                                    final slMax =
+                                        _slMax ?? (_clickPrice! * 1.02);
+                                    final slStep = _activePipValue(
+                                      simulationProvider,
+                                    );
+                                    return Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.remove,
+                                            size: 18,
+                                          ),
+                                          splashRadius: 18,
+                                          onPressed: () {
+                                            final newValue =
+                                                (slSliderValue - slStep).clamp(
+                                                  slMin,
+                                                  slMax,
+                                                );
+                                            setState(() => _slValue = newValue);
+                                            simulationProvider
+                                                .updateManualStopLoss(newValue);
+                                          },
+                                        ),
+                                        Expanded(
+                                          child: Slider(
+                                            value: slSliderValue,
+                                            min: slMin,
+                                            max: slMax,
+                                            onChanged: (v) {
+                                              setState(() => _slValue = v);
+                                              simulationProvider
+                                                  .updateManualStopLoss(v);
+                                            },
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.add, size: 18),
+                                          splashRadius: 18,
+                                          onPressed: () {
+                                            final newValue =
+                                                (slSliderValue + slStep).clamp(
+                                                  slMin,
+                                                  slMax,
+                                                );
+                                            setState(() => _slValue = newValue);
+                                            simulationProvider
+                                                .updateManualStopLoss(newValue);
+                                          },
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ],
                             ),
@@ -527,17 +583,72 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     ),
                                   ),
                                 Builder(
-                                  builder: (context) => Slider(
-                                    value: _tpValue ?? _clickPrice!,
-                                    min: _tpMin ?? (_clickPrice! * 1.00),
-                                    max: _tpMax ?? (_clickPrice! * 1.05),
-                                    onChanged: (v) {
-                                      setState(() => _tpValue = v);
-                                      simulationProvider.updateManualTakeProfit(
-                                        v,
-                                      );
-                                    },
-                                  ),
+                                  builder: (context) {
+                                    final tpSliderValue =
+                                        _tpValue != null &&
+                                            _tpMin != null &&
+                                            _tpMax != null
+                                        ? _tpValue!.clamp(_tpMin!, _tpMax!)
+                                        : (_tpValue ?? _clickPrice!);
+                                    final tpMin =
+                                        _tpMin ?? (_clickPrice! * 1.00);
+                                    final tpMax =
+                                        _tpMax ?? (_clickPrice! * 1.05);
+                                    final tpStep = _activePipValue(
+                                      simulationProvider,
+                                    );
+                                    return Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.remove,
+                                            size: 18,
+                                          ),
+                                          splashRadius: 18,
+                                          onPressed: () {
+                                            final newValue =
+                                                (tpSliderValue - tpStep).clamp(
+                                                  tpMin,
+                                                  tpMax,
+                                                );
+                                            setState(() => _tpValue = newValue);
+                                            simulationProvider
+                                                .updateManualTakeProfit(
+                                                  newValue,
+                                                );
+                                          },
+                                        ),
+                                        Expanded(
+                                          child: Slider(
+                                            value: tpSliderValue,
+                                            min: tpMin,
+                                            max: tpMax,
+                                            onChanged: (v) {
+                                              setState(() => _tpValue = v);
+                                              simulationProvider
+                                                  .updateManualTakeProfit(v);
+                                            },
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.add, size: 18),
+                                          splashRadius: 18,
+                                          onPressed: () {
+                                            final newValue =
+                                                (tpSliderValue + tpStep).clamp(
+                                                  tpMin,
+                                                  tpMax,
+                                                );
+                                            setState(() => _tpValue = newValue);
+                                            simulationProvider
+                                                .updateManualTakeProfit(
+                                                  newValue,
+                                                );
+                                          },
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ],
                             ),
