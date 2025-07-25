@@ -467,40 +467,118 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       ),
                                     ),
                                   ),
-                                Slider(
-                                  value: _slRiskPercent.clamp(0.1, 100),
-                                  min: 0.1,
-                                  max: 100,
-                                  divisions: 999,
-                                  label:
-                                      '${_slRiskPercent.toStringAsFixed(1)}%',
-                                  activeColor: Colors.red,
-                                  inactiveColor: Colors.red.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  onChanged: (newPercent) {
-                                    setState(() => _slRiskPercent = newPercent);
-                                    if (simulationProvider
-                                                .calculatedPositionSize !=
-                                            null &&
-                                        simulationProvider
-                                                .calculatedPositionSize! >
-                                            0) {
-                                      final riskAmount =
-                                          simulationProvider.currentBalance *
-                                          (_slRiskPercent / 100);
-                                      final priceDistance =
-                                          riskAmount /
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.remove,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _slRiskPercent =
+                                              (_slRiskPercent - 0.1).clamp(
+                                                0.1,
+                                                100,
+                                              );
+                                        });
+                                        if (simulationProvider
+                                                    .calculatedPositionSize !=
+                                                null &&
+                                            simulationProvider
+                                                    .calculatedPositionSize! >
+                                                0) {
+                                          final riskAmount =
+                                              simulationProvider
+                                                  .currentBalance *
+                                              (_slRiskPercent / 100);
+                                          final priceDistance =
+                                              riskAmount /
+                                              simulationProvider
+                                                  .calculatedPositionSize!;
+                                          final slPrice = _isBuyOrder
+                                              ? _clickPrice! - priceDistance
+                                              : _clickPrice! + priceDistance;
                                           simulationProvider
-                                              .calculatedPositionSize!;
-                                      final slPrice = _isBuyOrder
-                                          ? _clickPrice! - priceDistance
-                                          : _clickPrice! + priceDistance;
-                                      simulationProvider.updateManualStopLoss(
-                                        slPrice,
-                                      );
-                                    }
-                                  },
+                                              .updateManualStopLoss(slPrice);
+                                        }
+                                      },
+                                    ),
+                                    Expanded(
+                                      child: Slider(
+                                        value: _slRiskPercent.clamp(0.1, 100),
+                                        min: 0.1,
+                                        max: 100,
+                                        divisions: 999,
+                                        label:
+                                            '${_slRiskPercent.toStringAsFixed(1)}%',
+                                        activeColor: Colors.red,
+                                        inactiveColor: Colors.red.withOpacity(
+                                          0.2,
+                                        ),
+                                        onChanged: (newPercent) {
+                                          setState(
+                                            () => _slRiskPercent = newPercent,
+                                          );
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
+                                              simulationProvider
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final riskAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_slRiskPercent / 100);
+                                            final priceDistance =
+                                                riskAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final slPrice = _isBuyOrder
+                                                ? _clickPrice! - priceDistance
+                                                : _clickPrice! + priceDistance;
+                                            simulationProvider
+                                                .updateManualStopLoss(slPrice);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.add,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _slRiskPercent =
+                                              (_slRiskPercent + 0.1).clamp(
+                                                0.1,
+                                                100,
+                                              );
+                                        });
+                                        if (simulationProvider
+                                                    .calculatedPositionSize !=
+                                                null &&
+                                            simulationProvider
+                                                    .calculatedPositionSize! >
+                                                0) {
+                                          final riskAmount =
+                                              simulationProvider
+                                                  .currentBalance *
+                                              (_slRiskPercent / 100);
+                                          final priceDistance =
+                                              riskAmount /
+                                              simulationProvider
+                                                  .calculatedPositionSize!;
+                                          final slPrice = _isBuyOrder
+                                              ? _clickPrice! - priceDistance
+                                              : _clickPrice! + priceDistance;
+                                          simulationProvider
+                                              .updateManualStopLoss(slPrice);
+                                        }
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -524,40 +602,120 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       ),
                                     ),
                                   ),
-                                Slider(
-                                  value: _tpRiskPercent.clamp(0.1, 100),
-                                  min: 0.1,
-                                  max: 100,
-                                  divisions: 999,
-                                  label:
-                                      '+${_tpRiskPercent.toStringAsFixed(1)}%',
-                                  activeColor: Colors.green,
-                                  inactiveColor: Colors.green.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  onChanged: (newPercent) {
-                                    setState(() => _tpRiskPercent = newPercent);
-                                    if (simulationProvider
-                                                .calculatedPositionSize !=
-                                            null &&
-                                        simulationProvider
-                                                .calculatedPositionSize! >
-                                            0) {
-                                      final potentialAmount =
-                                          simulationProvider.currentBalance *
-                                          (_tpRiskPercent / 100);
-                                      final priceDistance =
-                                          potentialAmount /
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.remove,
+                                        color: Colors.green,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _tpRiskPercent =
+                                              (_tpRiskPercent - 0.1).clamp(
+                                                0.1,
+                                                100,
+                                              );
+                                        });
+                                        if (simulationProvider
+                                                    .calculatedPositionSize !=
+                                                null &&
+                                            simulationProvider
+                                                    .calculatedPositionSize! >
+                                                0) {
+                                          final potentialAmount =
+                                              simulationProvider
+                                                  .currentBalance *
+                                              (_tpRiskPercent / 100);
+                                          final priceDistance =
+                                              potentialAmount /
+                                              simulationProvider
+                                                  .calculatedPositionSize!;
+                                          final tpPrice = _isBuyOrder
+                                              ? _clickPrice! + priceDistance
+                                              : _clickPrice! - priceDistance;
                                           simulationProvider
-                                              .calculatedPositionSize!;
-                                      final tpPrice = _isBuyOrder
-                                          ? _clickPrice! + priceDistance
-                                          : _clickPrice! - priceDistance;
-                                      simulationProvider.updateManualTakeProfit(
-                                        tpPrice,
-                                      );
-                                    }
-                                  },
+                                              .updateManualTakeProfit(tpPrice);
+                                        }
+                                      },
+                                    ),
+                                    Expanded(
+                                      child: Slider(
+                                        value: _tpRiskPercent.clamp(0.1, 100),
+                                        min: 0.1,
+                                        max: 100,
+                                        divisions: 999,
+                                        label:
+                                            '+${_tpRiskPercent.toStringAsFixed(1)}%',
+                                        activeColor: Colors.green,
+                                        inactiveColor: Colors.green.withOpacity(
+                                          0.2,
+                                        ),
+                                        onChanged: (newPercent) {
+                                          setState(
+                                            () => _tpRiskPercent = newPercent,
+                                          );
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
+                                              simulationProvider
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final potentialAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_tpRiskPercent / 100);
+                                            final priceDistance =
+                                                potentialAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final tpPrice = _isBuyOrder
+                                                ? _clickPrice! + priceDistance
+                                                : _clickPrice! - priceDistance;
+                                            simulationProvider
+                                                .updateManualTakeProfit(
+                                                  tpPrice,
+                                                );
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.add,
+                                        color: Colors.green,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _tpRiskPercent =
+                                              (_tpRiskPercent + 0.1).clamp(
+                                                0.1,
+                                                100,
+                                              );
+                                        });
+                                        if (simulationProvider
+                                                    .calculatedPositionSize !=
+                                                null &&
+                                            simulationProvider
+                                                    .calculatedPositionSize! >
+                                                0) {
+                                          final potentialAmount =
+                                              simulationProvider
+                                                  .currentBalance *
+                                              (_tpRiskPercent / 100);
+                                          final priceDistance =
+                                              potentialAmount /
+                                              simulationProvider
+                                                  .calculatedPositionSize!;
+                                          final tpPrice = _isBuyOrder
+                                              ? _clickPrice! + priceDistance
+                                              : _clickPrice! - priceDistance;
+                                          simulationProvider
+                                              .updateManualTakeProfit(tpPrice);
+                                        }
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
