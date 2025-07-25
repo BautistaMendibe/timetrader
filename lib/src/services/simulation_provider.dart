@@ -4,6 +4,7 @@ import '../models/candle.dart';
 import '../models/setup.dart';
 import 'dart:async';
 import 'dart:math';
+import '../constants/pip_values.dart';
 
 // --- MODELO TICK ---
 class Tick {
@@ -18,23 +19,6 @@ enum SimulationMode { manual }
 enum Timeframe { D1, H1, M15, M5, M1 }
 
 class SimulationProvider with ChangeNotifier {
-  /// Valores de pip para los pares más tradeados
-  static const Map<String, double> _pipValues = {
-    'EURUSD': 0.0001,
-    'EUR/USD': 0.0001,
-    'GBPUSD': 0.0001,
-    'GBP/USD': 0.0001,
-    'USDJPY': 0.01,
-    'USD/JPY': 0.01,
-    'AUDUSD': 0.0001,
-    'AUD/USD': 0.0001,
-    'USDCAD': 0.0001,
-    'USD/CAD': 0.0001,
-    'NZDUSD': 0.0001,
-    'NZD/USD': 0.0001,
-    'BTCUSD': 1.0,
-    'BTC/USD': 1.0,
-  };
 
   String? _activeSymbol;
 
@@ -123,7 +107,7 @@ class SimulationProvider with ChangeNotifier {
   }
 
   double get _pipValue =>
-      _pipValues[_activeSymbol] ?? 0.0001; // fallback genérico
+      kPipValues[_activeSymbol] ?? 0.0001; // fallback genérico
 
   String? get activeSymbol => _activeSymbol;
 

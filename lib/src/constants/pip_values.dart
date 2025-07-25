@@ -1,0 +1,16 @@
+const Map<String, double> kPipValues = {
+  'EURUSD': 0.0001,
+  'EUR/USD': 0.0001,
+  'GBPUSD': 0.0001,
+  'GBP/USD': 0.0001,
+  'USDJPY': 0.01,
+  'USD/JPY': 0.01,
+  'AUDUSD': 0.0001,
+  'AUD/USD': 0.0001,
+  'USDCAD': 0.0001,
+  'USD/CAD': 0.0001,
+  'NZDUSD': 0.0001,
+  'NZD/USD': 0.0001,
+  'BTCUSD': 1.0,
+  'BTC/USD': 1.0,
+};
