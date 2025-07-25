@@ -5,7 +5,26 @@ import '../widgets/trading_view_chart.dart';
 import '../routes.dart';
 import '../models/simulation_result.dart';
 import '../models/rule.dart';
+import '../models/setup.dart';
 import 'package:tuple/tuple.dart';
+
+// Copia local de los valores de pip para los pares más tradeados
+const Map<String, double> _pipValues = {
+  'EURUSD': 0.0001,
+  'EUR/USD': 0.0001,
+  'GBPUSD': 0.0001,
+  'GBP/USD': 0.0001,
+  'USDJPY': 0.01,
+  'USD/JPY': 0.01,
+  'AUDUSD': 0.0001,
+  'AUD/USD': 0.0001,
+  'USDCAD': 0.0001,
+  'USD/CAD': 0.0001,
+  'NZDUSD': 0.0001,
+  'NZD/USD': 0.0001,
+  'BTCUSD': 1.0,
+  'BTC/USD': 1.0,
+};
 
 class SimulationScreen extends StatefulWidget {
   const SimulationScreen({super.key});
@@ -15,15 +34,26 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
+  double _activePipValue(SimulationProvider simulationProvider) {
+    final symbol = simulationProvider.activeSymbol;
+    return symbol != null ? _pipValues[symbol] ?? 0.0001 : 0.0001;
+  }
+
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
   bool _showSLTPContainer = false;
+  double? _clickPrice; // Precio capturado en el momento del clic
   // GlobalKey para acceder al TradingViewChart
   final GlobalKey<TradingViewChartState> _chartKey =
       GlobalKey<TradingViewChartState>();
   Timeframe? _selectedTimeframe; // NUEVO: para opciones avanzadas
   bool _isAdjustingSpeed =
       false; // Para controlar pausa durante ajuste de velocidad
+  // Flag para mostrar sliders SL/TP en el panel de orden
+  bool _showSlTpOnOrderInline = false;
+  // NUEVO: Porcentajes de SL y TP
+  double _slRiskPercent = 1.0;
+  double _tpRiskPercent = 2.0;
 
   @override
   void initState() {
@@ -42,7 +72,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
           // Verificar si es una señal de control (pausa/restauración)
           if (tickData.containsKey('pause') ||
               tickData.containsKey('restore')) {
-            // Es una señal de control, enviar directamente al WebView
             debugPrint(
               '🔥 CALLBACK: Enviando señal de control al WebView: $tickData',
             );
@@ -50,6 +79,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
           } else {
             // Es un tick normal con vela
             final candle = tickData['candle'] ?? tickData['tick'];
+            if (candle == null) return; // Evita error si no hay vela
             final trades = tickData['trades'] != null
                 ? List<Map<String, dynamic>>.from(tickData['trades'])
                 : null;
@@ -62,6 +92,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
               trades: trades,
               stopLoss: stopLoss,
               takeProfit: takeProfit,
+              entryPrice: simulationProvider.entryPrice > 0
+                  ? simulationProvider.entryPrice
+                  : null,
             );
           }
         }
@@ -87,15 +120,43 @@ class _SimulationScreenState extends State<SimulationScreen> {
     SimulationProvider simulationProvider,
     bool isBuy,
   ) {
-    // Pausar la simulación al abrir el panel de orden
+    // Primero pausar la simulación para congelar el precio
     simulationProvider.pauseSimulation();
-    // Calculate position parameters when showing the order container
-    simulationProvider.calculatePositionParameters(isBuy ? 'buy' : 'sell');
+
+    // Luego capturar el precio exacto del tick visible (el tick anterior al actual)
+    _clickPrice = simulationProvider.lastVisibleTickPrice;
+
+    // Calcular parámetros del setup para el precio de entrada
+    if (_clickPrice != null) {
+      simulationProvider.calculatePositionParameters(
+        isBuy ? 'buy' : 'sell',
+        _clickPrice!,
+      );
+    }
+    final slSetup = simulationProvider.calculatedStopLossPrice;
+    final tpSetup = simulationProvider.calculatedTakeProfitPrice;
+
+    // Inicializar porcentajes de SL y TP
+    if (_clickPrice != null && slSetup != null && tpSetup != null) {
+      // Inicializar como % de balance arriesgado y potencial
+      // Por defecto, 1% riesgo, 2% potencial
+      _slRiskPercent = 1.0;
+      _tpRiskPercent = 2.0;
+    }
 
     setState(() {
       _showOrderContainerInline = true;
       _isBuyOrder = isBuy;
+      _showSlTpOnOrderInline = true;
     });
+
+    // Dibujar líneas en el gráfico al abrir el panel
+    if (slSetup != null) simulationProvider.updateManualStopLoss(slSetup);
+    if (tpSetup != null) simulationProvider.updateManualTakeProfit(tpSetup);
+
+    debugPrint(
+      '🔥 SimulationScreen: Simulación pausada y precio capturado: $_clickPrice',
+    );
   }
 
   void _showManageSLTPContainer(
@@ -253,21 +314,34 @@ class _SimulationScreenState extends State<SimulationScreen> {
             height: MediaQuery.of(context).size.height * 0.5,
             child: Container(
               margin: const EdgeInsets.all(12),
-              child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
-                selector: (context, provider) =>
-                    Tuple2(allTrades, provider.currentCandleIndex),
-                builder: (context, data, child) {
-                  return TradingViewChart(
-                    key: _chartKey,
-                    candles: simulationProvider.historicalData,
-                    trades: data.item1,
-                    currentCandleIndex: data.item2,
-                    stopLoss: simulationProvider.manualStopLossPrice,
-                    takeProfit: simulationProvider.manualTakeProfitPrice,
-                    isRunning: simulationProvider.isSimulationRunning,
-                  );
-                },
-              ),
+              child:
+                  Selector<
+                    SimulationProvider,
+                    Tuple5<List<Trade>, int, double?, double?, double?>
+                  >(
+                    selector: (context, provider) => Tuple5(
+                      allTrades,
+                      provider.currentCandleIndex,
+                      provider.manualStopLossPrice,
+                      provider.manualTakeProfitPrice,
+                      provider.entryPrice > 0 ? provider.entryPrice : null,
+                    ),
+                    builder: (context, data, child) {
+                      final entryPrice = _clickPrice != null
+                          ? _clickPrice
+                          : data.item5;
+                      return TradingViewChart(
+                        key: _chartKey,
+                        candles: simulationProvider.historicalData,
+                        trades: data.item1,
+                        currentCandleIndex: data.item2,
+                        stopLoss: data.item3,
+                        takeProfit: data.item4,
+                        entryPrice: entryPrice,
+                        isRunning: simulationProvider.isSimulationRunning,
+                      );
+                    },
+                  ),
             ),
           ),
 
@@ -281,174 +355,356 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   // Order Container (when active)
                   if (_showOrderContainerInline) ...[
                     Container(
-                      constraints: const BoxConstraints(maxHeight: 300),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2C2C2C),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[700]!),
-                        ),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2C2C2C),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[700]!),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                              Text(
+                                _isBuyOrder ? 'Comprar' : 'Vender',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  simulationProvider.cancelOrder();
+                                  setState(() {
+                                    _showOrderContainerInline = false;
+                                    _showSlTpOnOrderInline = false;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          // Mostrar precio de entrada
+                          Text(
+                            'Precio de entrada: ${_clickPrice?.toStringAsFixed(5) ?? "--"}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          if (_clickPrice != null &&
+                              simulationProvider.calculatedPositionSize !=
+                                  null &&
+                              simulationProvider.calculatedPositionSize! >
+                                  0) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Precio de SL: ' +
+                                  (() {
+                                    final riskAmount =
+                                        simulationProvider.currentBalance *
+                                        (_slRiskPercent / 100);
+                                    final priceDistance =
+                                        riskAmount /
+                                        simulationProvider
+                                            .calculatedPositionSize!;
+                                    final slPrice = _isBuyOrder
+                                        ? _clickPrice! - priceDistance
+                                        : _clickPrice! + priceDistance;
+                                    return slPrice.toStringAsFixed(5);
+                                  })(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              'Precio de TP: ' +
+                                  (() {
+                                    final potentialAmount =
+                                        simulationProvider.currentBalance *
+                                        (_tpRiskPercent / 100);
+                                    final priceDistance =
+                                        potentialAmount /
+                                        simulationProvider
+                                            .calculatedPositionSize!;
+                                    final tpPrice = _isBuyOrder
+                                        ? _clickPrice! + priceDistance
+                                        : _clickPrice! - priceDistance;
+                                    return tpPrice.toStringAsFixed(5);
+                                  })(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                          if (_showSlTpOnOrderInline) ...[
+                            const SizedBox(height: 16),
+                            // Stop Loss % Slider
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_clickPrice != null &&
+                                    simulationProvider.calculatedPositionSize !=
+                                        null &&
+                                    simulationProvider.currentBalance > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                    child: Text(
+                                      'Stop Loss: ${_slRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)})',
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                Slider(
+                                  value: _slRiskPercent.clamp(0.1, 100),
+                                  min: 0.1,
+                                  max: 100,
+                                  divisions: 999,
+                                  label:
+                                      '${_slRiskPercent.toStringAsFixed(1)}%',
+                                  activeColor: Colors.red,
+                                  inactiveColor: Colors.red.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  onChanged: (newPercent) {
+                                    setState(() => _slRiskPercent = newPercent);
+                                    if (simulationProvider
+                                                .calculatedPositionSize !=
+                                            null &&
+                                        simulationProvider
+                                                .calculatedPositionSize! >
+                                            0) {
+                                      final riskAmount =
+                                          simulationProvider.currentBalance *
+                                          (_slRiskPercent / 100);
+                                      final priceDistance =
+                                          riskAmount /
+                                          simulationProvider
+                                              .calculatedPositionSize!;
+                                      final slPrice = _isBuyOrder
+                                          ? _clickPrice! - priceDistance
+                                          : _clickPrice! + priceDistance;
+                                      simulationProvider.updateManualStopLoss(
+                                        slPrice,
+                                      );
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            // Take Profit % Slider
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_clickPrice != null &&
+                                    simulationProvider.calculatedPositionSize !=
+                                        null &&
+                                    simulationProvider.currentBalance > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                    child: Text(
+                                      'Take Profit: ${_tpRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)})',
+                                      style: const TextStyle(
+                                        color: Colors.green,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                Slider(
+                                  value: _tpRiskPercent.clamp(0.1, 100),
+                                  min: 0.1,
+                                  max: 100,
+                                  divisions: 999,
+                                  label:
+                                      '+${_tpRiskPercent.toStringAsFixed(1)}%',
+                                  activeColor: Colors.green,
+                                  inactiveColor: Colors.green.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  onChanged: (newPercent) {
+                                    setState(() => _tpRiskPercent = newPercent);
+                                    if (simulationProvider
+                                                .calculatedPositionSize !=
+                                            null &&
+                                        simulationProvider
+                                                .calculatedPositionSize! >
+                                            0) {
+                                      final potentialAmount =
+                                          simulationProvider.currentBalance *
+                                          (_tpRiskPercent / 100);
+                                      final priceDistance =
+                                          potentialAmount /
+                                          simulationProvider
+                                              .calculatedPositionSize!;
+                                      final tpPrice = _isBuyOrder
+                                          ? _clickPrice! + priceDistance
+                                          : _clickPrice! - priceDistance;
+                                      simulationProvider.updateManualTakeProfit(
+                                        tpPrice,
+                                      );
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          // Confirm Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed:
+                                  simulationProvider.canCalculatePosition() &&
+                                      _clickPrice != null &&
+                                      _slRiskPercent > 0 &&
+                                      _tpRiskPercent > 0
+                                  ? () {
+                                      debugPrint(
+                                        '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = ${_slRiskPercent}, TP % = ${_tpRiskPercent}',
+                                      );
+                                      // Calcular precios a partir de los porcentajes de riesgo/potencial
+                                      final riskAmount =
+                                          simulationProvider.currentBalance *
+                                          (_slRiskPercent / 100);
+                                      final tpAmount =
+                                          simulationProvider.currentBalance *
+                                          (_tpRiskPercent / 100);
+                                      final slPrice = _isBuyOrder
+                                          ? _clickPrice! -
+                                                (riskAmount /
+                                                    (simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1))
+                                          : _clickPrice! +
+                                                (riskAmount /
+                                                    (simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1));
+                                      final tpPrice = _isBuyOrder
+                                          ? _clickPrice! +
+                                                (tpAmount /
+                                                    (simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1))
+                                          : _clickPrice! -
+                                                (tpAmount /
+                                                    (simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1));
+                                      simulationProvider.updateManualStopLoss(
+                                        slPrice,
+                                      );
+                                      simulationProvider.updateManualTakeProfit(
+                                        tpPrice,
+                                      );
+                                      debugPrint(
+                                        '🔥 [CONFIRMAR] Orden ejecutada. SL final = $slPrice, TP final = $tpPrice',
+                                      );
+                                      simulationProvider.executeManualTrade(
+                                        type: _isBuyOrder ? 'buy' : 'sell',
+                                        amount:
+                                            simulationProvider
+                                                .calculatedPositionSize ??
+                                            0.0,
+                                        leverage:
+                                            simulationProvider
+                                                .calculatedLeverage
+                                                ?.toInt() ??
+                                            1,
+                                        entryPrice: _clickPrice!,
+                                      );
+                                      Future.delayed(
+                                        const Duration(milliseconds: 100),
+                                        () {
+                                          simulationProvider.resumeSimulation();
+                                        },
+                                      );
+                                      setState(() {
+                                        _showOrderContainerInline = false;
+                                        _showSlTpOnOrderInline = false;
+                                        _clickPrice = null;
+                                      });
+                                    }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isBuyOrder
+                                    ? const Color(0xFF21CE99)
+                                    : const Color(0xFFFF6B6B),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: Text(
+                                _isBuyOrder ? 'Comprar' : 'Vender',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Position summary - solo mostrar después de ejecutar la orden
+                          if (simulationProvider.inPosition) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E1E1E),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey[600]!),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _isBuyOrder ? 'Comprar' : 'Vender',
+                                    simulationProvider.getPositionSummaryText(),
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                       fontFamily: 'Inter',
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 20,
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Stop Loss: ${simulationProvider.manualStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 12,
+                                      fontFamily: 'Inter',
                                     ),
-                                    onPressed: () {
-                                      simulationProvider.resumeSimulation();
-                                      setState(() {
-                                        _showOrderContainerInline = false;
-                                      });
-                                    },
+                                  ),
+                                  Text(
+                                    'Take Profit: ${simulationProvider.manualTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                    style: const TextStyle(
+                                      color: Colors.green,
+                                      fontSize: 12,
+                                      fontFamily: 'Inter',
+                                    ),
                                   ),
                                 ],
                               ),
-
-                              // Confirm Button
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed:
-                                      simulationProvider.canCalculatePosition()
-                                      ? () {
-                                          // Calculate position parameters before executing
-                                          simulationProvider
-                                              .calculatePositionParameters(
-                                                _isBuyOrder ? 'buy' : 'sell',
-                                              );
-
-                                          if (simulationProvider
-                                              .setupParametersCalculated) {
-                                            simulationProvider.executeManualTrade(
-                                              type: _isBuyOrder
-                                                  ? 'buy'
-                                                  : 'sell',
-                                              amount:
-                                                  simulationProvider
-                                                      .calculatedPositionSize ??
-                                                  0.0,
-                                              leverage:
-                                                  simulationProvider
-                                                      .calculatedLeverage
-                                                      ?.toInt() ??
-                                                  1,
-                                            );
-                                            simulationProvider
-                                                .resumeSimulation();
-                                            setState(() {
-                                              _showOrderContainerInline = false;
-                                            });
-                                          } else {
-                                            // Show error snackbar
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: const Text(
-                                                  'No se puede calcular la posición: verifica tu setup.',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontFamily: 'Inter',
-                                                  ),
-                                                ),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isBuyOrder
-                                        ? const Color(0xFF21CE99)
-                                        : const Color(0xFFFF6B6B),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    _isBuyOrder ? 'Comprar' : 'Vender',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              // Position summary
-                              if (simulationProvider
-                                  .setupParametersCalculated) ...[
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF1E1E1E),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Colors.grey[600]!,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        simulationProvider
-                                            .getPositionSummaryText(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontFamily: 'Inter',
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Stop Loss: ${simulationProvider.calculatedStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
-                                        style: const TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 12,
-                                          fontFamily: 'Inter',
-                                        ),
-                                      ),
-                                      Text(
-                                        'Take Profit: ${simulationProvider.calculatedTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
-                                        style: const TextStyle(
-                                          color: Colors.green,
-                                          fontSize: 12,
-                                          fontFamily: 'Inter',
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -553,12 +809,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     onPressed: () {
-                                      final currentCandle =
-                                          simulationProvider
-                                              .historicalData[simulationProvider
-                                              .currentCandleIndex];
                                       simulationProvider.closeManualPosition(
-                                        currentCandle.close,
+                                        simulationProvider.currentTickPrice,
                                       );
                                     },
                                     icon: const Icon(Icons.close),
@@ -605,6 +857,52 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Debug Button (temporary)
+                    if (simulationProvider.setupParametersCalculated) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E1E),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey[600]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.bug_report,
+                                  color: Colors.orange,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Debug Info',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              simulationProvider.getDebugSLTPInfo(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ],
 
                   // --- Control de simulación con timeframe integrado ---
@@ -723,6 +1021,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               simulationProvider
                                                   .simulationSpeed,
                                               simulationProvider.currentBalance,
+                                              simulationProvider.activeSymbol ??
+                                                  'BTCUSD', // fallback to BTCUSD if no symbol set
                                             )
                                       : null,
                                   icon: const Icon(Icons.play_arrow),

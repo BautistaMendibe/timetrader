@@ -12,12 +12,32 @@ class Tick {
   Tick(this.time, this.price);
 }
 
-enum SimulationMode { automatic, manual }
+enum SimulationMode { manual }
 
 // --- TIMEFRAMES ---
 enum Timeframe { D1, H1, M15, M5, M1 }
 
 class SimulationProvider with ChangeNotifier {
+  /// Valores de pip para los pares más tradeados
+  static const Map<String, double> _pipValues = {
+    'EURUSD': 0.0001,
+    'EUR/USD': 0.0001,
+    'GBPUSD': 0.0001,
+    'GBP/USD': 0.0001,
+    'USDJPY': 0.01,
+    'USD/JPY': 0.01,
+    'AUDUSD': 0.0001,
+    'AUD/USD': 0.0001,
+    'USDCAD': 0.0001,
+    'USD/CAD': 0.0001,
+    'NZDUSD': 0.0001,
+    'NZD/USD': 0.0001,
+    'BTCUSD': 1.0,
+    'BTC/USD': 1.0,
+  };
+
+  String? _activeSymbol;
+
   SimulationResult? _currentSimulation;
   final List<SimulationResult> _simulationHistory = [];
 
@@ -40,10 +60,8 @@ class SimulationProvider with ChangeNotifier {
   int _currentCandleIndex = 0;
   double _currentBalance = 10000.0;
   List<Trade> _currentTrades = [];
-  List<Trade> _completedTrades =
-      []; // Lista de trades individuales (para compatibilidad)
-  List<CompletedTrade> _completedOperations =
-      []; // Nueva lista para operaciones completas
+  List<Trade> _completedTrades = [];
+  List<CompletedTrade> _completedOperations = [];
   List<double> _equityCurve = [];
   Setup? _currentSetup;
 
@@ -59,23 +77,12 @@ class SimulationProvider with ChangeNotifier {
   SimulationMode _simulationMode = SimulationMode.manual;
   double _simulationSpeed = 1.0; // candles per second
 
-  double? _manualStopLossPercent;
-  double? _manualTakeProfitPercent;
-
-  // New methods for automatic setup parameter reading and position calculation
+  // Calculated position parameters
   double? _calculatedPositionSize;
   double? _calculatedLeverage;
   double? _calculatedStopLossPrice;
   double? _calculatedTakeProfitPrice;
   bool _setupParametersCalculated = false;
-
-  // Default SL/TP values from setup (for the sliders)
-  double? _defaultStopLossPercent;
-  double? _defaultTakeProfitPercent;
-
-  // Track if SL/TP are enabled
-  bool _stopLossEnabled = false;
-  bool _takeProfitEnabled = false;
 
   // --- TICK SIMULATION STATE ---
   List<Tick> _syntheticTicks = [];
@@ -88,23 +95,43 @@ class SimulationProvider with ChangeNotifier {
   List<Tick> _currentCandleTicks = [];
   DateTime? _currentCandleStartTime;
 
-  // --- ESTADO DE PAUSA ---
-  bool _wasPaused = false;
-  int _pausedTickIndex = 0;
-  List<Tick> _pausedCandleTicks = [];
-  DateTime? _pausedCandleStartTime;
+  // --- ENVÍO DE TICK AL CHART ---
+  Function(Map<String, dynamic>)? _tickCallback;
 
-  int _tfRemainder = 0;
+  /// Fija el símbolo activo (desde SimulationSetupScreen)
+  void setActiveSymbol(String symbol) {
+    _activeSymbol = symbol;
+    final pipValue = _pipValue;
+    // debugPrint('🔥 SimulationProvider: símbolo activo = $_activeSymbol');
+    // debugPrint('🔥 SimulationProvider: pip value = $pipValue');
+
+    // Mostrar información específica del par
+    if (_activeSymbol != null) {
+      if (_activeSymbol!.contains('EUR') ||
+          _activeSymbol!.contains('GBP') ||
+          _activeSymbol!.contains('AUD') ||
+          _activeSymbol!.contains('NZD')) {
+        // debugPrint(
+        //   '🔥 SimulationProvider: Par de divisas mayor - pip value = 0.0001',
+        // );
+      } else if (_activeSymbol!.contains('JPY')) {
+        // debugPrint('🔥 SimulationProvider: Par con JPY - pip value = 0.01');
+      } else if (_activeSymbol!.contains('BTC')) {
+        // debugPrint('🔥 SimulationProvider: Criptomoneda - pip value = 1.0');
+      }
+    }
+  }
+
+  double get _pipValue =>
+      _pipValues[_activeSymbol] ?? 0.0001; // fallback genérico
+
+  String? get activeSymbol => _activeSymbol;
 
   double? get calculatedPositionSize => _calculatedPositionSize;
   double? get calculatedLeverage => _calculatedLeverage;
   double? get calculatedStopLossPrice => _calculatedStopLossPrice;
   double? get calculatedTakeProfitPrice => _calculatedTakeProfitPrice;
   bool get setupParametersCalculated => _setupParametersCalculated;
-  double? get defaultStopLossPercent => _defaultStopLossPercent;
-  double? get defaultTakeProfitPercent => _defaultTakeProfitPercent;
-  bool get stopLossEnabled => _stopLossEnabled;
-  bool get takeProfitEnabled => _takeProfitEnabled;
 
   SimulationResult? get currentSimulation => _currentSimulation;
   List<SimulationResult> get simulationHistory => _simulationHistory;
@@ -118,10 +145,8 @@ class SimulationProvider with ChangeNotifier {
   int get currentCandleIndex => _currentCandleIndex;
   double get currentBalance => _currentBalance;
   List<Trade> get currentTrades => _currentTrades;
-  List<Trade> get completedTrades =>
-      _completedTrades; // Getter para trades completados
-  List<CompletedTrade> get completedOperations =>
-      _completedOperations; // Getter para operaciones completas
+  List<Trade> get completedTrades => _completedTrades;
+  List<CompletedTrade> get completedOperations => _completedOperations;
   List<double> get equityCurve => _equityCurve;
   bool get inPosition => _inPosition;
   double get entryPrice => _entryPrice;
@@ -131,77 +156,41 @@ class SimulationProvider with ChangeNotifier {
   Setup? get currentSetup => _currentSetup;
   SimulationMode get simulationMode => _simulationMode;
   double get simulationSpeed => _simulationSpeed;
-  double? get manualStopLossPercent => _manualStopLossPercent;
-  double? get manualTakeProfitPercent => _manualTakeProfitPercent;
 
-  double? get manualStopLossPrice {
-    if (!_inPosition || !_stopLossEnabled) return null;
-    final entry = _entryPrice;
-
-    // Si hay valores manuales y están habilitados, usarlos
-    if (_manualStopLossPercent != null) {
-      final price = _manualPositionType == 'buy'
-          ? entry * (1 - _manualStopLossPercent! / 100)
-          : entry * (1 + _manualStopLossPercent! / 100);
-      debugPrint(
-        '🔥 SimulationProvider: manualStopLossPrice using manual value: $price (${_manualStopLossPercent}%)',
-      );
-      return price;
+  // Get current tick price (for manual trades when simulation is paused)
+  double get currentTickPrice {
+    if (_syntheticTicks.isEmpty ||
+        _currentTickIndex >= _syntheticTicks.length) {
+      final fallbackPrice = historicalData[_currentCandleIndex].close;
+      // debugPrint(
+      //   '🔥 SimulationProvider: currentTickPrice - usando precio de vela: $fallbackPrice (no hay ticks disponibles)',
+      // );
+      return fallbackPrice;
     }
-
-    // Si no hay valores manuales, usar los calculados del setup (solo si están habilitados)
-    if (_setupParametersCalculated &&
-        _calculatedStopLossPrice != null &&
-        _manualStopLossPercent != null) {
-      debugPrint(
-        '🔥 SimulationProvider: manualStopLossPrice using calculated value: $_calculatedStopLossPrice',
-      );
-      return _calculatedStopLossPrice;
-    }
-
-    debugPrint(
-      '🔥 SimulationProvider: manualStopLossPrice returning null (disabled)',
-    );
-    return null;
+    final tickPrice = _syntheticTicks[_currentTickIndex].price;
+    // debugPrint(
+    //   '🔥 SimulationProvider: currentTickPrice - tick $_currentTickIndex: $tickPrice (simulación ${_isSimulationRunning ? 'corriendo' : 'pausada'})',
+    // );
+    return tickPrice;
   }
 
-  double? get manualTakeProfitPrice {
-    if (!_inPosition || !_takeProfitEnabled) return null;
-    final entry = _entryPrice;
-
-    // Si hay valores manuales y están habilitados, usarlos
-    if (_manualTakeProfitPercent != null) {
-      final price = _manualPositionType == 'buy'
-          ? entry * (1 + _manualTakeProfitPercent! / 100)
-          : entry * (1 - _manualTakeProfitPercent! / 100);
-      debugPrint(
-        '🔥 SimulationProvider: manualTakeProfitPrice using manual value: $price (${_manualTakeProfitPercent}%)',
-      );
-      return price;
-    }
-
-    // Si no hay valores manuales, usar los calculados del setup (solo si están habilitados)
-    if (_setupParametersCalculated &&
-        _calculatedTakeProfitPrice != null &&
-        _manualTakeProfitPercent != null) {
-      debugPrint(
-        '🔥 SimulationProvider: manualTakeProfitPrice using calculated value: $_calculatedTakeProfitPrice',
-      );
-      return _calculatedTakeProfitPrice;
-    }
-
-    debugPrint(
-      '🔥 SimulationProvider: manualTakeProfitPrice returning null (disabled)',
-    );
-    return null;
+  // Nuevo: obtener el precio del tick visible (el tick anterior al actual)
+  double get lastVisibleTickPrice {
+    if (_syntheticTicks.isEmpty) return 0.0;
+    final idx = _currentTickIndex > 0 ? _currentTickIndex - 1 : 0;
+    final price = _syntheticTicks[idx].price;
+    // debugPrint(
+    //   '🔥 SimulationProvider: lastVisibleTickPrice - idx: $idx, price: $price',
+    // );
+    return price;
   }
 
-  // Calcula el P&L flotante basado en el precio actual
+  // Calcula el P&L flotante basado en el precio actual del tick
   double get unrealizedPnL {
     if (!_inPosition || _currentTrades.isEmpty) return 0.0;
 
     final lastTrade = _currentTrades.last;
-    final currentPrice = historicalData[_currentCandleIndex].close;
+    final currentPrice = currentTickPrice;
 
     if (lastTrade.type == 'buy') {
       return (currentPrice - lastTrade.price) *
@@ -220,26 +209,41 @@ class SimulationProvider with ChangeNotifier {
     return realizedPnL + unrealizedPnL;
   }
 
+  // Getters para compatibilidad con la UI
+  double? get manualStopLossPrice => _calculatedStopLossPrice;
+  double? get manualTakeProfitPrice => _calculatedTakeProfitPrice;
+  bool get isSimulationPaused => !_isSimulationRunning;
+
+  // Getters para SL/TP manuales (compatibilidad)
+  double? get manualStopLossPercent =>
+      null; // No se usan en la versión simplificada
+  double? get manualTakeProfitPercent =>
+      null; // No se usan en la versión simplificada
+  double? get defaultStopLossPercent =>
+      null; // No se usan en la versión simplificada
+  double? get defaultTakeProfitPercent =>
+      null; // No se usan en la versión simplificada
+
   void setHistoricalData(List<Candle> data) {
-    debugPrint(
-      '🔥 SimulationProvider: setHistoricalData() - Datos recibidos: ${data.length} velas',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: setHistoricalData() - Datos recibidos: ${data.length} velas',
+    // );
     if (data.isNotEmpty) {
-      debugPrint(
-        '🔥 SimulationProvider: Primera vela: ${data.first.timestamp} - ${data.first.close}',
-      );
-      debugPrint(
-        '🔥 SimulationProvider: Última vela: ${data.last.timestamp} - ${data.last.close}',
-      );
+      // debugPrint(
+      //   '🔥 SimulationProvider: Primera vela: ${data.first.timestamp} - ${data.first.close}',
+      // );
+      // debugPrint(
+      //   '🔥 SimulationProvider: Última vela: ${data.last.timestamp} - ${data.last.close}',
+      // );
     }
     loadRawData(data);
   }
 
   // --- MULTI-TIMEFRAME METHODS ---
   void loadRawData(List<Candle> raw) {
-    debugPrint(
-      '🔥 SimulationProvider: loadRawData() - Procesando ${raw.length} velas raw',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: loadRawData() - Procesando ${raw.length} velas raw',
+    // );
 
     // Reagrupar datos en todos los timeframes
     _allTimeframes = {
@@ -256,13 +260,13 @@ class SimulationProvider with ChangeNotifier {
 
     // Actualizar _ticksPerCandle según el timeframe inicial
     _ticksPerCandle = _ticksPerCandleMap[_activeTf]!;
-    debugPrint(
-      '🔥 SimulationProvider: _ticksPerCandle inicializado a $_ticksPerCandle para ${_activeTf.name}',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: _ticksPerCandle inicializado a $_ticksPerCandle para ${_activeTf.name}',
+    // );
 
-    debugPrint('🔥 SimulationProvider: Timeframes generados:');
+    // debugPrint('🔥 SimulationProvider: Timeframes generados:');
     for (final tf in Timeframe.values) {
-      debugPrint('  ${tf.name}: ${_allTimeframes[tf]!.length} velas');
+      // debugPrint('  ${tf.name}: ${_allTimeframes[tf]!.length} velas');
     }
 
     _notifyChartReset();
@@ -315,21 +319,6 @@ class SimulationProvider with ChangeNotifier {
     return aggregated;
   }
 
-  int _findClosestByTimestamp(List<Candle> candles, DateTime ts) {
-    int closestIndex = 0;
-    int minDifference = double.maxFinite.toInt();
-    for (int i = 0; i < candles.length; i++) {
-      final difference = (candles[i].timestamp.difference(
-        ts,
-      )).abs().inMilliseconds;
-      if (difference < minDifference) {
-        minDifference = difference;
-        closestIndex = i;
-      }
-    }
-    return closestIndex;
-  }
-
   void setTimeframe(Timeframe tf) {
     if (tf == _activeTf) return;
 
@@ -344,16 +333,14 @@ class SimulationProvider with ChangeNotifier {
 
     int newIndex;
     if (newTicks > oldTicks) {
-      // paso de TF menor → mayor: agrupo “factor” velas y guardo el resto
+      // paso de TF menor → mayor: agrupo "factor" velas y guardo el resto
       final factor = newTicks ~/ oldTicks;
       final fullGroups = oldIndex ~/ factor;
-      _tfRemainder = oldIndex % factor;
       newIndex = fullGroups;
     } else {
       // paso de TF mayor → menor: subdivido y reaplico el resto
       final factor = oldTicks ~/ newTicks;
-      newIndex = oldIndex * factor + _tfRemainder;
-      _tfRemainder = 0;
+      newIndex = oldIndex * factor;
     }
 
     // 2) clamp y notifica
@@ -362,21 +349,6 @@ class SimulationProvider with ChangeNotifier {
 
     _setupTicksForCurrentCandle();
     _notifyChartReset();
-  }
-
-  Duration _durationForTimeframe(Timeframe tf) {
-    switch (tf) {
-      case Timeframe.M1:
-        return const Duration(minutes: 1);
-      case Timeframe.M5:
-        return const Duration(minutes: 5);
-      case Timeframe.M15:
-        return const Duration(minutes: 15);
-      case Timeframe.H1:
-        return const Duration(hours: 1);
-      case Timeframe.D1:
-        return const Duration(days: 1);
-    }
   }
 
   void _setupTicksForCurrentCandle() {
@@ -420,8 +392,8 @@ class SimulationProvider with ChangeNotifier {
     _currentCandleIndex = 0;
     _currentBalance = initialBalance;
     _currentTrades = [];
-    _completedTrades = []; // Limpiar trades completados
-    _completedOperations = []; // Limpiar operaciones completas
+    _completedTrades = [];
+    _completedOperations = [];
     _equityCurve = [initialBalance];
     _isSimulationRunning = true;
     _currentSetup = setup;
@@ -440,13 +412,6 @@ class SimulationProvider with ChangeNotifier {
     _calculatedStopLossPrice = null;
     _calculatedTakeProfitPrice = null;
     _setupParametersCalculated = false;
-    // Reset default SL/TP values
-    _defaultStopLossPercent = null;
-    _defaultTakeProfitPercent = null;
-
-    // Reset SL/TP enabled state
-    _stopLossEnabled = false;
-    _takeProfitEnabled = false;
 
     _notifyChartReset();
   }
@@ -465,258 +430,6 @@ class SimulationProvider with ChangeNotifier {
     _isSimulationRunning = false;
     _finalizeSimulation();
     _notifySimulationState();
-  }
-
-  // Process next candle in simulation
-  void processNextCandle() {
-    if (!_isSimulationRunning ||
-        _currentCandleIndex >= historicalData.length - 1) {
-      stopSimulation();
-      return;
-    }
-
-    _currentCandleIndex++;
-    final currentCandle = historicalData[_currentCandleIndex];
-
-    debugPrint(
-      '🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}',
-    );
-
-    // Check if we need to close position due to stop loss or take profit
-    if (_inPosition) {
-      _checkStopLossAndTakeProfit(currentCandle);
-    }
-
-    // Check for new entry signals
-    if (!_inPosition) {
-      _checkEntrySignals(currentCandle);
-    }
-
-    // Update equity curve
-    _equityCurve.add(_currentBalance);
-    _notifyUIUpdate();
-  }
-
-  void _checkStopLossAndTakeProfit(Candle candle) {
-    if (!_inPosition) return;
-
-    bool shouldClose = false;
-    String closeReason = '';
-
-    // Check stop loss (only if it's greater than 0)
-    if (_stopLossPrice > 0 && candle.low <= _stopLossPrice) {
-      shouldClose = true;
-      closeReason = 'Stop Loss';
-    }
-
-    // Check take profit (only if it's greater than 0)
-    if (_takeProfitPrice > 0 && candle.high >= _takeProfitPrice) {
-      shouldClose = true;
-      closeReason = 'Take Profit';
-    }
-
-    if (shouldClose) {
-      _closePosition(candle.close, closeReason);
-    }
-  }
-
-  void _checkEntrySignals(Candle candle) {
-    if (_inPosition || _currentSetup == null) return;
-
-    // Simple breakout strategy for demonstration
-    // You can implement more sophisticated strategies here
-    if (_currentCandleIndex < 20)
-      return; // Need at least 20 candles for analysis
-
-    final lookbackPeriod = 20;
-    final highPrices = historicalData
-        .skip(_currentCandleIndex - lookbackPeriod)
-        .take(lookbackPeriod)
-        .map((c) => c.high)
-        .toList();
-
-    final lowPrices = historicalData
-        .skip(_currentCandleIndex - lookbackPeriod)
-        .take(lookbackPeriod)
-        .map((c) => c.low)
-        .toList();
-
-    final resistanceLevel = highPrices.reduce((a, b) => a > b ? a : b);
-    final supportLevel = lowPrices.reduce((a, b) => a < b ? a : b);
-
-    // Breakout strategy
-    if (candle.close > resistanceLevel &&
-        candle.volume > _getAverageVolume(lookbackPeriod) * 1.5) {
-      _openPosition('buy', candle.close, 'Breakout Long');
-    } else if (candle.close < supportLevel &&
-        candle.volume > _getAverageVolume(lookbackPeriod) * 1.5) {
-      _openPosition('sell', candle.close, 'Breakout Short');
-    }
-  }
-
-  double _getAverageVolume(int period) {
-    final volumes = historicalData
-        .skip(_currentCandleIndex - period)
-        .take(period)
-        .map((c) => c.volume)
-        .toList();
-    return volumes.reduce((a, b) => a + b) / volumes.length;
-  }
-
-  void _openPosition(String type, double price, String reason) {
-    if (_currentSetup == null) return;
-
-    _inPosition = true;
-    _entryPrice = price;
-
-    // Calcular el tamaño de la posición basado en el riesgo del setup
-    double riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
-
-    // Calcular el tamaño de la posición basado en la distancia del stop loss
-    double stopLossDistance = _currentSetup!.stopLossDistance;
-    double positionSize;
-
-    if (_currentSetup!.stopLossType == StopLossType.pips) {
-      // Convertir pips a precio (asumiendo que 1 pip = 0.0001 para la mayoría de pares)
-      double pipValue = 0.0001;
-      double priceDistance = stopLossDistance * pipValue;
-      positionSize = riskAmount / priceDistance;
-    } else {
-      // Usar distancia en precio directamente
-      positionSize = riskAmount / stopLossDistance;
-    }
-
-    _positionSize = positionSize;
-
-    // Calcular stop loss y take profit
-    double takeProfitRatio = _currentSetup!.getEffectiveTakeProfitRatio();
-
-    if (type == 'buy') {
-      _stopLossPrice = price - stopLossDistance;
-      _takeProfitPrice = price + (stopLossDistance * takeProfitRatio);
-    } else {
-      _stopLossPrice = price + stopLossDistance;
-      _takeProfitPrice = price - (stopLossDistance * takeProfitRatio);
-    }
-
-    // Execute trade
-    executeTrade(type, price, _positionSize, reason);
-
-    debugPrint(
-      '🔥 SimulationProvider: Posición abierta - Tipo: $type, Precio: $price, Tamaño: $_positionSize, Razón: $reason',
-    );
-  }
-
-  void _closePosition(double price, String reason) {
-    if (!_inPosition) return;
-    final lastTrade = _currentTrades.last;
-    final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
-    final pnl = lastTrade.type == 'buy'
-        ? (price - lastTrade.price) *
-              lastTrade.quantity *
-              (lastTrade.leverage ?? 1)
-        : (lastTrade.price - price) *
-              lastTrade.quantity *
-              (lastTrade.leverage ?? 1);
-
-    final tradeGroupId = DateTime.now().millisecondsSinceEpoch.toString();
-
-    // Crear trade de cierre con el mismo tradeGroupId
-    final closeTrade = Trade(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: historicalData[_currentCandleIndex].timestamp,
-      type: closeType,
-      price: price,
-      quantity: lastTrade.quantity,
-      candleIndex: _currentCandleIndex,
-      reason: reason,
-      amount: lastTrade.amount,
-      leverage: lastTrade.leverage,
-      pnl: pnl,
-      tradeGroupId: tradeGroupId,
-    );
-
-    // Actualizar el trade de entrada con el mismo tradeGroupId
-    final entryTrade = Trade(
-      id: lastTrade.id,
-      timestamp: lastTrade.timestamp,
-      type: lastTrade.type,
-      price: lastTrade.price,
-      quantity: lastTrade.quantity,
-      candleIndex: lastTrade.candleIndex,
-      reason: lastTrade.reason,
-      amount: lastTrade.amount,
-      leverage: lastTrade.leverage,
-      pnl: 0.0, // El P&L se calcula en el trade de salida
-      tradeGroupId: tradeGroupId,
-    );
-
-    _currentTrades.add(closeTrade);
-    _currentBalance += pnl;
-
-    // Crear la operación completa
-    final completedOperation = CompletedTrade(
-      id: tradeGroupId,
-      entryTrade: entryTrade,
-      exitTrade: closeTrade,
-      totalPnL: pnl,
-      entryTime: entryTrade.timestamp,
-      exitTime: closeTrade.timestamp,
-      entryPrice: entryTrade.price,
-      exitPrice: closeTrade.price,
-      quantity: entryTrade.quantity,
-      leverage: entryTrade.leverage,
-      reason: reason,
-    );
-
-    _completedOperations.add(completedOperation);
-
-    // Mantener compatibilidad con la lista anterior
-    _completedTrades.add(entryTrade);
-    _completedTrades.add(closeTrade);
-
-    _inPosition = false;
-    _entryPrice = 0.0;
-    _positionSize = 0.0;
-    _stopLossPrice = 0.0;
-    _takeProfitPrice = 0.0;
-    _currentTrades.clear();
-
-    // Reset default SL/TP values
-    _defaultStopLossPercent = null;
-    _defaultTakeProfitPercent = null;
-
-    // Reset SL/TP enabled state
-    _stopLossEnabled = false;
-    _takeProfitEnabled = false;
-
-    debugPrint(
-      '🔥 SimulationProvider: Posición cerrada - Precio: $price, Razón: $reason, P&L: $pnl',
-    );
-    _notifyUIUpdate();
-  }
-
-  void executeTrade(
-    String type,
-    double price,
-    double quantity, [
-    String? reason,
-  ]) {
-    final trade = Trade(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: historicalData[_currentCandleIndex].timestamp,
-      type: type,
-      price: price,
-      quantity: quantity,
-      candleIndex: _currentCandleIndex,
-      reason: reason,
-    );
-    _currentTrades.add(trade);
-
-    // El P&L se calculará cuando se cierre la posición
-    // No calcular P&L aquí para evitar duplicación
-
-    _notifyUIUpdate();
   }
 
   void _finalizeSimulation() {
@@ -741,9 +454,9 @@ class SimulationProvider with ChangeNotifier {
       netPnL: _currentBalance - 10000.0,
       winRate: winRate,
       maxDrawdown: maxDrawdown,
-      totalTrades: completedOperations.length, // Solo operaciones completas
+      totalTrades: completedOperations.length,
       winningTrades: winningTrades,
-      trades: _completedTrades, // Mantener compatibilidad
+      trades: _completedTrades,
       equityCurve: _equityCurve,
     );
 
@@ -776,8 +489,8 @@ class SimulationProvider with ChangeNotifier {
     _currentCandleIndex = 0;
     _currentBalance = 10000.0;
     _currentTrades = [];
-    _completedTrades = []; // Limpiar trades completados
-    _completedOperations = []; // Limpiar operaciones completas
+    _completedTrades = [];
+    _completedOperations = [];
     _equityCurve = [];
     _isSimulationRunning = false;
     _inPosition = false;
@@ -833,76 +546,9 @@ class SimulationProvider with ChangeNotifier {
       '🔥 SimulationProvider: Procesando vela $_currentCandleIndex: ${currentCandle.timestamp} - Precio: ${currentCandle.close}',
     );
 
-    // Verificar SL/TP manuales si hay posición abierta
-    if (_inPosition) {
-      _checkManualStopLossAndTakeProfit(currentCandle);
-    }
-
-    // En modo manual, NO ejecutar lógica automática de stop loss/take profit ni señales de entrada
-    // Solo actualizar la equity curve
+    // En modo manual, solo actualizar la equity curve
     _equityCurve.add(_currentBalance);
     _notifyUIUpdate();
-  }
-
-  void _checkManualStopLossAndTakeProfit(Candle candle) {
-    if (!_inPosition) return;
-
-    bool shouldClose = false;
-    String closeReason = '';
-    double exitPrice = candle.close;
-
-    // Verificar Stop Loss manual
-    final slPrice = manualStopLossPrice;
-    if (slPrice != null) {
-      debugPrint(
-        '🔥 SimulationProvider: Checking SL at $slPrice (manual: $_manualStopLossPercent%, default: $_defaultStopLossPercent%)',
-      );
-      if (_manualPositionType == 'buy') {
-        // Para compra: SL se activa cuando el precio baja
-        if (candle.low <= slPrice) {
-          shouldClose = true;
-          closeReason = 'Stop Loss Manual';
-          exitPrice = slPrice;
-        }
-      } else {
-        // Para venta: SL se activa cuando el precio sube
-        if (candle.high >= slPrice) {
-          shouldClose = true;
-          closeReason = 'Stop Loss Manual';
-          exitPrice = slPrice;
-        }
-      }
-    }
-
-    // Verificar Take Profit manual
-    final tpPrice = manualTakeProfitPrice;
-    if (tpPrice != null) {
-      debugPrint(
-        '🔥 SimulationProvider: Checking TP at $tpPrice (manual: $_manualTakeProfitPercent%, default: $_defaultTakeProfitPercent%)',
-      );
-      if (_manualPositionType == 'buy') {
-        // Para compra: TP se activa cuando el precio sube
-        if (candle.high >= tpPrice) {
-          shouldClose = true;
-          closeReason = 'Take Profit Manual';
-          exitPrice = tpPrice;
-        }
-      } else {
-        // Para venta: TP se activa cuando el precio baja
-        if (candle.low <= tpPrice) {
-          shouldClose = true;
-          closeReason = 'Take Profit Manual';
-          exitPrice = tpPrice;
-        }
-      }
-    }
-
-    if (shouldClose) {
-      closeManualPosition(exitPrice);
-      debugPrint(
-        '🔥 SimulationProvider: Posición cerrada por $closeReason - Precio: $exitPrice',
-      );
-    }
   }
 
   void goToCandle(int index) {
@@ -928,27 +574,135 @@ class SimulationProvider with ChangeNotifier {
     _notifyUIUpdate();
   }
 
+  // --- MÉTODO PRINCIPAL: CÁLCULO DE PARÁMETROS DE POSICIÓN ---
+  void calculatePositionParameters(String type, double entryPrice) {
+    if (_currentSetup == null || historicalData.isEmpty) {
+      _setupParametersCalculated = false;
+      return;
+    }
+
+    // 1. Calculate risk amount
+    final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
+
+    // 2. Calculate stop loss distance in price
+    double priceDistance;
+    if (_currentSetup!.stopLossType == StopLossType.pips) {
+      // Convert pips to price using the appropriate pip value for the active symbol
+      final double pipValue = _pipValue;
+      priceDistance = _currentSetup!.stopLossDistance * pipValue;
+      debugPrint(
+        '🔥 SimulationProvider: SL calculation - Setup SL: ${_currentSetup!.stopLossDistance} pips, Pip Value: $pipValue, Active Symbol: $_activeSymbol, SL Distance: $priceDistance',
+      );
+    } else {
+      // Use price distance directly
+      priceDistance = _currentSetup!.stopLossDistance;
+      debugPrint(
+        '🔥 SimulationProvider: SL calculation - Setup SL: ${_currentSetup!.stopLossDistance} (price distance), SL Distance: $priceDistance',
+      );
+    }
+
+    // 3. Calculate position size
+    if (priceDistance <= 0) {
+      _setupParametersCalculated = false;
+      return;
+    }
+
+    _calculatedPositionSize = riskAmount / priceDistance;
+
+    // 4. Set leverage (use setup leverage if defined, otherwise 1x)
+    _calculatedLeverage = 1.0; // Default leverage
+
+    // 5. Calculate stop loss and take profit prices using ENTRY PRICE
+    final takeProfitRR = _currentSetup!.getEffectiveTakeProfitRatio();
+
+    debugPrint(
+      '🔥 SimulationProvider: DEBUG - Entry Price: $entryPrice, Price Distance: $priceDistance, Take Profit RR: $takeProfitRR',
+    );
+    debugPrint(
+      '🔥 SimulationProvider: DEBUG - Setup Take Profit Ratio: ${_currentSetup!.takeProfitRatio}, Custom Value: ${_currentSetup!.customTakeProfitRatio}',
+    );
+
+    // Mostrar cálculo de pips para mayor claridad
+    if (_currentSetup!.stopLossType == StopLossType.pips) {
+      final pipsDistance = _currentSetup!.stopLossDistance;
+      final calculatedPips = priceDistance / _pipValue;
+      debugPrint(
+        '🔥 SimulationProvider: DEBUG - Pips calculation: ${pipsDistance} pips × ${_pipValue} pip value = ${calculatedPips} price distance',
+      );
+    }
+
+    if (type == 'buy') {
+      _calculatedStopLossPrice = entryPrice - priceDistance;
+      _calculatedTakeProfitPrice = entryPrice + (priceDistance * takeProfitRR);
+      debugPrint(
+        '🔥 SimulationProvider: DEBUG - BUY - SL: $_calculatedStopLossPrice (${entryPrice} - ${priceDistance}), TP: $_calculatedTakeProfitPrice (${entryPrice} + ${priceDistance} * ${takeProfitRR})',
+      );
+    } else {
+      _calculatedStopLossPrice = entryPrice + priceDistance;
+      _calculatedTakeProfitPrice = entryPrice - (priceDistance * takeProfitRR);
+      debugPrint(
+        '🔥 SimulationProvider: DEBUG - SELL - SL: $_calculatedStopLossPrice (${entryPrice} + ${priceDistance}), TP: $_calculatedTakeProfitPrice (${entryPrice} - ${priceDistance} * ${takeProfitRR})',
+      );
+    }
+
+    _setupParametersCalculated = true;
+    debugPrint(
+      '🔥 SimulationProvider: Position parameters calculated - Entry: $entryPrice, Size: $_calculatedPositionSize, SL: $_calculatedStopLossPrice, TP: $_calculatedTakeProfitPrice',
+    );
+  }
+
+  // --- MÉTODO PARA EJECUTAR TRADE MANUAL ---
   void executeManualTrade({
     required String type,
     required double amount,
     required int leverage,
+    double? entryPrice, // Precio de entrada específico (opcional)
   }) {
     if (_currentSetup == null) return;
 
-    // Calculate position parameters first
-    calculatePositionParameters(type);
+    // Use provided entry price or current tick price
+    final price = entryPrice ?? currentTickPrice;
 
-    if (!_setupParametersCalculated) {
-      debugPrint('🔥 SimulationProvider: Cannot calculate position parameters');
-      return;
+    // Si se proporciona un precio específico, usar el tiempo del tick actual
+    // para mantener la sincronización temporal
+    final currentTime = entryPrice != null
+        ? (_syntheticTicks.isNotEmpty &&
+                  _currentTickIndex < _syntheticTicks.length
+              ? _syntheticTicks[_currentTickIndex].time
+              : historicalData[_currentCandleIndex].timestamp)
+        : (_syntheticTicks.isNotEmpty &&
+                  _currentTickIndex < _syntheticTicks.length
+              ? _syntheticTicks[_currentTickIndex].time
+              : historicalData[_currentCandleIndex].timestamp);
+
+    debugPrint(
+      '🔥 SimulationProvider: executeManualTrade - Using price: $price (${entryPrice != null ? 'provided entry price' : 'current tick price'})',
+    );
+    debugPrint(
+      '🔥 SimulationProvider: executeManualTrade - Current tick index: $_currentTickIndex, Total ticks: ${_syntheticTicks.length}',
+    );
+    if (entryPrice != null) {
+      debugPrint(
+        '🔥 SimulationProvider: executeManualTrade - Entry price provided: $entryPrice, will use this exact price',
+      );
     }
 
-    final candle = historicalData[_currentCandleIndex];
-    final price = candle.close;
+    // Solo calcular parámetros si SL o TP no fueron seteados manualmente
+    if (_calculatedStopLossPrice == null ||
+        _calculatedTakeProfitPrice == null) {
+      debugPrint(
+        '🔥 SimulationProvider: executeManualTrade - Calculando parámetros con precio: $price (no hay SL/TP manual)',
+      );
+      calculatePositionParameters(type, price);
+    } else {
+      debugPrint(
+        '🔥 SimulationProvider: executeManualTrade - Usando SL/TP manual: SL=$_calculatedStopLossPrice, TP=$_calculatedTakeProfitPrice',
+      );
+    }
 
     final trade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: candle.timestamp,
+      timestamp: currentTime,
       type: type,
       price: price,
       quantity: _calculatedPositionSize!,
@@ -961,48 +715,25 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = true;
     _entryPrice = price;
     _positionSize = _calculatedPositionSize!;
-    _manualMargin = _currentBalance * (_currentSetup!.riskPercent / 100);
-    _manualPositionType = type; // Guardar el tipo de operación
+    _manualPositionType = type;
 
-    // Set the calculated SL/TP prices for the chart and default values for sliders
-    // Solo establecer los valores por defecto si no hay valores manuales previos
-    if (_manualStopLossPercent == null) {
-      _manualStopLossPercent = _defaultStopLossPercent;
-      _stopLossEnabled = _defaultStopLossPercent != null;
+    // Enviar datos al WebView para dibujar las líneas
+    if (_tickCallback != null) {
+      final msg = {
+        'entryPrice': price,
+        'stopLoss': _calculatedStopLossPrice,
+        'takeProfit': _calculatedTakeProfitPrice,
+      };
       debugPrint(
-        '🔥 SimulationProvider: Setting default SL: $_manualStopLossPercent%, Enabled: $_stopLossEnabled',
+        '🔥 SimulationProvider: Enviando datos de posición al WebView: $msg',
       );
-    } else {
-      _stopLossEnabled = true;
-      debugPrint(
-        '🔥 SimulationProvider: Keeping manual SL: $_manualStopLossPercent%, Enabled: $_stopLossEnabled',
-      );
+      _tickCallback!(msg);
     }
-    if (_manualTakeProfitPercent == null) {
-      _manualTakeProfitPercent = _defaultTakeProfitPercent;
-      _takeProfitEnabled = _defaultTakeProfitPercent != null;
-      debugPrint(
-        '🔥 SimulationProvider: Setting default TP: $_manualTakeProfitPercent%, Enabled: $_takeProfitEnabled',
-      );
-    } else {
-      _takeProfitEnabled = true;
-      debugPrint(
-        '🔥 SimulationProvider: Keeping manual TP: $_manualTakeProfitPercent%, Enabled: $_takeProfitEnabled',
-      );
-    }
-
-    debugPrint(
-      '🔥 SimulationProvider: executeManualTrade - SL: $_manualStopLossPercent%, TP: $_manualTakeProfitPercent%',
-    );
-    debugPrint(
-      '🔥 SimulationProvider: executeManualTrade - SL Price: ${manualStopLossPrice}, TP Price: ${manualTakeProfitPrice}',
-    );
 
     _notifyUIUpdate();
   }
 
-  double _manualMargin = 0.0;
-
+  // --- MÉTODO PARA CERRAR POSICIÓN MANUAL ---
   void closeManualPosition(double exitPrice) {
     if (!_inPosition) return;
     final lastTrade = _currentTrades.last;
@@ -1073,10 +804,7 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
-    _manualMargin = 0.0;
     _manualPositionType = 'buy';
-    _manualStopLossPercent = null;
-    _manualTakeProfitPercent = null;
 
     // Reset calculated parameters
     _calculatedPositionSize = null;
@@ -1086,219 +814,27 @@ class SimulationProvider with ChangeNotifier {
     _setupParametersCalculated = false;
 
     _currentTrades.clear();
-    _notifyUIUpdate();
-  }
 
-  void setManualSLTP({double? stopLossPercent, double? takeProfitPercent}) {
-    // Si se pasa null explícitamente, limpiar el valor
-    if (stopLossPercent == null) {
-      _manualStopLossPercent = null;
-    } else if (stopLossPercent > 0) {
-      _manualStopLossPercent = stopLossPercent;
-    } else {
-      _manualStopLossPercent = null;
-    }
-
-    if (takeProfitPercent == null) {
-      _manualTakeProfitPercent = null;
-    } else if (takeProfitPercent > 0) {
-      _manualTakeProfitPercent = takeProfitPercent;
-    } else {
-      _manualTakeProfitPercent = null;
+    // Enviar señal de cierre de orden al WebView para limpiar las líneas
+    if (_tickCallback != null) {
+      final closeOrderMsg = {'closeOrder': true};
+      debugPrint('🔥 SimulationProvider: Enviando señal closeOrder al WebView');
+      _tickCallback!(closeOrderMsg);
     }
 
     _notifyUIUpdate();
   }
 
-  // Métodos separados para manejar SL y TP de forma independiente
-  void setManualStopLoss(double? stopLossPercent) {
-    if (stopLossPercent == null) {
-      _manualStopLossPercent = null;
-      _stopLossEnabled = false;
-    } else if (stopLossPercent > 0) {
-      _manualStopLossPercent = stopLossPercent;
-      _stopLossEnabled = true;
-    } else {
-      _manualStopLossPercent = null;
-      _stopLossEnabled = false;
-    }
-    debugPrint(
-      '🔥 SimulationProvider: setManualStopLoss - SL: $_manualStopLossPercent%, Enabled: $_stopLossEnabled',
-    );
-    _notifyUIUpdate();
-  }
-
-  void setManualTakeProfit(double? takeProfitPercent) {
-    if (takeProfitPercent == null) {
-      _manualTakeProfitPercent = null;
-      _takeProfitEnabled = false;
-    } else if (takeProfitPercent > 0) {
-      _manualTakeProfitPercent = takeProfitPercent;
-      _takeProfitEnabled = true;
-    } else {
-      _manualTakeProfitPercent = null;
-      _takeProfitEnabled = false;
-    }
-    debugPrint(
-      '🔥 SimulationProvider: setManualTakeProfit - TP: $_manualTakeProfitPercent%, Enabled: $_takeProfitEnabled',
-    );
-    _notifyUIUpdate();
-  }
-
-  // Cierre parcial de la posición abierta
-  void closePartialPosition(double percent) {
-    if (!_inPosition || percent <= 0 || percent > 100) return;
-    final lastTrade = _currentTrades.last;
-    final closeType = lastTrade.type == 'buy' ? 'sell' : 'buy';
-    final currentPrice = historicalData[_currentCandleIndex].close;
-    final qtyToClose = lastTrade.quantity * (percent / 100);
-    final pnl = lastTrade.type == 'buy'
-        ? (currentPrice - lastTrade.price) *
-              qtyToClose *
-              (lastTrade.leverage ?? 1)
-        : (lastTrade.price - currentPrice) *
-              qtyToClose *
-              (lastTrade.leverage ?? 1);
-
-    final tradeGroupId = DateTime.now().millisecondsSinceEpoch.toString();
-
-    final closeTrade = Trade(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: historicalData[_currentCandleIndex].timestamp,
-      type: closeType,
-      price: currentPrice,
-      quantity: qtyToClose,
-      candleIndex: _currentCandleIndex,
-      reason: 'Cierre Parcial',
-      amount: lastTrade.amount != null
-          ? lastTrade.amount! * (percent / 100)
-          : null,
-      leverage: lastTrade.leverage,
-      pnl: pnl,
-      tradeGroupId: tradeGroupId,
-    );
-
-    _currentTrades.add(closeTrade);
-    _currentBalance += pnl;
-    final newQty = lastTrade.quantity - qtyToClose;
-
-    if (newQty <= 0.00001) {
-      // Si se cierra completamente la posición, crear la operación completa
-      final entryTrade = Trade(
-        id: lastTrade.id,
-        timestamp: lastTrade.timestamp,
-        type: lastTrade.type,
-        price: lastTrade.price,
-        quantity: lastTrade.quantity,
-        candleIndex: lastTrade.candleIndex,
-        reason: lastTrade.reason,
-        amount: lastTrade.amount,
-        leverage: lastTrade.leverage,
-        pnl: 0.0,
-        tradeGroupId: tradeGroupId,
+  // --- MÉTODO PARA CANCELAR ÓRDENES ---
+  void cancelOrder() {
+    // Enviar señal de cierre de orden al WebView para limpiar las líneas
+    if (_tickCallback != null) {
+      final closeOrderMsg = {'closeOrder': true};
+      debugPrint(
+        '🔥 SimulationProvider: Enviando señal closeOrder al WebView (cancelación)',
       );
-
-      // Crear la operación completa
-      final completedOperation = CompletedTrade(
-        id: tradeGroupId,
-        entryTrade: entryTrade,
-        exitTrade: closeTrade,
-        totalPnL: pnl,
-        entryTime: entryTrade.timestamp,
-        exitTime: closeTrade.timestamp,
-        entryPrice: entryTrade.price,
-        exitPrice: closeTrade.price,
-        quantity: entryTrade.quantity,
-        leverage: entryTrade.leverage,
-        reason: 'Cierre Parcial',
-      );
-
-      _completedOperations.add(completedOperation);
-
-      // Mantener compatibilidad con la lista anterior
-      _completedTrades.add(entryTrade);
-      _completedTrades.add(closeTrade);
-
-      _inPosition = false;
-      _entryPrice = 0.0;
-      _positionSize = 0.0;
-      _manualMargin = 0.0;
-      _manualPositionType = 'buy';
-      _manualStopLossPercent = null;
-      _manualTakeProfitPercent = null;
-      _currentTrades.clear();
-    } else {
-      _positionSize = newQty;
-      _manualMargin = _manualMargin * (1 - percent / 100);
+      _tickCallback!(closeOrderMsg);
     }
-    _notifyUIUpdate();
-  }
-
-  // New methods for automatic setup parameter reading and position calculation
-  void calculatePositionParameters(String tradeType) {
-    if (_currentSetup == null || historicalData.isEmpty) {
-      _setupParametersCalculated = false;
-      return;
-    }
-
-    final currentPrice = historicalData[_currentCandleIndex].close;
-
-    // 1. Calculate risk amount
-    final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
-
-    // 2. Calculate stop loss distance in price
-    double slPriceDistance;
-    if (_currentSetup!.stopLossType == StopLossType.pips) {
-      // Convert pips to price (assuming 1 pip = 0.0001 for most pairs)
-      const double pipValue = 0.0001;
-      slPriceDistance = _currentSetup!.stopLossDistance * pipValue;
-    } else {
-      // Use price distance directly
-      slPriceDistance = _currentSetup!.stopLossDistance;
-    }
-
-    // 3. Calculate position size
-    if (slPriceDistance <= 0) {
-      _setupParametersCalculated = false;
-      return;
-    }
-
-    _calculatedPositionSize = riskAmount / slPriceDistance;
-
-    // 4. Set leverage (use setup leverage if defined, otherwise 1x)
-    _calculatedLeverage = 1.0; // Default leverage
-
-    // 5. Calculate stop loss and take profit prices
-    final takeProfitRatio = _currentSetup!.getEffectiveTakeProfitRatio();
-
-    if (tradeType == 'buy') {
-      _calculatedStopLossPrice = currentPrice - slPriceDistance;
-      _calculatedTakeProfitPrice =
-          currentPrice + (slPriceDistance * takeProfitRatio);
-    } else {
-      _calculatedStopLossPrice = currentPrice + slPriceDistance;
-      _calculatedTakeProfitPrice =
-          currentPrice - (slPriceDistance * takeProfitRatio);
-    }
-
-    // 6. Calculate default SL/TP percentages for the sliders
-    if (tradeType == 'buy') {
-      _defaultStopLossPercent = (slPriceDistance / currentPrice) * 100;
-      _defaultTakeProfitPercent =
-          (slPriceDistance * takeProfitRatio / currentPrice) * 100;
-    } else {
-      _defaultStopLossPercent = (slPriceDistance / currentPrice) * 100;
-      _defaultTakeProfitPercent =
-          (slPriceDistance * takeProfitRatio / currentPrice) * 100;
-    }
-
-    _setupParametersCalculated = true;
-    debugPrint(
-      '🔥 SimulationProvider: Position parameters calculated - Size: $_calculatedPositionSize, SL: $_calculatedStopLossPrice, TP: $_calculatedTakeProfitPrice',
-    );
-    debugPrint(
-      '🔥 SimulationProvider: Default percentages - SL: ${_defaultStopLossPercent?.toStringAsFixed(2)}%, TP: ${_defaultTakeProfitPercent?.toStringAsFixed(2)}%',
-    );
   }
 
   // Validate if position can be calculated
@@ -1308,15 +844,19 @@ class SimulationProvider with ChangeNotifier {
     final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
     if (riskAmount <= 0) return false;
 
-    double slPriceDistance;
+    double priceDistance;
     if (_currentSetup!.stopLossType == StopLossType.pips) {
-      const double pipValue = 0.0001;
-      slPriceDistance = _currentSetup!.stopLossDistance * pipValue;
+      final double pipValue = _pipValue;
+      priceDistance = _currentSetup!.stopLossDistance * pipValue;
     } else {
-      slPriceDistance = _currentSetup!.stopLossDistance;
+      priceDistance = _currentSetup!.stopLossDistance;
     }
 
-    return slPriceDistance > 0;
+    if (priceDistance <= 0) return false;
+
+    // Verificar que se pueda calcular el tamaño de la posición
+    final positionSize = riskAmount / priceDistance;
+    return positionSize > 0;
   }
 
   // Get position summary text
@@ -1327,6 +867,54 @@ class SimulationProvider with ChangeNotifier {
 
     final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
     return 'Posición: ${_calculatedPositionSize!.toStringAsFixed(4)} unidades @ ${_calculatedLeverage!.toStringAsFixed(0)}x (riesgo ${_currentSetup!.riskPercent.toStringAsFixed(1)}% = \$${riskAmount.toStringAsFixed(0)})';
+  }
+
+  // Debug method to show detailed SL/TP calculation info
+  String getDebugSLTPInfo() {
+    if (_currentSetup == null) {
+      return 'No hay setup configurado';
+    }
+
+    final currentPrice = currentTickPrice;
+    final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
+    final pipValue = _pipValue;
+    final takeProfitRatio = _currentSetup!.getEffectiveTakeProfitRatio();
+
+    String info = '🔍 DEBUG SL/TP INFO:\n';
+    info += '• Activo: $_activeSymbol\n';
+    info += '• Pip Value: $pipValue\n';
+    info +=
+        '• Setup SL: ${_currentSetup!.stopLossDistance} ${_currentSetup!.stopLossType == StopLossType.pips ? 'pips' : 'price'}\n';
+    info += '• Setup TP Ratio: $takeProfitRatio\n';
+    info += '• Current Tick Price: $currentPrice\n';
+    info +=
+        '• Candle Close Price: ${historicalData[_currentCandleIndex].close}\n';
+    info += '• Tick Index: $_currentTickIndex/${_syntheticTicks.length}\n';
+    info += '• Risk Amount: \$${riskAmount.toStringAsFixed(2)}\n';
+    info += '• In Position: $_inPosition\n';
+    info += '• Entry Price: ${_entryPrice.toStringAsFixed(5)}\n';
+    info +=
+        '• Calculated SL Price: ${_calculatedStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}\n';
+    info +=
+        '• Calculated TP Price: ${_calculatedTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}';
+
+    // Agregar información de diferencias para mayor claridad
+    if (_calculatedStopLossPrice != null &&
+        _calculatedTakeProfitPrice != null &&
+        _entryPrice > 0) {
+      final slDiff = _calculatedStopLossPrice! - _entryPrice;
+      final tpDiff = _calculatedTakeProfitPrice! - _entryPrice;
+      final slPercent = (slDiff / _entryPrice) * 100;
+      final tpPercent = (tpDiff / _entryPrice) * 100;
+
+      info +=
+          '\n• SL Distance: ${slDiff.toStringAsFixed(6)} (${slPercent.toStringAsFixed(4)}%)\n';
+      info +=
+          '• TP Distance: ${tpDiff.toStringAsFixed(6)} (${tpPercent.toStringAsFixed(4)}%)\n';
+      info += '• TP/SL Ratio: ${(tpDiff / slDiff).abs().toStringAsFixed(2)}:1';
+    }
+
+    return info;
   }
 
   // Exponer configuración para la UI
@@ -1374,7 +962,9 @@ class SimulationProvider with ChangeNotifier {
     DateTime startDate,
     double speed,
     double initialBalance,
+    String symbol,
   ) {
+    setActiveSymbol(symbol);
     debugPrint('🔥🔥🔥 INICIANDO SIMULACIÓN TICK A TICK 🔥🔥🔥');
     debugPrint('🔥 Setup: ${setup.name}');
     debugPrint('🔥 Velocidad: $speed');
@@ -1407,19 +997,11 @@ class SimulationProvider with ChangeNotifier {
     _calculatedStopLossPrice = null;
     _calculatedTakeProfitPrice = null;
     _setupParametersCalculated = false;
-    _defaultStopLossPercent = null;
-    _defaultTakeProfitPercent = null;
-    _stopLossEnabled = false;
-    _takeProfitEnabled = false;
 
     // Reset tick simulation state
     _currentCandleTicks.clear();
     _currentCandleStartTime = null;
     _currentTickIndex = 0;
-    _wasPaused = false;
-    _pausedTickIndex = 0;
-    _pausedCandleTicks.clear();
-    _pausedCandleStartTime = null;
 
     _isSimulationRunning = false;
     _currentSetup = setup;
@@ -1442,7 +1024,7 @@ class SimulationProvider with ChangeNotifier {
       debugPrint(
         '🔥 SimulationProvider: No se puede iniciar timer - simulación no está corriendo',
       );
-      return; // Verificar que esté corriendo
+      return;
     }
 
     final intervalMs = (1000 ~/ (_simulationSpeed * _ticksPerSecondFactor))
@@ -1476,89 +1058,39 @@ class SimulationProvider with ChangeNotifier {
 
   void pauseTickSimulation() {
     debugPrint('🔥 PAUSE: Iniciando pausa de simulación');
-
-    // Guardar estado actual antes de pausar
-    _wasPaused = true;
-    _pausedTickIndex = _currentTickIndex;
-    _pausedCandleTicks = List.from(_currentCandleTicks);
-    _pausedCandleStartTime = _currentCandleStartTime;
-
-    debugPrint(
-      '🔥 PAUSE: Estado guardado - tick: $_pausedTickIndex, ticks acumulados: ${_pausedCandleTicks.length}',
-    );
-
-    // Detener timer
     _tickTimer?.cancel();
-
-    // Enviar señal de pausa al gráfico
-    if (_tickCallback != null) {
-      final msg = {
-        'pause': true,
-        'trades': _currentTrades
-            .map(
-              (t) => {
-                'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
-                'type': t.type,
-                'price': t.price,
-                'amount': t.amount ?? 0.0,
-                'leverage': t.leverage ?? 1,
-                'reason': t.reason ?? '',
-              },
-            )
-            .toList(),
-        'stopLoss': stopLossPrice > 0 ? stopLossPrice : null,
-        'takeProfit': takeProfitPrice > 0 ? takeProfitPrice : null,
-      };
-      debugPrint('🔥 PAUSE: Enviando señal de pausa al gráfico');
-      _tickCallback!(msg);
-    }
-
-    // Pausar simulación
     pauseSimulation();
     debugPrint('🔥 PAUSE: Simulación pausada');
   }
 
   void resumeTickSimulation() {
     debugPrint('🔥 RESUME: Método resumeTickSimulation() llamado');
-
-    if (!_wasPaused) {
-      debugPrint('🔥 RESUME: No estaba pausado, saliendo');
-      return;
-    }
-
-    debugPrint('🔥 RESUME: Restaurando estado guardado');
-
-    // Restaurar estado guardado
-    _currentTickIndex = _pausedTickIndex;
-    _currentCandleTicks = List.from(_pausedCandleTicks);
-    _currentCandleStartTime = _pausedCandleStartTime;
-
-    debugPrint(
-      '🔥 RESUME: Estado restaurado - tick: $_currentTickIndex, ticks acumulados: ${_currentCandleTicks.length}',
-    );
-
-    // Marcar como corriendo
     _isSimulationRunning = true;
-
-    // Reiniciar timer
     _startTickTimer();
-
-    // Enviar señal de reanudación al gráfico
-    if (_tickCallback != null) {
-      final resumeMsg = {'pause': false};
-      debugPrint('🔥 RESUME: Enviando señal de reanudación al chart');
-      _tickCallback!(resumeMsg);
-    }
-
-    // Limpiar estado de pausa
-    _wasPaused = false;
-    _pausedTickIndex = 0;
-    _pausedCandleTicks.clear();
-    _pausedCandleStartTime = null;
-
-    // Notificar cambios
     _notifySimulationState();
     debugPrint('🔥 RESUME: Simulación reanudada');
+  }
+
+  // Métodos para compatibilidad con la UI (no se usan en la versión simplificada)
+  void setManualTakeProfit(double? takeProfitPercent) {
+    // No se implementa en la versión simplificada
+    debugPrint(
+      '🔥 SimulationProvider: setManualTakeProfit no implementado en versión simplificada',
+    );
+  }
+
+  void setManualStopLoss(double? stopLossPercent) {
+    // No se implementa en la versión simplificada
+    debugPrint(
+      '🔥 SimulationProvider: setManualStopLoss no implementado en versión simplificada',
+    );
+  }
+
+  void closePartialPosition(double percent) {
+    // No se implementa en la versión simplificada
+    debugPrint(
+      '🔥 SimulationProvider: closePartialPosition no implementado en versión simplificada',
+    );
   }
 
   // --- LOOP DE SIMULACIÓN POR TICK ---
@@ -1651,12 +1183,10 @@ class SimulationProvider with ChangeNotifier {
               },
             )
             .toList(),
-        'stopLoss': stopLossPrice > 0 ? stopLossPrice : null,
-        'takeProfit': takeProfitPrice > 0 ? takeProfitPrice : null,
       };
 
       debugPrint('🔥 TICK: Enviando vela al chart: $msg');
-      _tickCallback!(msg); // sólo enviamos al WebView
+      _tickCallback!(msg);
     } else {
       debugPrint(
         '🔥 TICK: No enviando vela - simulación pausada o callback null',
@@ -1677,14 +1207,37 @@ class SimulationProvider with ChangeNotifier {
     _processNextTick();
   }
 
-  // --- ENVÍO DE TICK AL CHART (mantener para compatibilidad) ---
-  Function(Map<String, dynamic>)? _tickCallback;
-
+  // --- ENVÍO DE TICK AL CHART ---
   void setTickCallback(Function(Map<String, dynamic>) callback) {
     _tickCallback = callback;
   }
 
-  bool get isSimulationPaused => _wasPaused;
+  // --- NUEVOS MÉTODOS PARA SL/TP MANUAL ---
+  void updateManualStopLoss(double price) {
+    _calculatedStopLossPrice = price;
+    debugPrint('updateManualStopLoss: nuevo SL =  [33m$price [0m');
+    if (_tickCallback != null && _entryPrice > 0) {
+      _tickCallback!({
+        'entryPrice': _entryPrice,
+        'stopLoss': _calculatedStopLossPrice,
+        'takeProfit': _calculatedTakeProfitPrice,
+      });
+    }
+    notifyListeners();
+  }
+
+  void updateManualTakeProfit(double price) {
+    _calculatedTakeProfitPrice = price;
+    debugPrint('updateManualTakeProfit: nuevo TP =  [32m$price [0m');
+    if (_tickCallback != null && _entryPrice > 0) {
+      _tickCallback!({
+        'entryPrice': _entryPrice,
+        'stopLoss': _calculatedStopLossPrice,
+        'takeProfit': _calculatedTakeProfitPrice,
+      });
+    }
+    notifyListeners();
+  }
 
   // --- NOTIFICACIONES GRANULARES ---
 

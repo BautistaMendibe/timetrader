@@ -20,7 +20,6 @@ class SetupFormScreen extends StatefulWidget {
 class _SetupFormScreenState extends State<SetupFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _assetController = TextEditingController();
   final _riskPercentController = TextEditingController();
   final _stopLossDistanceController = TextEditingController();
   final _customTakeProfitController = TextEditingController();
@@ -39,7 +38,6 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
     if (widget.setupToEdit != null) {
       // Modo edición
       _nameController.text = widget.setupToEdit!.name;
-      _assetController.text = widget.setupToEdit!.asset;
       _riskPercentController.text = widget.setupToEdit!.riskPercent.toString();
       _stopLossDistanceController.text = widget.setupToEdit!.stopLossDistance
           .toString();
@@ -55,7 +53,6 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
       }
     } else {
       // Modo creación
-      _assetController.text = 'BTC/USD';
       _riskPercentController.text = '1.0';
       _stopLossDistanceController.text = '50.0';
     }
@@ -75,7 +72,6 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _assetController.dispose();
     _riskPercentController.dispose();
     _stopLossDistanceController.dispose();
     _customTakeProfitController.dispose();
@@ -176,28 +172,6 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Por favor ingresa un nombre';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _assetController,
-              decoration: const InputDecoration(
-                labelText: 'Activo',
-                labelStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF21CE99)),
-                ),
-              ),
-              style: const TextStyle(color: Colors.white),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Por favor ingresa un activo';
                 }
                 return null;
               },
@@ -649,7 +623,6 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
             widget.setupToEdit?.id ??
             DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text,
-        asset: _assetController.text,
         riskPercent: double.parse(_riskPercentController.text),
         stopLossDistance: double.parse(_stopLossDistanceController.text),
         stopLossType: _stopLossType,

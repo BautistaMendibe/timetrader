@@ -99,6 +99,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
         _selectedDate!,
         1.0,
         _initialBalance,
+        _selectedAsset!, // <-- aquí el símbolo
       ); // Usar simulación por ticks
 
       if (mounted) {

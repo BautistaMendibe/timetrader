@@ -36,7 +36,6 @@ enum TakeProfitRatio {
 class Setup {
   final String id;
   final String name;
-  final String asset;
   final double riskPercent;
   final double stopLossDistance;
   final StopLossType stopLossType;
@@ -51,7 +50,6 @@ class Setup {
   Setup({
     required this.id,
     required this.name,
-    required this.asset,
     required this.riskPercent,
     required this.stopLossDistance,
     this.stopLossType = StopLossType.pips,
@@ -68,7 +66,6 @@ class Setup {
     return {
       'id': id,
       'name': name,
-      'asset': asset,
       'riskPercent': riskPercent,
       'stopLossDistance': stopLossDistance,
       'stopLossType': stopLossType.toString(),
@@ -86,7 +83,6 @@ class Setup {
     return Setup(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
-      asset: json['asset'] ?? '',
       riskPercent: (json['riskPercent'] ?? 1.0).toDouble(),
       stopLossDistance: (json['stopLossDistance'] ?? 0.0).toDouble(),
       stopLossType: StopLossType.values.firstWhere(
@@ -119,7 +115,6 @@ class Setup {
   Setup copyWith({
     String? id,
     String? name,
-    String? asset,
     double? riskPercent,
     double? stopLossDistance,
     StopLossType? stopLossType,
@@ -134,7 +129,6 @@ class Setup {
     return Setup(
       id: id ?? this.id,
       name: name ?? this.name,
-      asset: asset ?? this.asset,
       riskPercent: riskPercent ?? this.riskPercent,
       stopLossDistance: stopLossDistance ?? this.stopLossDistance,
       stopLossType: stopLossType ?? this.stopLossType,

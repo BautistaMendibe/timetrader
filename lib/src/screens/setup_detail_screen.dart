@@ -89,7 +89,7 @@ class SetupDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        setup.asset,
+                        'Configuración de Trading',
                         style: TextStyle(fontSize: 18, color: Colors.grey[400]),
                       ),
                     ],

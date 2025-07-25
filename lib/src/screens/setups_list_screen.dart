@@ -143,7 +143,7 @@ class _SetupCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          setup.asset,
+                          'Configuración',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey[400],
