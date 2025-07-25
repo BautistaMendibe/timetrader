@@ -33,7 +33,7 @@ class _OrderContainerState extends State<OrderContainer> {
     double tpPrice = 0;
     if (hasPosition) {
       final riskAmount = provider.currentBalance * (_slRiskPercent / 100);
-      final dist = riskAmount / posSize!;
+      final dist = riskAmount / posSize;
       slPrice = widget.isBuy ? widget.price - dist : widget.price + dist;
 
       final tpAmount = provider.currentBalance * (_tpRiskPercent / 100);
@@ -71,8 +71,10 @@ class _OrderContainerState extends State<OrderContainer> {
             ],
           ),
           const SizedBox(height: 8),
-          Text('Precio de entrada: ${widget.price.toStringAsFixed(5)}',
-              style: const TextStyle(color: Colors.white)),
+          Text(
+            'Precio de entrada: ${widget.price.toStringAsFixed(5)}',
+            style: const TextStyle(color: Colors.white),
+          ),
           if (hasPosition) ...[
             const SizedBox(height: 4),
             Text(
@@ -90,9 +92,10 @@ class _OrderContainerState extends State<OrderContainer> {
                 Text(
                   'Stop Loss: ${_slRiskPercent.toStringAsFixed(1)}% (\$${(provider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)})',
                   style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Slider(
                   value: _slRiskPercent.clamp(0.1, 100),
@@ -101,15 +104,16 @@ class _OrderContainerState extends State<OrderContainer> {
                   divisions: 999,
                   label: '${_slRiskPercent.toStringAsFixed(1)}%',
                   activeColor: Colors.red,
-                  inactiveColor: Colors.red.withOpacity(0.2),
+                  inactiveColor: Colors.red.withValues(alpha: 0.2),
                   onChanged: (v) {
                     setState(() => _slRiskPercent = v);
                     if (hasPosition) {
                       final riskAmount =
                           provider.currentBalance * (_slRiskPercent / 100);
-                      final dist = riskAmount / posSize!;
-                      final price =
-                          widget.isBuy ? widget.price - dist : widget.price + dist;
+                      final dist = riskAmount / posSize;
+                      final price = widget.isBuy
+                          ? widget.price - dist
+                          : widget.price + dist;
                       provider.updateManualStopLoss(price);
                     }
                   },
@@ -118,9 +122,10 @@ class _OrderContainerState extends State<OrderContainer> {
                 Text(
                   'Take Profit: ${_tpRiskPercent.toStringAsFixed(1)}% (\$${(provider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)})',
                   style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Slider(
                   value: _tpRiskPercent.clamp(0.1, 100),
@@ -129,15 +134,16 @@ class _OrderContainerState extends State<OrderContainer> {
                   divisions: 999,
                   label: '+${_tpRiskPercent.toStringAsFixed(1)}%',
                   activeColor: Colors.green,
-                  inactiveColor: Colors.green.withOpacity(0.2),
+                  inactiveColor: Colors.green.withValues(alpha: 0.2),
                   onChanged: (v) {
                     setState(() => _tpRiskPercent = v);
                     if (hasPosition) {
                       final tpAmount =
                           provider.currentBalance * (_tpRiskPercent / 100);
-                      final dist = tpAmount / posSize!;
-                      final price =
-                          widget.isBuy ? widget.price + dist : widget.price - dist;
+                      final dist = tpAmount / posSize;
+                      final price = widget.isBuy
+                          ? widget.price + dist
+                          : widget.price - dist;
                       provider.updateManualTakeProfit(price);
                     }
                   },
@@ -155,12 +161,14 @@ class _OrderContainerState extends State<OrderContainer> {
                       provider.updateManualTakeProfit(tpPrice);
                       provider.executeManualTrade(
                         type: widget.isBuy ? 'buy' : 'sell',
-                        amount: posSize!,
+                        amount: posSize,
                         leverage: provider.calculatedLeverage?.toInt() ?? 1,
                         entryPrice: widget.price,
                       );
-                      Future.delayed(const Duration(milliseconds: 100),
-                          provider.resumeSimulation);
+                      Future.delayed(
+                        const Duration(milliseconds: 100),
+                        provider.resumeSimulation,
+                      );
                       widget.onClose();
                     }
                   : null,
@@ -177,7 +185,10 @@ class _OrderContainerState extends State<OrderContainer> {
               child: Text(
                 widget.isBuy ? 'Comprar' : 'Vender',
                 style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
+                ),
               ),
             ),
           ),
@@ -205,12 +216,18 @@ class _OrderContainerState extends State<OrderContainer> {
                   Text(
                     'Stop Loss: ${provider.manualStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
                     style: const TextStyle(
-                        color: Colors.red, fontSize: 12, fontFamily: 'Inter'),
+                      color: Colors.red,
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                    ),
                   ),
                   Text(
                     'Take Profit: ${provider.manualTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
                     style: const TextStyle(
-                        color: Colors.green, fontSize: 12, fontFamily: 'Inter'),
+                      color: Colors.green,
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                    ),
                   ),
                 ],
               ),

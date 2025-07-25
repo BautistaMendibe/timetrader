@@ -52,7 +52,6 @@ class SimulationSummaryScreen extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.share),
                 onPressed: () {
-                  // TODO: Implement share functionality
                   TopSnackBar.showInfo(
                     context: context,
                     message: 'Función de compartir próximamente',

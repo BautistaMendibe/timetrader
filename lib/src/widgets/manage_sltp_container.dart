@@ -111,15 +111,15 @@ class _ManageSLTPContainerState extends State<ManageSLTPContainer> {
 
     final tpValue = _takeProfitIndex != null
         ? positionSize *
-            entryPrice *
-            (_tpPercents[_takeProfitIndex!] / 100) *
-            (widget.simulationProvider.currentTrades.last.leverage ?? 1)
+              entryPrice *
+              (_tpPercents[_takeProfitIndex!] / 100) *
+              (widget.simulationProvider.currentTrades.last.leverage ?? 1)
         : 0;
     final slValue = _stopLossIndex != null
         ? positionSize *
-            entryPrice *
-            (_slPercents[_stopLossIndex!] / 100) *
-            (widget.simulationProvider.currentTrades.last.leverage ?? 1)
+              entryPrice *
+              (_slPercents[_stopLossIndex!] / 100) *
+              (widget.simulationProvider.currentTrades.last.leverage ?? 1)
         : 0;
 
     return Container(
@@ -191,9 +191,10 @@ class _ManageSLTPContainerState extends State<ManageSLTPContainer> {
                 min: 0,
                 max: (_tpPercents.length - 1).toDouble(),
                 divisions: _tpPercents.length - 1,
-                label: '+${_tpPercents[_takeProfitIndex ?? 0].toStringAsFixed(1)}%',
+                label:
+                    '+${_tpPercents[_takeProfitIndex ?? 0].toStringAsFixed(1)}%',
                 activeColor: Colors.green,
-                inactiveColor: Colors.green.withOpacity(0.2),
+                inactiveColor: Colors.green.withValues(alpha: 0.2),
                 onChanged: (v) {
                   setState(() {
                     _takeProfitIndex = v.round();
@@ -245,9 +246,10 @@ class _ManageSLTPContainerState extends State<ManageSLTPContainer> {
                 min: 0,
                 max: (_slPercents.length - 1).toDouble(),
                 divisions: _slPercents.length - 1,
-                label: '-${_slPercents[_stopLossIndex ?? 0].toStringAsFixed(1)}%',
+                label:
+                    '-${_slPercents[_stopLossIndex ?? 0].toStringAsFixed(1)}%',
                 activeColor: Colors.red,
-                inactiveColor: Colors.red.withOpacity(0.2),
+                inactiveColor: Colors.red.withValues(alpha: 0.2),
                 onChanged: (v) {
                   setState(() {
                     _stopLossIndex = v.round();

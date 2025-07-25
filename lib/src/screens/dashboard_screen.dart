@@ -146,7 +146,6 @@ class DashboardScreen extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 8),
                             child: TextButton(
                               onPressed: () {
-                                // TODO: Navigate to full history screen
                                 TopSnackBar.showInfo(
                                   context: context,
                                   message: 'Historial completo próximamente',

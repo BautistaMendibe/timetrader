@@ -7,9 +7,7 @@ import '../widgets/manage_sltp_container.dart';
 import '../routes.dart';
 import '../models/simulation_result.dart';
 import '../models/rule.dart';
-import '../models/setup.dart';
 import 'package:tuple/tuple.dart';
-import '../constants/pip_values.dart';
 
 class SimulationScreen extends StatefulWidget {
   const SimulationScreen({super.key});
@@ -19,11 +17,6 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
-  double _activePipValue(SimulationProvider simulationProvider) {
-    final symbol = simulationProvider.activeSymbol;
-    return symbol != null ? kPipValues[symbol] ?? 0.0001 : 0.0001;
-  }
-
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
   double? _clickPrice; // Precio capturado en el momento del clic
@@ -303,9 +296,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       provider.entryPrice > 0 ? provider.entryPrice : null,
                     ),
                     builder: (context, data, child) {
-                      final entryPrice = _clickPrice != null
-                          ? _clickPrice
-                          : data.item5;
+                      final entryPrice = _clickPrice ?? data.item5;
                       return TradingViewChart(
                         key: _chartKey,
                         candles: simulationProvider.historicalData,
@@ -342,7 +333,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-                  ],
                   ],
 
                   // --- Controles de compra/venta en la sección media ---
@@ -590,19 +580,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   items: Timeframe.values.map((tf) {
                                     String label;
                                     switch (tf) {
-                                      case Timeframe.D1:
+                                      case Timeframe.d1:
                                         label = '1D';
                                         break;
-                                      case Timeframe.H1:
+                                      case Timeframe.h1:
                                         label = '1H';
                                         break;
-                                      case Timeframe.M15:
+                                      case Timeframe.m15:
                                         label = '15M';
                                         break;
-                                      case Timeframe.M5:
+                                      case Timeframe.m5:
                                         label = '5M';
                                         break;
-                                      case Timeframe.M1:
+                                      case Timeframe.m1:
                                         label = '1M';
                                         break;
                                     }
@@ -1803,3 +1793,5 @@ class _SimulationScreenState extends State<SimulationScreen> {
       case RuleType.other:
         return Icons.rule;
     }
+  }
+}
