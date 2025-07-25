@@ -102,8 +102,8 @@ class SimulationProvider with ChangeNotifier {
   void setActiveSymbol(String symbol) {
     _activeSymbol = symbol;
     final pipValue = _pipValue;
-    debugPrint('🔥 SimulationProvider: símbolo activo = $_activeSymbol');
-    debugPrint('🔥 SimulationProvider: pip value = $pipValue');
+    // debugPrint('🔥 SimulationProvider: símbolo activo = $_activeSymbol');
+    // debugPrint('🔥 SimulationProvider: pip value = $pipValue');
 
     // Mostrar información específica del par
     if (_activeSymbol != null) {
@@ -111,13 +111,13 @@ class SimulationProvider with ChangeNotifier {
           _activeSymbol!.contains('GBP') ||
           _activeSymbol!.contains('AUD') ||
           _activeSymbol!.contains('NZD')) {
-        debugPrint(
-          '🔥 SimulationProvider: Par de divisas mayor - pip value = 0.0001',
-        );
+        // debugPrint(
+        //   '🔥 SimulationProvider: Par de divisas mayor - pip value = 0.0001',
+        // );
       } else if (_activeSymbol!.contains('JPY')) {
-        debugPrint('🔥 SimulationProvider: Par con JPY - pip value = 0.01');
+        // debugPrint('🔥 SimulationProvider: Par con JPY - pip value = 0.01');
       } else if (_activeSymbol!.contains('BTC')) {
-        debugPrint('🔥 SimulationProvider: Criptomoneda - pip value = 1.0');
+        // debugPrint('🔥 SimulationProvider: Criptomoneda - pip value = 1.0');
       }
     }
   }
@@ -162,15 +162,15 @@ class SimulationProvider with ChangeNotifier {
     if (_syntheticTicks.isEmpty ||
         _currentTickIndex >= _syntheticTicks.length) {
       final fallbackPrice = historicalData[_currentCandleIndex].close;
-      debugPrint(
-        '🔥 SimulationProvider: currentTickPrice - usando precio de vela: $fallbackPrice (no hay ticks disponibles)',
-      );
+      // debugPrint(
+      //   '🔥 SimulationProvider: currentTickPrice - usando precio de vela: $fallbackPrice (no hay ticks disponibles)',
+      // );
       return fallbackPrice;
     }
     final tickPrice = _syntheticTicks[_currentTickIndex].price;
-    debugPrint(
-      '🔥 SimulationProvider: currentTickPrice - tick $_currentTickIndex: $tickPrice (simulación ${_isSimulationRunning ? 'corriendo' : 'pausada'})',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: currentTickPrice - tick $_currentTickIndex: $tickPrice (simulación ${_isSimulationRunning ? 'corriendo' : 'pausada'})',
+    // );
     return tickPrice;
   }
 
@@ -179,9 +179,9 @@ class SimulationProvider with ChangeNotifier {
     if (_syntheticTicks.isEmpty) return 0.0;
     final idx = _currentTickIndex > 0 ? _currentTickIndex - 1 : 0;
     final price = _syntheticTicks[idx].price;
-    debugPrint(
-      '🔥 SimulationProvider: lastVisibleTickPrice - idx: $idx, price: $price',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: lastVisibleTickPrice - idx: $idx, price: $price',
+    // );
     return price;
   }
 
@@ -225,25 +225,25 @@ class SimulationProvider with ChangeNotifier {
       null; // No se usan en la versión simplificada
 
   void setHistoricalData(List<Candle> data) {
-    debugPrint(
-      '🔥 SimulationProvider: setHistoricalData() - Datos recibidos: ${data.length} velas',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: setHistoricalData() - Datos recibidos: ${data.length} velas',
+    // );
     if (data.isNotEmpty) {
-      debugPrint(
-        '🔥 SimulationProvider: Primera vela: ${data.first.timestamp} - ${data.first.close}',
-      );
-      debugPrint(
-        '🔥 SimulationProvider: Última vela: ${data.last.timestamp} - ${data.last.close}',
-      );
+      // debugPrint(
+      //   '🔥 SimulationProvider: Primera vela: ${data.first.timestamp} - ${data.first.close}',
+      // );
+      // debugPrint(
+      //   '🔥 SimulationProvider: Última vela: ${data.last.timestamp} - ${data.last.close}',
+      // );
     }
     loadRawData(data);
   }
 
   // --- MULTI-TIMEFRAME METHODS ---
   void loadRawData(List<Candle> raw) {
-    debugPrint(
-      '🔥 SimulationProvider: loadRawData() - Procesando ${raw.length} velas raw',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: loadRawData() - Procesando ${raw.length} velas raw',
+    // );
 
     // Reagrupar datos en todos los timeframes
     _allTimeframes = {
@@ -260,13 +260,13 @@ class SimulationProvider with ChangeNotifier {
 
     // Actualizar _ticksPerCandle según el timeframe inicial
     _ticksPerCandle = _ticksPerCandleMap[_activeTf]!;
-    debugPrint(
-      '🔥 SimulationProvider: _ticksPerCandle inicializado a $_ticksPerCandle para ${_activeTf.name}',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: _ticksPerCandle inicializado a $_ticksPerCandle para ${_activeTf.name}',
+    // );
 
-    debugPrint('🔥 SimulationProvider: Timeframes generados:');
+    // debugPrint('🔥 SimulationProvider: Timeframes generados:');
     for (final tf in Timeframe.values) {
-      debugPrint('  ${tf.name}: ${_allTimeframes[tf]!.length} velas');
+      // debugPrint('  ${tf.name}: ${_allTimeframes[tf]!.length} velas');
     }
 
     _notifyChartReset();
@@ -1215,6 +1215,7 @@ class SimulationProvider with ChangeNotifier {
   // --- NUEVOS MÉTODOS PARA SL/TP MANUAL ---
   void updateManualStopLoss(double price) {
     _calculatedStopLossPrice = price;
+    debugPrint('updateManualStopLoss: nuevo SL =  [33m$price [0m');
     if (_tickCallback != null && _entryPrice > 0) {
       _tickCallback!({
         'entryPrice': _entryPrice,
@@ -1227,6 +1228,7 @@ class SimulationProvider with ChangeNotifier {
 
   void updateManualTakeProfit(double price) {
     _calculatedTakeProfitPrice = price;
+    debugPrint('updateManualTakeProfit: nuevo TP =  [32m$price [0m');
     if (_tickCallback != null && _entryPrice > 0) {
       _tickCallback!({
         'entryPrice': _entryPrice,

@@ -78,28 +78,18 @@ class TradingViewChartState extends State<TradingViewChart> {
   @override
   void didUpdateWidget(covariant TradingViewChart oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!_isWebViewReady) return;
 
-    // Solo reenviar datos automáticamente si la simulación está corriendo
-    if (_isWebViewReady && widget.isRunning) {
-      // Verificar si realmente necesitamos reiniciar el gráfico
-      bool needsFullReset = false;
+    // DEBUG: Solo este print para depuración de SL/TP
+    debugPrint(
+      'didUpdateWidget: old SL= [33m${oldWidget.stopLoss} [0m new SL= [33m${widget.stopLoss} [0m • old TP= [32m${oldWidget.takeProfit} [0m new TP= [32m${widget.takeProfit} [0m',
+    );
 
-      // Solo reiniciar si cambian las velas base (no los trades o índices)
-      if (oldWidget.candles != widget.candles) {
-        needsFullReset = true;
-      }
-
-      // Si necesitamos reinicio completo, hacerlo
-      if (needsFullReset) {
-        _sendDataToWebView();
-      }
-      // Si no necesitamos reinicio completo, solo actualizar trades y SL/TP si han cambiado
-      else if (oldWidget.trades != widget.trades ||
-          oldWidget.stopLoss != widget.stopLoss ||
-          oldWidget.takeProfit != widget.takeProfit) {
-        // Enviar solo los trades y SL/TP actualizados sin reiniciar el gráfico
-        _sendTradesAndSLTPOnly();
-      }
+    if (oldWidget.trades != widget.trades ||
+        oldWidget.stopLoss != widget.stopLoss ||
+        oldWidget.takeProfit != widget.takeProfit ||
+        oldWidget.entryPrice != widget.entryPrice) {
+      _sendTradesAndSLTPOnly();
     }
   }
 
@@ -226,48 +216,33 @@ class TradingViewChartState extends State<TradingViewChart> {
 
   /// Envía una vela OHLC completa al WebView para actualización en tiempo real.
   /// [candle] debe ser un Map con 'time' (segundos epoch), 'open', 'high', 'low', 'close'.
-  /// [trades], [stopLoss], [takeProfit] son opcionales.
+  /// [trades], [stopLoss], [takeProfit], [entryPrice] son opcionales pero siempre enviados.
   Future<void> sendTickToWebView({
-    Map<String, dynamic>? candle,
+    required Map<String, dynamic>? candle,
     List<Map<String, dynamic>>? trades,
     double? stopLoss,
     double? takeProfit,
     double? entryPrice,
   }) async {
     if (!_isWebViewReady) return;
+    if (candle == null) {
+      debugPrint('⚠️ sendTickToWebView: candle es null, se ignora la llamada');
+      return;
+    }
     final msg = <String, dynamic>{};
 
-    // Solo agregar candle si no es null
-    if (candle != null) {
-      msg['candle'] = candle;
-    }
+    // Agregar candle siempre
+    msg['candle'] = candle;
 
     // Agregar trades si existen
-    if (trades != null && trades.isNotEmpty) {
+    if (trades != null) {
       msg['trades'] = trades;
     }
 
-    // Agregar stopLoss y takeProfit si son válidos
-    if (stopLoss != null && stopLoss > 0) {
-      msg['stopLoss'] = stopLoss;
-    }
-    if (takeProfit != null && takeProfit > 0) {
-      msg['takeProfit'] = takeProfit;
-    }
-    if (entryPrice != null && entryPrice > 0) {
-      msg['entryPrice'] = entryPrice;
-    }
-
-    // Agregar señales especiales si no hay candle
-    if (candle == null) {
-      // Determinar si es señal de pausa o restauración basado en el contexto
-      // Si hay trades, es probablemente una señal de control
-      if (trades != null && trades.isNotEmpty) {
-        // Por ahora, asumimos que es pausa si no hay vela
-        // La lógica específica se maneja en el callback de Flutter
-        msg['pause'] = true; // Señal de pausa por defecto
-      }
-    }
+    // Agregar stopLoss, takeProfit y entryPrice SIEMPRE (aunque sean null)
+    msg['stopLoss'] = stopLoss;
+    msg['takeProfit'] = takeProfit;
+    msg['entryPrice'] = entryPrice;
 
     final jsonData = jsonEncode(msg);
     try {

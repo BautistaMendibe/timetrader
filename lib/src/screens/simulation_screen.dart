@@ -72,7 +72,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
           // Verificar si es una señal de control (pausa/restauración)
           if (tickData.containsKey('pause') ||
               tickData.containsKey('restore')) {
-            // Es una señal de control, enviar directamente al WebView
             debugPrint(
               '🔥 CALLBACK: Enviando señal de control al WebView: $tickData',
             );
@@ -80,6 +79,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
           } else {
             // Es un tick normal con vela
             final candle = tickData['candle'] ?? tickData['tick'];
+            if (candle == null) return; // Evita error si no hay vela
             final trades = tickData['trades'] != null
                 ? List<Map<String, dynamic>>.from(tickData['trades'])
                 : null;
@@ -92,6 +92,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
               trades: trades,
               stopLoss: stopLoss,
               takeProfit: takeProfit,
+              entryPrice: simulationProvider.entryPrice > 0
+                  ? simulationProvider.entryPrice
+                  : null,
             );
           }
         }
@@ -311,24 +314,34 @@ class _SimulationScreenState extends State<SimulationScreen> {
             height: MediaQuery.of(context).size.height * 0.5,
             child: Container(
               margin: const EdgeInsets.all(12),
-              child: Selector<SimulationProvider, Tuple2<List<Trade>, int>>(
-                selector: (context, provider) =>
-                    Tuple2(allTrades, provider.currentCandleIndex),
-                builder: (context, data, child) {
-                  return TradingViewChart(
-                    key: _chartKey,
-                    candles: simulationProvider.historicalData,
-                    trades: data.item1,
-                    currentCandleIndex: data.item2,
-                    stopLoss: simulationProvider.manualStopLossPrice,
-                    takeProfit: simulationProvider.manualTakeProfitPrice,
-                    entryPrice: simulationProvider.entryPrice > 0
-                        ? simulationProvider.entryPrice
-                        : null,
-                    isRunning: simulationProvider.isSimulationRunning,
-                  );
-                },
-              ),
+              child:
+                  Selector<
+                    SimulationProvider,
+                    Tuple5<List<Trade>, int, double?, double?, double?>
+                  >(
+                    selector: (context, provider) => Tuple5(
+                      allTrades,
+                      provider.currentCandleIndex,
+                      provider.manualStopLossPrice,
+                      provider.manualTakeProfitPrice,
+                      provider.entryPrice > 0 ? provider.entryPrice : null,
+                    ),
+                    builder: (context, data, child) {
+                      final entryPrice = _clickPrice != null
+                          ? _clickPrice
+                          : data.item5;
+                      return TradingViewChart(
+                        key: _chartKey,
+                        candles: simulationProvider.historicalData,
+                        trades: data.item1,
+                        currentCandleIndex: data.item2,
+                        stopLoss: data.item3,
+                        takeProfit: data.item4,
+                        entryPrice: entryPrice,
+                        isRunning: simulationProvider.isSimulationRunning,
+                      );
+                    },
+                  ),
             ),
           ),
 

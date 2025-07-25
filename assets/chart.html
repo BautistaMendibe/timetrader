@@ -324,9 +324,10 @@
         // Listen for messages from Flutter
         window.addEventListener('message', (event) => {
             try {
-                //console.log('📨 HTML: Mensaje recibido:', event.data);
+                console.log('📨 HTML: Mensaje recibido:', event.data);
                 const data = JSON.parse(event.data);
-                //console.log('📨 HTML: Datos parseados:', data);
+                console.log('📨 HTML: Datos parseados:', data);
+                console.log('📨 HTML: entryPrice:', data.entryPrice, 'stopLoss:', data.stopLoss, 'takeProfit:', data.takeProfit);
 
                 // 1) Si viene la señal de cerrar orden, limpiar y borrar líneas
                 if (data.closeOrder === true) {
@@ -339,16 +340,10 @@
                 }
 
                 // 2) Si vienen datos de posición (entryPrice, stopLoss, takeProfit)
-                if (data.entryPrice != null || data.stopLoss != null || data.takeProfit != null) {
-                    // Guardar los valores recibidos
-                    if (data.entryPrice != null) lastEntryPrice = parseFloat(data.entryPrice);
-                    if (data.stopLoss != null) lastStopLoss = parseFloat(data.stopLoss);
-                    if (data.takeProfit != null) lastTakeProfit = parseFloat(data.takeProfit);
-                    
-                    // Actualizar las líneas de precio
-                    updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice);
-                }
-                
+                if (data.entryPrice != null) lastEntryPrice = parseFloat(data.entryPrice);
+                if (data.stopLoss != null) lastStopLoss = parseFloat(data.stopLoss);
+                if (data.takeProfit != null) lastTakeProfit = parseFloat(data.takeProfit);
+
                 // 3) Si viene una vela, actualizar el chart y luego las líneas de precio
                 if (data.candle) {
                     //console.log('🕯️ HTML: Recibida vela en tiempo real:', data.candle);
@@ -408,7 +403,7 @@
                         }
                     }
                     
-                    // Actualizar las líneas de precio después de actualizar la vela
+                    // SIEMPRE actualizar las líneas después de procesar la vela y los datos de posición
                     updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice);
                     return;
                 }
