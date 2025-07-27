@@ -54,10 +54,15 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
         _selectedDate == null ||
         _selectedSetup == null) {
       String errorMessage = 'Por favor completa todos los campos:';
-      if (_selectedAsset == null) errorMessage += '\n• Selecciona un activo';
-      if (_selectedDate == null)
+      if (_selectedAsset == null) {
+        errorMessage += '\n• Selecciona un activo';
+      }
+      if (_selectedDate == null) {
         errorMessage += '\n• Selecciona una fecha de inicio';
-      if (_selectedSetup == null) errorMessage += '\n• Selecciona un setup';
+      }
+      if (_selectedSetup == null) {
+        errorMessage += '\n• Selecciona un setup';
+      }
 
       TopSnackBar.showError(
         context: context,

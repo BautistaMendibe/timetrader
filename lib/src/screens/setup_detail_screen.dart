@@ -369,11 +369,14 @@ class SetupDetailScreen extends StatelessWidget {
                   debugPrint('DEBUG: deleteSetup completado exitosamente');
                 } catch (e) {
                   debugPrint('DEBUG: Error durante la eliminación: $e');
-                  TopSnackBar.showError(
-                    context: context,
-                    message: 'Error al eliminar: ${e.toString()}',
-                    duration: const Duration(seconds: 3),
-                  );
+                  // Check if widget is still mounted before using context
+                  if (context.mounted) {
+                    TopSnackBar.showError(
+                      context: context,
+                      message: 'Error al eliminar: ${e.toString()}',
+                      duration: const Duration(seconds: 3),
+                    );
+                  }
                 }
               },
               child: const Text(
