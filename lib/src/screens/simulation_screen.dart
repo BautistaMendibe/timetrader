@@ -5,26 +5,7 @@ import '../widgets/trading_view_chart.dart';
 import '../routes.dart';
 import '../models/simulation_result.dart';
 import '../models/rule.dart';
-import '../models/setup.dart';
 import 'package:tuple/tuple.dart';
-
-// Copia local de los valores de pip para los pares más tradeados
-const Map<String, double> _pipValues = {
-  'EURUSD': 0.0001,
-  'EUR/USD': 0.0001,
-  'GBPUSD': 0.0001,
-  'GBP/USD': 0.0001,
-  'USDJPY': 0.01,
-  'USD/JPY': 0.01,
-  'AUDUSD': 0.0001,
-  'AUD/USD': 0.0001,
-  'USDCAD': 0.0001,
-  'USD/CAD': 0.0001,
-  'NZDUSD': 0.0001,
-  'NZD/USD': 0.0001,
-  'BTCUSD': 1.0,
-  'BTC/USD': 1.0,
-};
 
 class SimulationScreen extends StatefulWidget {
   const SimulationScreen({super.key});
@@ -34,11 +15,6 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
-  double _activePipValue(SimulationProvider simulationProvider) {
-    final symbol = simulationProvider.activeSymbol;
-    return symbol != null ? _pipValues[symbol] ?? 0.0001 : 0.0001;
-  }
-
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
   bool _showSLTPContainer = false;
@@ -327,9 +303,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       provider.entryPrice > 0 ? provider.entryPrice : null,
                     ),
                     builder: (context, data, child) {
-                      final entryPrice = _clickPrice != null
-                          ? _clickPrice
-                          : data.item5;
+                      final entryPrice = _clickPrice ?? data.item5;
                       return TradingViewChart(
                         key: _chartKey,
                         candles: simulationProvider.historicalData,
@@ -406,40 +380,24 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   0) ...[
                             const SizedBox(height: 4),
                             Text(
-                              'Precio de SL: ' +
-                                  (() {
-                                    final riskAmount =
-                                        simulationProvider.currentBalance *
-                                        (_slRiskPercent / 100);
-                                    final priceDistance =
-                                        riskAmount /
-                                        simulationProvider
-                                            .calculatedPositionSize!;
-                                    final slPrice = _isBuyOrder
-                                        ? _clickPrice! - priceDistance
-                                        : _clickPrice! + priceDistance;
-                                    return slPrice.toStringAsFixed(5);
-                                  })(),
+                              'Precio de SL: ${(() {
+                                final riskAmount = simulationProvider.currentBalance * (_slRiskPercent / 100);
+                                final priceDistance = riskAmount / simulationProvider.calculatedPositionSize!;
+                                final slPrice = _isBuyOrder ? _clickPrice! - priceDistance : _clickPrice! + priceDistance;
+                                return slPrice.toStringAsFixed(5);
+                              })()}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
                               ),
                             ),
                             Text(
-                              'Precio de TP: ' +
-                                  (() {
-                                    final potentialAmount =
-                                        simulationProvider.currentBalance *
-                                        (_tpRiskPercent / 100);
-                                    final priceDistance =
-                                        potentialAmount /
-                                        simulationProvider
-                                            .calculatedPositionSize!;
-                                    final tpPrice = _isBuyOrder
-                                        ? _clickPrice! + priceDistance
-                                        : _clickPrice! - priceDistance;
-                                    return tpPrice.toStringAsFixed(5);
-                                  })(),
+                              'Precio de TP: ${(() {
+                                final potentialAmount = simulationProvider.currentBalance * (_tpRiskPercent / 100);
+                                final priceDistance = potentialAmount / simulationProvider.calculatedPositionSize!;
+                                final tpPrice = _isBuyOrder ? _clickPrice! + priceDistance : _clickPrice! - priceDistance;
+                                return tpPrice.toStringAsFixed(5);
+                              })()}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
@@ -513,8 +471,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                         label:
                                             '${_slRiskPercent.toStringAsFixed(1)}%',
                                         activeColor: Colors.red,
-                                        inactiveColor: Colors.red.withOpacity(
-                                          0.2,
+                                        inactiveColor: Colors.red.withValues(
+                                          alpha: 0.2,
                                         ),
                                         onChanged: (newPercent) {
                                           setState(
@@ -648,8 +606,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                         label:
                                             '+${_tpRiskPercent.toStringAsFixed(1)}%',
                                         activeColor: Colors.green,
-                                        inactiveColor: Colors.green.withOpacity(
-                                          0.2,
+                                        inactiveColor: Colors.green.withValues(
+                                          alpha: 0.2,
                                         ),
                                         onChanged: (newPercent) {
                                           setState(
@@ -732,7 +690,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       _tpRiskPercent > 0
                                   ? () {
                                       debugPrint(
-                                        '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = ${_slRiskPercent}, TP % = ${_tpRiskPercent}',
+                                        '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = $_slRiskPercent, TP % = $_tpRiskPercent',
                                       );
                                       // Calcular precios a partir de los porcentajes de riesgo/potencial
                                       final riskAmount =
@@ -1113,19 +1071,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   items: Timeframe.values.map((tf) {
                                     String label;
                                     switch (tf) {
-                                      case Timeframe.D1:
+                                      case Timeframe.d1:
                                         label = '1D';
                                         break;
-                                      case Timeframe.H1:
+                                      case Timeframe.h1:
                                         label = '1H';
                                         break;
-                                      case Timeframe.M15:
+                                      case Timeframe.m15:
                                         label = '15M';
                                         break;
-                                      case Timeframe.M5:
+                                      case Timeframe.m5:
                                         label = '5M';
                                         break;
-                                      case Timeframe.M1:
+                                      case Timeframe.m1:
                                         label = '1M';
                                         break;
                                     }

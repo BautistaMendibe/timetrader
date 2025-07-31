@@ -15,7 +15,7 @@ class Tick {
 enum SimulationMode { manual }
 
 // --- TIMEFRAMES ---
-enum Timeframe { D1, H1, M15, M5, M1 }
+enum Timeframe { d1, h1, m15, m5, m1 }
 
 class SimulationProvider with ChangeNotifier {
   /// Valores de pip para los pares más tradeados
@@ -43,17 +43,17 @@ class SimulationProvider with ChangeNotifier {
 
   // --- MULTI-TIMEFRAME DATA ---
   late Map<Timeframe, List<Candle>> _allTimeframes;
-  Timeframe _activeTf = Timeframe.H1;
+  Timeframe _activeTf = Timeframe.h1;
 
   static const int baseTicksPerMinute = 10;
 
   // Mapa de ticks por vela para cada timeframe
   static final Map<Timeframe, int> _ticksPerCandleMap = {
-    Timeframe.M1: baseTicksPerMinute * 1, // 10 ticks por 1 m
-    Timeframe.M5: baseTicksPerMinute * 5, // 50 ticks por 5 m = 5×10
-    Timeframe.M15: baseTicksPerMinute * 15, // 150 ticks por 15 m = 15×10
-    Timeframe.H1: baseTicksPerMinute * 60, // 600 ticks por 1 h = 60×10
-    Timeframe.D1: baseTicksPerMinute * 1440, // 14400 ticks por 1 d = 1440×10
+    Timeframe.m1: baseTicksPerMinute * 1, // 10 ticks por 1 m
+    Timeframe.m5: baseTicksPerMinute * 5, // 50 ticks por 5 m = 5×10
+    Timeframe.m15: baseTicksPerMinute * 15, // 150 ticks por 15 m = 15×10
+    Timeframe.h1: baseTicksPerMinute * 60, // 600 ticks por 1 h = 60×10
+    Timeframe.d1: baseTicksPerMinute * 1440, // 14400 ticks por 1 d = 1440×10
   };
 
   bool _isSimulationRunning = false;
@@ -71,7 +71,6 @@ class SimulationProvider with ChangeNotifier {
   double _positionSize = 0.0;
   double _stopLossPrice = 0.0;
   double _takeProfitPrice = 0.0;
-  String _manualPositionType = 'buy'; // 'buy' or 'sell'
 
   // Simulation mode
   SimulationMode _simulationMode = SimulationMode.manual;
@@ -92,7 +91,7 @@ class SimulationProvider with ChangeNotifier {
   double _ticksPerSecondFactor = 1.0; // Para ajustar velocidad
 
   // --- ACUMULACIÓN DE TICKS PARA VELAS ---
-  List<Tick> _currentCandleTicks = [];
+  final List<Tick> _currentCandleTicks = [];
   DateTime? _currentCandleStartTime;
 
   // --- ENVÍO DE TICK AL CHART ---
@@ -101,9 +100,6 @@ class SimulationProvider with ChangeNotifier {
   /// Fija el símbolo activo (desde SimulationSetupScreen)
   void setActiveSymbol(String symbol) {
     _activeSymbol = symbol;
-    final pipValue = _pipValue;
-    // debugPrint('🔥 SimulationProvider: símbolo activo = $_activeSymbol');
-    // debugPrint('🔥 SimulationProvider: pip value = $pipValue');
 
     // Mostrar información específica del par
     if (_activeSymbol != null) {
@@ -247,15 +243,15 @@ class SimulationProvider with ChangeNotifier {
 
     // Reagrupar datos en todos los timeframes
     _allTimeframes = {
-      Timeframe.D1: reaggregate(raw, const Duration(days: 1)),
-      Timeframe.H1: reaggregate(raw, const Duration(hours: 1)),
-      Timeframe.M15: reaggregate(raw, const Duration(minutes: 15)),
-      Timeframe.M5: reaggregate(raw, const Duration(minutes: 5)),
-      Timeframe.M1: reaggregate(raw, const Duration(minutes: 1)),
+      Timeframe.d1: reaggregate(raw, const Duration(days: 1)),
+      Timeframe.h1: reaggregate(raw, const Duration(hours: 1)),
+      Timeframe.m15: reaggregate(raw, const Duration(minutes: 15)),
+      Timeframe.m5: reaggregate(raw, const Duration(minutes: 5)),
+      Timeframe.m1: reaggregate(raw, const Duration(minutes: 1)),
     };
 
     // Inicializar con H1 por defecto
-    _activeTf = Timeframe.H1;
+    _activeTf = Timeframe.h1;
     _currentCandleIndex = 0;
 
     // Actualizar _ticksPerCandle según el timeframe inicial
@@ -263,11 +259,6 @@ class SimulationProvider with ChangeNotifier {
     // debugPrint(
     //   '🔥 SimulationProvider: _ticksPerCandle inicializado a $_ticksPerCandle para ${_activeTf.name}',
     // );
-
-    // debugPrint('🔥 SimulationProvider: Timeframes generados:');
-    for (final tf in Timeframe.values) {
-      // debugPrint('  ${tf.name}: ${_allTimeframes[tf]!.length} velas');
-    }
 
     _notifyChartReset();
   }
@@ -627,7 +618,7 @@ class SimulationProvider with ChangeNotifier {
       final pipsDistance = _currentSetup!.stopLossDistance;
       final calculatedPips = priceDistance / _pipValue;
       debugPrint(
-        '🔥 SimulationProvider: DEBUG - Pips calculation: ${pipsDistance} pips × ${_pipValue} pip value = ${calculatedPips} price distance',
+        '🔥 SimulationProvider: DEBUG - Pips calculation: $pipsDistance pips × $_pipValue pip value = $calculatedPips price distance',
       );
     }
 
@@ -635,13 +626,13 @@ class SimulationProvider with ChangeNotifier {
       _calculatedStopLossPrice = entryPrice - priceDistance;
       _calculatedTakeProfitPrice = entryPrice + (priceDistance * takeProfitRR);
       debugPrint(
-        '🔥 SimulationProvider: DEBUG - BUY - SL: $_calculatedStopLossPrice (${entryPrice} - ${priceDistance}), TP: $_calculatedTakeProfitPrice (${entryPrice} + ${priceDistance} * ${takeProfitRR})',
+        '🔥 SimulationProvider: DEBUG - BUY - SL: $_calculatedStopLossPrice ($entryPrice - $priceDistance), TP: $_calculatedTakeProfitPrice ($entryPrice + $priceDistance * $takeProfitRR)',
       );
     } else {
       _calculatedStopLossPrice = entryPrice + priceDistance;
       _calculatedTakeProfitPrice = entryPrice - (priceDistance * takeProfitRR);
       debugPrint(
-        '🔥 SimulationProvider: DEBUG - SELL - SL: $_calculatedStopLossPrice (${entryPrice} + ${priceDistance}), TP: $_calculatedTakeProfitPrice (${entryPrice} - ${priceDistance} * ${takeProfitRR})',
+        '🔥 SimulationProvider: DEBUG - SELL - SL: $_calculatedStopLossPrice ($entryPrice + $priceDistance), TP: $_calculatedTakeProfitPrice ($entryPrice - $priceDistance * $takeProfitRR)',
       );
     }
 
@@ -715,7 +706,6 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = true;
     _entryPrice = price;
     _positionSize = _calculatedPositionSize!;
-    _manualPositionType = type;
 
     // Enviar datos al WebView para dibujar las líneas
     if (_tickCallback != null) {
@@ -804,7 +794,6 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
-    _manualPositionType = 'buy';
 
     // Reset calculated parameters
     _calculatedPositionSize = null;
