@@ -1158,6 +1158,11 @@ class SimulationProvider with ChangeNotifier {
       '🔥 TICK: Tick agregado. Total acumulados: ${_currentCandleTicks.length}',
     );
 
+    // Verificar SL/TP si hay posición abierta
+    if (_inPosition && _currentTrades.isNotEmpty) {
+      _checkStopLossAndTakeProfit(tick.price);
+    }
+
     // Calcular OHLC de los ticks acumulados hasta ahora
     final prices = _currentCandleTicks.map((t) => t.price).toList();
     final o = prices.first, c = prices.last;
@@ -1263,5 +1268,124 @@ class SimulationProvider with ChangeNotifier {
   /// Notifica cambios de estado de simulación sin reiniciar gráfico
   void _notifySimulationState() {
     notifyListeners();
+  }
+
+  // --- VERIFICACIÓN DE STOP LOSS Y TAKE PROFIT ---
+  void _checkStopLossAndTakeProfit(double currentPrice) {
+    if (!_inPosition || _currentTrades.isEmpty) return;
+
+    final lastTrade = _currentTrades.last;
+    String? closeReason;
+
+    // Verificar Stop Loss
+    if (_calculatedStopLossPrice != null) {
+      if (lastTrade.type == 'buy' &&
+          currentPrice <= _calculatedStopLossPrice!) {
+        closeReason = 'Stop Loss';
+        debugPrint(
+          '🔥 SL/TP: Stop Loss alcanzado - Precio: $currentPrice, SL: ${_calculatedStopLossPrice}',
+        );
+      } else if (lastTrade.type == 'sell' &&
+          currentPrice >= _calculatedStopLossPrice!) {
+        closeReason = 'Stop Loss';
+        debugPrint(
+          '🔥 SL/TP: Stop Loss alcanzado - Precio: $currentPrice, SL: ${_calculatedStopLossPrice}',
+        );
+      }
+    }
+
+    // Verificar Take Profit
+    if (_calculatedTakeProfitPrice != null && closeReason == null) {
+      if (lastTrade.type == 'buy' &&
+          currentPrice >= _calculatedTakeProfitPrice!) {
+        closeReason = 'Take Profit';
+        debugPrint(
+          '🔥 SL/TP: Take Profit alcanzado - Precio: $currentPrice, TP: ${_calculatedTakeProfitPrice}',
+        );
+      } else if (lastTrade.type == 'sell' &&
+          currentPrice <= _calculatedTakeProfitPrice!) {
+        closeReason = 'Take Profit';
+        debugPrint(
+          '🔥 SL/TP: Take Profit alcanzado - Precio: $currentPrice, TP: ${_calculatedTakeProfitPrice}',
+        );
+      }
+    }
+
+    // Cerrar posición si se alcanzó SL o TP
+    if (closeReason != null) {
+      _closePositionAtPrice(currentPrice, closeReason);
+    }
+  }
+
+  void _closePositionAtPrice(double closePrice, String reason) {
+    if (!_inPosition || _currentTrades.isEmpty) return;
+
+    final lastTrade = _currentTrades.last;
+
+    // Calcular P&L de la operación
+    double pnl;
+    if (lastTrade.type == 'buy') {
+      pnl =
+          (closePrice - lastTrade.price) *
+          lastTrade.quantity *
+          lastTrade.leverage!;
+    } else {
+      pnl =
+          (lastTrade.price - closePrice) *
+          lastTrade.quantity *
+          lastTrade.leverage!;
+    }
+
+    // Crear trade de cierre
+    final closeTrade = Trade(
+      id: 'close_${DateTime.now().millisecondsSinceEpoch}',
+      timestamp: DateTime.now(),
+      type: lastTrade.type == 'buy' ? 'sell' : 'buy',
+      price: closePrice,
+      quantity: lastTrade.quantity,
+      candleIndex: _currentCandleIndex,
+      reason: reason,
+      leverage: lastTrade.leverage,
+      pnl: pnl,
+      tradeGroupId: lastTrade.tradeGroupId,
+    );
+
+    // Agregar trade de cierre a la lista
+    _currentTrades.add(closeTrade);
+
+    // Crear operación completada
+    final completedOperation = CompletedTrade(
+      id: 'completed_${DateTime.now().millisecondsSinceEpoch}',
+      entryTrade: lastTrade,
+      exitTrade: closeTrade,
+      totalPnL: pnl,
+      entryTime: lastTrade.timestamp,
+      exitTime: closeTrade.timestamp,
+      entryPrice: lastTrade.price,
+      exitPrice: closePrice,
+      quantity: lastTrade.quantity,
+      leverage: lastTrade.leverage,
+      reason: reason,
+    );
+
+    // Mover trades a operaciones completadas
+    _completedOperations.add(completedOperation);
+    _currentTrades.clear();
+
+    // Actualizar balance
+    _currentBalance += pnl;
+
+    // Limpiar estado de posición
+    _inPosition = false;
+    _entryPrice = 0.0;
+    _calculatedStopLossPrice = null;
+    _calculatedTakeProfitPrice = null;
+
+    debugPrint(
+      '🔥 SL/TP: Posición cerrada - Precio: $closePrice, P&L: $pnl, Razón: $reason',
+    );
+
+    // Notificar cambios
+    _notifyUIUpdate();
   }
 }
