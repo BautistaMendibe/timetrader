@@ -76,9 +76,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
             final tpValue = _tpRiskPercent.isFinite
                 ? simulationProvider.currentBalance * (_tpRiskPercent / 100)
                 : 0.0;
-            final entryValue =
-                simulationProvider.currentBalance *
-                (_slRiskPercent / 100); // Valor monetario de la entrada
+            final entryValue = simulationProvider.inPosition
+                ? simulationProvider.unrealizedPnL
+                : 0.0; // P&L flotante en tiempo real
 
             _chartKey.currentState?.sendMessageToWebView({
               'candle': candle,
@@ -343,9 +343,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         tpValue:
                             simulationProvider.currentBalance *
                             (_tpRiskPercent / 100),
-                        entryValue:
-                            simulationProvider.currentBalance *
-                            (_slRiskPercent / 100),
+                        entryValue: simulationProvider.inPosition
+                            ? simulationProvider.unrealizedPnL
+                            : 0.0,
                         isRunning: simulationProvider.isSimulationRunning,
                       );
                     },

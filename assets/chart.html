@@ -447,19 +447,19 @@
             const priceFormat = isForexPair ? entry.toFixed(5) : entry.toFixed(3);
 
             // 2) Línea de ENTRADA: siempre en el precio de entry, pero con título dinámico (% respecto a currentPrice)
-            if (!isNaN(entry) && !isNaN(currentPrice)) {
-                const pctMove = (currentPrice - entry) / entry * 100;
-                const entryValue = entryVal || 0; // Valor monetario de la entrada
-                entryPriceLine = candlestickSeries.createPriceLine({
-                    price: entry,
-                    color: '#2176FF',
-                    lineWidth: 2,
-                    lineStyle: LightweightCharts.LineStyle.Dotted,
-                    axisLabelVisible: true,
-                    // Ej: "Entry -0.12% ($100.00)" para forex
-                    title: `Entry ${pctMove>=0?'+':''}${pctMove.toFixed(2)}% ($${entryValue.toFixed(2)})`,
-                });
-            }
+                            if (!isNaN(entry) && !isNaN(currentPrice)) {
+                    const pctMove = (currentPrice - entry) / entry * 100;
+                    const entryValue = entryVal || 0; // P&L flotante en tiempo real
+                    entryPriceLine = candlestickSeries.createPriceLine({
+                        price: entry,
+                        color: '#2176FF',
+                        lineWidth: 2,
+                        lineStyle: LightweightCharts.LineStyle.Dotted,
+                        axisLabelVisible: true,
+                        // Ej: "Entry +0.12% (+$50.00)" o "Entry -0.12% (-$25.00)"
+                        title: `Entry ${pctMove>=0?'+':''}${pctMove.toFixed(2)}% (${entryValue>=0?'+':''}$${entryValue.toFixed(2)})`,
+                    });
+                }
 
             // 3) Stop Loss
             if (!isNaN(sl) && !isNaN(slPct) && !isNaN(slVal)) {
