@@ -63,15 +63,34 @@ class _SimulationScreenState extends State<SimulationScreen> {
             final takeProfit = tickData['takeProfit'];
 
             // Enviar al WebView
-            _chartKey.currentState!.sendTickToWebView(
-              candle: candle,
-              trades: trades,
-              stopLoss: stopLoss,
-              takeProfit: takeProfit,
-              entryPrice: simulationProvider.entryPrice > 0
+            debugPrint(
+              '🔥 Enviando al WebView: SL%=${-_slRiskPercent}, SLValue=${-(simulationProvider.currentBalance * (_slRiskPercent / 100))}, TP%=$_tpRiskPercent, TPValue=${simulationProvider.currentBalance * (_tpRiskPercent / 100)}',
+            );
+
+            // Verificar que los valores no sean NaN antes de enviar
+            final slPercent = _slRiskPercent.isFinite ? -_slRiskPercent : 0.0;
+            final slValue = _slRiskPercent.isFinite
+                ? -(simulationProvider.currentBalance * (_slRiskPercent / 100))
+                : 0.0;
+            final tpPercent = _tpRiskPercent.isFinite ? _tpRiskPercent : 0.0;
+            final tpValue = _tpRiskPercent.isFinite
+                ? simulationProvider.currentBalance * (_tpRiskPercent / 100)
+                : 0.0;
+
+            _chartKey.currentState?.sendMessageToWebView({
+              'candle': candle,
+              'trades': trades,
+              'entryPrice': simulationProvider.entryPrice > 0
                   ? simulationProvider.entryPrice
                   : null,
-            );
+              'stopLoss': stopLoss,
+              'takeProfit': takeProfit,
+              // añado porcentaje y valor en USD
+              'slPercent': slPercent,
+              'slValue': slValue,
+              'tpPercent': tpPercent,
+              'tpValue': tpValue,
+            });
           }
         }
       });
@@ -312,6 +331,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         stopLoss: data.item3,
                         takeProfit: data.item4,
                         entryPrice: entryPrice,
+                        slPercent: -_slRiskPercent,
+                        slValue:
+                            -(simulationProvider.currentBalance *
+                                (_slRiskPercent / 100)),
+                        tpPercent: _tpRiskPercent,
+                        tpValue:
+                            simulationProvider.currentBalance *
+                            (_tpRiskPercent / 100),
                         isRunning: simulationProvider.isSimulationRunning,
                       );
                     },

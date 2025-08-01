@@ -22,7 +22,7 @@ class _TestChartScreenState extends State<TestChartScreen> {
     testCandles = [];
     final DateTime baseDate = DateTime.now().subtract(const Duration(days: 7));
     double price = 50000.0;
-    
+
     for (int i = 0; i < 50; i++) {
       final timestamp = baseDate.add(Duration(hours: i));
       final change = price * 0.02 * (0.5 - (i % 3) * 0.3);
@@ -30,20 +30,24 @@ class _TestChartScreenState extends State<TestChartScreen> {
       final close = price + change;
       final high = open + (change * 1.5).abs();
       final low = open - (change * 1.5).abs();
-      
-      testCandles.add(Candle(
-        timestamp: timestamp,
-        open: open,
-        high: high,
-        low: low,
-        close: close,
-        volume: 1000.0 + (i * 10),
-      ));
-      
+
+      testCandles.add(
+        Candle(
+          timestamp: timestamp,
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          volume: 1000.0 + (i * 10),
+        ),
+      );
+
       price = close;
     }
-    
-    debugPrint('TestChartScreen: Generados ${testCandles.length} velas de prueba');
+
+    debugPrint(
+      'TestChartScreen: Generados ${testCandles.length} velas de prueba',
+    );
   }
 
   @override
@@ -69,6 +73,10 @@ class _TestChartScreenState extends State<TestChartScreen> {
               child: TradingViewChart(
                 candles: testCandles,
                 trades: const [],
+                slPercent: null,
+                slValue: null,
+                tpPercent: null,
+                tpValue: null,
               ),
             ),
           ),
@@ -76,4 +84,4 @@ class _TestChartScreenState extends State<TestChartScreen> {
       ),
     );
   }
-} 
+}

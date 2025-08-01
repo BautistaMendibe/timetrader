@@ -335,7 +335,7 @@
                     lastStopLoss = NaN;
                     lastTakeProfit = NaN;
                     lastPrice = NaN;
-                    updatePriceLines(NaN, NaN, NaN, NaN);
+                    updatePriceLines(NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN);
                     return;
                 }
 
@@ -343,6 +343,23 @@
                 if (data.entryPrice != null) lastEntryPrice = parseFloat(data.entryPrice);
                 if (data.stopLoss != null) lastStopLoss = parseFloat(data.stopLoss);
                 if (data.takeProfit != null) lastTakeProfit = parseFloat(data.takeProfit);
+
+                // Extraer los nuevos campos de porcentaje y valor
+                const slPct  = parseFloat(data.slPercent) || NaN;
+                const slVal  = parseFloat(data.slValue)   || NaN;
+                const tpPct  = parseFloat(data.tpPercent) || NaN;
+                const tpVal  = parseFloat(data.tpValue)   || NaN;
+                
+                console.log('📊 Datos recibidos:', {
+                    slPercent: data.slPercent,
+                    slValue: data.slValue,
+                    tpPercent: data.tpPercent,
+                    tpValue: data.tpValue,
+                    slPct: slPct,
+                    slVal: slVal,
+                    tpPct: tpPct,
+                    tpVal: tpVal
+                });
 
                 // 3) Si viene una vela, actualizar el chart y luego las líneas de precio
                 if (data.candle) {
@@ -404,19 +421,21 @@
                     }
                     
                     // SIEMPRE actualizar las líneas después de procesar la vela y los datos de posición
-                    updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice);
+                    updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice, slPct, slVal, tpPct, tpVal);
                     return;
                 }
                 
                 // 4) Soporte tradicional de velas (para carga inicial)
                 renderChart(data);
-                updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice);
+                updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice, slPct, slVal, tpPct, tpVal);
             } catch (error) {
                 console.error('Error parsing message from Flutter:', error);
             }
         });
 
-        function updatePriceLines(entry, sl, tp, currentPrice) {
+        function updatePriceLines(entry, sl, tp, currentPrice, slPct, slVal, tpPct, tpVal) {
+            console.log('🔄 updatePriceLines:', { entry, sl, tp, currentPrice, slPct, slVal, tpPct, tpVal });
+            
             // 1) Borrar líneas viejas
             if (slPriceLine)  { candlestickSeries.removePriceLine(slPriceLine);  slPriceLine  = null; }
             if (tpPriceLine)  { candlestickSeries.removePriceLine(tpPriceLine);  tpPriceLine  = null; }
@@ -440,33 +459,34 @@
                 });
             }
 
-            // 3) Stop Loss: solo si es válido, mayor a 0 y diferente de entry
-            if (!isNaN(entry) && !isNaN(sl) && sl > 0 && sl !== entry) {
-                const pctSL = (sl - entry) / entry * 100;
-                const slFormat = isForexPair ? sl.toFixed(5) : sl.toFixed(3);
+            // 3) Stop Loss
+            if (!isNaN(sl) && !isNaN(slPct) && !isNaN(slVal)) {
                 slPriceLine = candlestickSeries.createPriceLine({
                     price: sl,
                     color: '#FF5A5F',
                     lineWidth: 2,
                     lineStyle: LightweightCharts.LineStyle.Dotted,
                     axisLabelVisible: true,
-                    // Ej: "1.08000 (–0.46%)" para forex
-                    title: `${slFormat} (${pctSL>=0?'+':''}${pctSL.toFixed(2)}%)`,
+                    title: `Stop Loss: ${slPct.toFixed(1)}% (${slVal<0?'-':''}$${Math.abs(slVal).toFixed(2)})`,
                 });
+                console.log('✅ Línea SL creada con título:', `Stop Loss: ${slPct.toFixed(1)}% (${slVal<0?'-':''}$${Math.abs(slVal).toFixed(2)})`);
+            } else {
+                console.log('❌ No se creó línea SL - valores inválidos:', { sl, slPct, slVal });
             }
 
-            // 4) Take Profit: solo si es válido, mayor a 0 y diferente de entry
-            if (!isNaN(entry) && !isNaN(tp) && tp > 0 && tp !== entry) {
-                const pctTP = (tp - entry) / entry * 100;
-                const tpFormat = isForexPair ? tp.toFixed(5) : tp.toFixed(3);
+            // 4) Take Profit
+            if (!isNaN(tp) && !isNaN(tpPct) && !isNaN(tpVal)) {
                 tpPriceLine = candlestickSeries.createPriceLine({
                     price: tp,
                     color: '#21CE99',
                     lineWidth: 2,
                     lineStyle: LightweightCharts.LineStyle.Dotted,
                     axisLabelVisible: true,
-                    title: `${tpFormat} (${pctTP>=0?'+':''}${pctTP.toFixed(2)}%)`,
+                    title: `Take Profit: ${tpPct>=0?'+':''}${tpPct.toFixed(1)}% (${tpVal>=0?'+':''}$${tpVal.toFixed(2)})`,
                 });
+                console.log('✅ Línea TP creada con título:', `Take Profit: ${tpPct>=0?'+':''}${tpPct.toFixed(1)}% (${tpVal>=0?'+':''}$${tpVal.toFixed(2)})`);
+            } else {
+                console.log('❌ No se creó línea TP - valores inválidos:', { tp, tpPct, tpVal });
             }
         }
 
