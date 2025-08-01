@@ -155,17 +155,24 @@ class SimulationProvider with ChangeNotifier {
 
   // Get current tick price (for manual trades when simulation is paused)
   double get currentTickPrice {
-    if (_syntheticTicks.isEmpty ||
-        _currentTickIndex >= _syntheticTicks.length) {
+    if (_syntheticTicks.isEmpty) {
       final fallbackPrice = historicalData[_currentCandleIndex].close;
       // debugPrint(
       //   '🔥 SimulationProvider: currentTickPrice - usando precio de vela: $fallbackPrice (no hay ticks disponibles)',
       // );
       return fallbackPrice;
     }
-    final tickPrice = _syntheticTicks[_currentTickIndex].price;
+
+    // Usar el índice anterior al actual para obtener el precio del tick procesado
+    final tickIndex = _currentTickIndex > 0 ? _currentTickIndex - 1 : 0;
+    if (tickIndex >= _syntheticTicks.length) {
+      final fallbackPrice = historicalData[_currentCandleIndex].close;
+      return fallbackPrice;
+    }
+
+    final tickPrice = _syntheticTicks[tickIndex].price;
     // debugPrint(
-    //   '🔥 SimulationProvider: currentTickPrice - tick $_currentTickIndex: $tickPrice (simulación ${_isSimulationRunning ? 'corriendo' : 'pausada'})',
+    //   '🔥 SimulationProvider: currentTickPrice - tick $tickIndex: $tickPrice (simulación ${_isSimulationRunning ? 'corriendo' : 'pausada'})',
     // );
     return tickPrice;
   }
@@ -1107,11 +1114,19 @@ class SimulationProvider with ChangeNotifier {
     }
 
     if (_currentTickIndex < _syntheticTicks.length) {
-      final tick = _syntheticTicks[_currentTickIndex++];
+      final tick = _syntheticTicks[_currentTickIndex];
+      final currentTickPrice =
+          tick.price; // Capturar precio antes de incrementar
+      _currentTickIndex++;
       debugPrint(
-        '🔥 SimulationProvider: Procesando tick ${tick.price} a las ${tick.time}',
+        '🔥 SimulationProvider: Procesando tick $currentTickPrice a las ${tick.time}',
       );
       _accumulateTickForCandle(tick);
+
+      // Notificar cambios de UI para actualizar P&L flotante en tiempo real
+      if (_inPosition) {
+        _notifyUIUpdate();
+      }
     } else {
       debugPrint('🔥 SimulationProvider: Índice de tick fuera de rango');
     }
@@ -1187,6 +1202,11 @@ class SimulationProvider with ChangeNotifier {
       debugPrint('🔥 TICK: Vela completada, limpiando ticks acumulados');
       _currentCandleTicks.clear();
       _currentCandleStartTime = null;
+    }
+
+    // Notificar cambios de UI para actualizar P&L flotante en tiempo real
+    if (_inPosition) {
+      _notifyUIUpdate();
     }
   }
 
