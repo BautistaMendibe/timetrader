@@ -329,13 +329,15 @@
                 console.log('📨 HTML: Datos parseados:', data);
                 console.log('📨 HTML: entryPrice:', data.entryPrice, 'stopLoss:', data.stopLoss, 'takeProfit:', data.takeProfit);
 
-                // 1) Si viene la señal de cerrar orden, limpiar y borrar líneas
-                if (data.closeOrder === true) {
+                // 1) Si viene la señal de cerrar orden o limpiar líneas, limpiar y borrar líneas
+                if (data.closeOrder === true || data.clearLines === true) {
+                    console.log('📨 HTML: Limpiando líneas - closeOrder:', data.closeOrder, 'clearLines:', data.clearLines);
                     lastEntryPrice = NaN;
                     lastStopLoss = NaN;
                     lastTakeProfit = NaN;
                     lastPrice = NaN;
                     updatePriceLines(NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN);
+                    console.log('📨 HTML: Líneas limpiadas exitosamente');
                     return;
                 }
 
@@ -438,9 +440,27 @@
             console.log('🔄 updatePriceLines:', { entry, sl, tp, currentPrice, slPct, slVal, tpPct, tpVal });
             
             // 1) Borrar líneas viejas
-            if (slPriceLine)  { candlestickSeries.removePriceLine(slPriceLine);  slPriceLine  = null; }
-            if (tpPriceLine)  { candlestickSeries.removePriceLine(tpPriceLine);  tpPriceLine  = null; }
-            if (entryPriceLine) { candlestickSeries.removePriceLine(entryPriceLine); entryPriceLine = null; }
+            if (slPriceLine)  { 
+                console.log('🔄 Removiendo línea SL existente');
+                candlestickSeries.removePriceLine(slPriceLine);  
+                slPriceLine = null; 
+            }
+            if (tpPriceLine)  { 
+                console.log('🔄 Removiendo línea TP existente');
+                candlestickSeries.removePriceLine(tpPriceLine);  
+                tpPriceLine = null; 
+            }
+            if (entryPriceLine) { 
+                console.log('🔄 Removiendo línea Entry existente');
+                candlestickSeries.removePriceLine(entryPriceLine); 
+                entryPriceLine = null; 
+            }
+
+            // Si todos los valores son NaN o null, no crear nuevas líneas
+            if ((isNaN(entry) || entry === null) && (isNaN(sl) || sl === null) && (isNaN(tp) || tp === null)) {
+                console.log('🔄 Todos los valores son NaN/null - no creando líneas');
+                return;
+            }
 
             // Determine precision based on asset type
             const precision = isForexPair ? 5 : 3;

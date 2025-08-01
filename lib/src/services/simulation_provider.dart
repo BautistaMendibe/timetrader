@@ -811,26 +811,17 @@ class SimulationProvider with ChangeNotifier {
 
     _currentTrades.clear();
 
-    // Enviar señal de cierre de orden al WebView para limpiar las líneas
-    if (_tickCallback != null) {
-      final closeOrderMsg = {'closeOrder': true};
-      debugPrint('🔥 SimulationProvider: Enviando señal closeOrder al WebView');
-      _tickCallback!(closeOrderMsg);
-    }
+    // Limpiar líneas del gráfico
+    debugPrint('🔥 closeManualPosition: Limpiando líneas del gráfico...');
+    _clearChartLines();
 
     _notifyUIUpdate();
   }
 
   // --- MÉTODO PARA CANCELAR ÓRDENES ---
   void cancelOrder() {
-    // Enviar señal de cierre de orden al WebView para limpiar las líneas
-    if (_tickCallback != null) {
-      final closeOrderMsg = {'closeOrder': true};
-      debugPrint(
-        '🔥 SimulationProvider: Enviando señal closeOrder al WebView (cancelación)',
-      );
-      _tickCallback!(closeOrderMsg);
-    }
+    // Limpiar líneas del gráfico
+    _clearChartLines();
   }
 
   // Validate if position can be calculated
@@ -1270,6 +1261,37 @@ class SimulationProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // --- MÉTODO HELPER PARA LIMPIAR LÍNEAS DEL GRÁFICO ---
+  void _clearChartLines() {
+    if (_tickCallback != null) {
+      debugPrint(
+        '🔥 SimulationProvider: Enviando señal para limpiar líneas del gráfico',
+      );
+      final clearMsg = {'closeOrder': true};
+      debugPrint('🔥 SimulationProvider: Mensaje de limpieza: $clearMsg');
+      _tickCallback!(clearMsg);
+
+      // Esperar un momento y enviar un mensaje adicional para asegurar la limpieza
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_tickCallback != null) {
+          debugPrint(
+            '🔥 SimulationProvider: Enviando mensaje adicional de limpieza',
+          );
+          _tickCallback!({
+            'entryPrice': null,
+            'stopLoss': null,
+            'takeProfit': null,
+            'clearLines': true,
+          });
+        }
+      });
+    } else {
+      debugPrint(
+        '🔥 SimulationProvider: ERROR - _tickCallback es null, no se pueden limpiar las líneas',
+      );
+    }
+  }
+
   // --- VERIFICACIÓN DE STOP LOSS Y TAKE PROFIT ---
   void _checkStopLossAndTakeProfit(double currentPrice) {
     if (!_inPosition || _currentTrades.isEmpty) return;
@@ -1322,26 +1344,48 @@ class SimulationProvider with ChangeNotifier {
 
     final lastTrade = _currentTrades.last;
 
+    // Para mayor precisión, usar el precio exacto de SL/TP cuando corresponda
+    double exactClosePrice = closePrice;
+    if (reason == 'Take Profit' && _calculatedTakeProfitPrice != null) {
+      exactClosePrice = _calculatedTakeProfitPrice!;
+      debugPrint(
+        '🔥 SL/TP: Usando precio exacto de TP: $exactClosePrice en lugar de $closePrice',
+      );
+    } else if (reason == 'Stop Loss' && _calculatedStopLossPrice != null) {
+      exactClosePrice = _calculatedStopLossPrice!;
+      debugPrint(
+        '🔥 SL/TP: Usando precio exacto de SL: $exactClosePrice en lugar de $closePrice',
+      );
+    }
+
     // Calcular P&L de la operación
     double pnl;
     if (lastTrade.type == 'buy') {
       pnl =
-          (closePrice - lastTrade.price) *
+          (exactClosePrice - lastTrade.price) *
           lastTrade.quantity *
           lastTrade.leverage!;
     } else {
       pnl =
-          (lastTrade.price - closePrice) *
+          (lastTrade.price - exactClosePrice) *
           lastTrade.quantity *
           lastTrade.leverage!;
     }
+
+    debugPrint('🔥 SL/TP: Cálculo P&L detallado:');
+    debugPrint('  - Tipo: ${lastTrade.type}');
+    debugPrint('  - Precio entrada: ${lastTrade.price}');
+    debugPrint('  - Precio cierre: $exactClosePrice');
+    debugPrint('  - Cantidad: ${lastTrade.quantity}');
+    debugPrint('  - Leverage: ${lastTrade.leverage}');
+    debugPrint('  - P&L calculado: $pnl');
 
     // Crear trade de cierre
     final closeTrade = Trade(
       id: 'close_${DateTime.now().millisecondsSinceEpoch}',
       timestamp: DateTime.now(),
       type: lastTrade.type == 'buy' ? 'sell' : 'buy',
-      price: closePrice,
+      price: exactClosePrice,
       quantity: lastTrade.quantity,
       candleIndex: _currentCandleIndex,
       reason: reason,
@@ -1362,7 +1406,7 @@ class SimulationProvider with ChangeNotifier {
       entryTime: lastTrade.timestamp,
       exitTime: closeTrade.timestamp,
       entryPrice: lastTrade.price,
-      exitPrice: closePrice,
+      exitPrice: exactClosePrice,
       quantity: lastTrade.quantity,
       leverage: lastTrade.leverage,
       reason: reason,
@@ -1382,8 +1426,12 @@ class SimulationProvider with ChangeNotifier {
     _calculatedTakeProfitPrice = null;
 
     debugPrint(
-      '🔥 SL/TP: Posición cerrada - Precio: $closePrice, P&L: $pnl, Razón: $reason',
+      '🔥 SL/TP: Posición cerrada - Precio: $exactClosePrice, P&L: $pnl, Razón: $reason',
     );
+
+    // Limpiar líneas del gráfico
+    debugPrint('🔥 SL/TP: Limpiando líneas del gráfico...');
+    _clearChartLines();
 
     // Notificar cambios
     _notifyUIUpdate();
