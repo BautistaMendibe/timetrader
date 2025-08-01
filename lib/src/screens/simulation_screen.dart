@@ -76,6 +76,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
             final tpValue = _tpRiskPercent.isFinite
                 ? simulationProvider.currentBalance * (_tpRiskPercent / 100)
                 : 0.0;
+            final entryValue =
+                simulationProvider.currentBalance *
+                (_slRiskPercent / 100); // Valor monetario de la entrada
 
             _chartKey.currentState?.sendMessageToWebView({
               'candle': candle,
@@ -90,6 +93,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
               'slValue': slValue,
               'tpPercent': tpPercent,
               'tpValue': tpValue,
+              'entryValue': entryValue,
             });
           }
         }
@@ -339,6 +343,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         tpValue:
                             simulationProvider.currentBalance *
                             (_tpRiskPercent / 100),
+                        entryValue:
+                            simulationProvider.currentBalance *
+                            (_slRiskPercent / 100),
                         isRunning: simulationProvider.isSimulationRunning,
                       );
                     },

@@ -15,6 +15,7 @@ class TradingViewChart extends StatefulWidget {
   final double? slValue;
   final double? tpPercent;
   final double? tpValue;
+  final double? entryValue;
   final bool isRunning; // Flag para controlar si la simulación está corriendo
 
   const TradingViewChart({
@@ -28,6 +29,7 @@ class TradingViewChart extends StatefulWidget {
     this.slValue,
     this.tpPercent,
     this.tpValue,
+    this.entryValue,
     this.isRunning = true, // Por defecto está corriendo
     super.key,
   });
@@ -133,6 +135,7 @@ class TradingViewChartState extends State<TradingViewChart> {
         'slValue': widget.slValue,
         'tpPercent': widget.tpPercent,
         'tpValue': widget.tpValue,
+        'entryValue': widget.entryValue,
         'updateOnly': true, // Señal para indicar que es solo actualización
       };
 

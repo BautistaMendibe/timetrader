@@ -335,7 +335,7 @@
                     lastStopLoss = NaN;
                     lastTakeProfit = NaN;
                     lastPrice = NaN;
-                    updatePriceLines(NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN);
+                    updatePriceLines(NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN);
                     return;
                 }
 
@@ -349,6 +349,7 @@
                 const slVal  = parseFloat(data.slValue)   || NaN;
                 const tpPct  = parseFloat(data.tpPercent) || NaN;
                 const tpVal  = parseFloat(data.tpValue)   || NaN;
+                const entryVal = parseFloat(data.entryValue) || NaN;
                 
                 console.log('📊 Datos recibidos:', {
                     slPercent: data.slPercent,
@@ -421,19 +422,19 @@
                     }
                     
                     // SIEMPRE actualizar las líneas después de procesar la vela y los datos de posición
-                    updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice, slPct, slVal, tpPct, tpVal);
+                    updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice, slPct, slVal, tpPct, tpVal, entryVal);
                     return;
                 }
                 
                 // 4) Soporte tradicional de velas (para carga inicial)
                 renderChart(data);
-                updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice, slPct, slVal, tpPct, tpVal);
+                updatePriceLines(lastEntryPrice, lastStopLoss, lastTakeProfit, lastPrice, slPct, slVal, tpPct, tpVal, entryVal);
             } catch (error) {
                 console.error('Error parsing message from Flutter:', error);
             }
         });
 
-        function updatePriceLines(entry, sl, tp, currentPrice, slPct, slVal, tpPct, tpVal) {
+        function updatePriceLines(entry, sl, tp, currentPrice, slPct, slVal, tpPct, tpVal, entryVal) {
             console.log('🔄 updatePriceLines:', { entry, sl, tp, currentPrice, slPct, slVal, tpPct, tpVal });
             
             // 1) Borrar líneas viejas
@@ -448,14 +449,15 @@
             // 2) Línea de ENTRADA: siempre en el precio de entry, pero con título dinámico (% respecto a currentPrice)
             if (!isNaN(entry) && !isNaN(currentPrice)) {
                 const pctMove = (currentPrice - entry) / entry * 100;
+                const entryValue = entryVal || 0; // Valor monetario de la entrada
                 entryPriceLine = candlestickSeries.createPriceLine({
                     price: entry,
                     color: '#2176FF',
                     lineWidth: 2,
                     lineStyle: LightweightCharts.LineStyle.Dotted,
                     axisLabelVisible: true,
-                    // Ej: "1.08500 (+0.12%)" para forex o "49951.285 (+1.23%)" para crypto
-                    title: `${priceFormat} (${pctMove>=0?'+':''}${pctMove.toFixed(2)}%)`,
+                    // Ej: "Entry -0.12% ($100.00)" para forex
+                    title: `Entry ${pctMove>=0?'+':''}${pctMove.toFixed(2)}% ($${entryValue.toFixed(2)})`,
                 });
             }
 

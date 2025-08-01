@@ -77,6 +77,7 @@ class _TestChartScreenState extends State<TestChartScreen> {
                 slValue: null,
                 tpPercent: null,
                 tpValue: null,
+                entryValue: null,
               ),
             ),
           ),
