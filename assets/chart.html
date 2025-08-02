@@ -49,6 +49,15 @@
         let lastTakeProfit = NaN;
         let lastPrice = NaN;
         let isForexPair = false; // Flag to detect forex pairs
+        let allMarkers = []; // Acumular todos los markers históricos
+
+        function clearAllMarkers() {
+            allMarkers = [];
+            if (candlestickSeries) {
+                candlestickSeries.setMarkers([]);
+                console.log('📊 Chart: Todos los markers han sido limpiados');
+            }
+        }
 
         function checkLightweightCharts() {
             if (typeof LightweightCharts === 'undefined') {
@@ -168,6 +177,9 @@
 
                 isInitialized = true;
                 
+                // Limpiar markers al inicializar
+                clearAllMarkers();
+                
                 // Handle window resize
                 window.addEventListener('resize', () => {
                     if (chart) {
@@ -194,6 +206,9 @@
                 if (!data || !data.candles || !Array.isArray(data.candles)) {
                     return;
                 }
+
+                // Reset markers array cuando se recarga el chart completamente
+                allMarkers = [];
 
                 // Detect asset type and adjust chart configuration
                 isForexPair = detectAssetType(data.candles);
@@ -263,13 +278,12 @@
 
                 // Add trade markers if available
                 if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
-                    const markers = data.trades.map(trade => {
+                    const newMarkers = data.trades.map(trade => {
                         const formattedTime = formatTime(trade.time);
+                        console.log('📊 Chart: Processing trade marker - Original time:', trade.time, 'Formatted time:', formattedTime, 'Type:', trade.type);
                         if (formattedTime === null) {
                             return null;
                         }
-                        const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
-                        const lev = trade.leverage ? `x${trade.leverage}` : '';
                         let text;
                         if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
                             text = `CLOSE`;
@@ -278,9 +292,9 @@
                                 text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
                             }
                         } else {
-                            text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
+                            text = trade.type.toUpperCase();
                         }
-                        return {
+                        const marker = {
                             time: formattedTime,
                             position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
                             color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
@@ -288,10 +302,33 @@
                             text: text,
                             size: 1,
                         };
+                        console.log('📊 Chart: Created marker:', marker);
+                        return marker;
                     }).filter(marker => marker !== null);
                     
-                    if (markers.length > 0) {
-                        candlestickSeries.setMarkers(markers);
+                    if (newMarkers.length > 0) {
+                        // Mostrar markers antes de agregar
+                        console.log('📊 Chart: Markers existentes antes de agregar:', allMarkers.length, allMarkers);
+                        console.log('📊 Chart: Nuevos markers a agregar:', newMarkers.length, newMarkers);
+                        
+                        // Agregar nuevos markers a la colección total
+                        allMarkers = allMarkers.concat(newMarkers);
+                        console.log('📊 Chart: Markers después de concat:', allMarkers.length);
+                        
+                        // Eliminar duplicados basados en tiempo y tipo
+                        const beforeDedup = allMarkers.length;
+                        allMarkers = allMarkers.filter((marker, index, self) => 
+                            index === self.findIndex(m => m.time === marker.time && m.text === marker.text)
+                        );
+                        console.log('📊 Chart: Markers después de deduplicar:', allMarkers.length, 'Eliminados:', beforeDedup - allMarkers.length);
+                        
+                        // Ordenar por tiempo
+                        allMarkers.sort((a, b) => a.time - b.time);
+                        console.log('📊 Chart: Markers finales ordenados:', allMarkers);
+                        
+                        // Establecer todos los markers
+                        candlestickSeries.setMarkers(allMarkers);
+                        console.log('📊 Chart: Markers históricos actualizados. Total:', allMarkers.length);
                     }
                 }
 
@@ -392,13 +429,12 @@
                     
                     // Actualizar trades si están disponibles
                     if (data.trades && Array.isArray(data.trades) && data.trades.length > 0) {
-                        const markers = data.trades.map(trade => {
+                        const newMarkers = data.trades.map(trade => {
                             const formattedTime = formatTime(trade.time);
+                            console.log('📊 Chart: Processing realtime trade marker - Original time:', trade.time, 'Formatted time:', formattedTime, 'Type:', trade.type);
                             if (formattedTime === null) {
                                 return null;
                             }
-                            const amount = trade.amount ? `$${parseFloat(trade.amount).toFixed(2)}` : '';
-                            const lev = trade.leverage ? `x${trade.leverage}` : '';
                             let text;
                             if (trade.reason && (trade.reason.toLowerCase().includes('close') || trade.reason.toLowerCase().includes('cierre'))) {
                                 text = `CLOSE`;
@@ -407,9 +443,9 @@
                                     text += `\nP&L: ${pnl > 0 ? '+' : ''}$${pnl}`;
                                 }
                             } else {
-                                text = `${trade.type.toUpperCase()} ${amount} ${lev}`.trim();
+                                text = trade.type.toUpperCase();
                             }
-                            return {
+                            const marker = {
                                 time: formattedTime,
                                 position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
                                 color: trade.type === 'buy' ? '#21CE99' : '#FF5A5F',
@@ -417,9 +453,32 @@
                                 text: text,
                                 size: 1,
                             };
+                            console.log('📊 Chart: Created realtime marker:', marker);
+                            return marker;
                         }).filter(marker => marker !== null);
-                        if (markers.length > 0) {
-                            candlestickSeries.setMarkers(markers);
+                        if (newMarkers.length > 0) {
+                            // Mostrar markers antes de agregar
+                            console.log('📊 Chart: [REALTIME] Markers existentes antes de agregar:', allMarkers.length, allMarkers);
+                            console.log('📊 Chart: [REALTIME] Nuevos markers a agregar:', newMarkers.length, newMarkers);
+                            
+                            // Agregar nuevos markers a la colección total
+                            allMarkers = allMarkers.concat(newMarkers);
+                            console.log('📊 Chart: [REALTIME] Markers después de concat:', allMarkers.length);
+                            
+                            // Eliminar duplicados basados en tiempo y tipo
+                            const beforeDedup = allMarkers.length;
+                            allMarkers = allMarkers.filter((marker, index, self) => 
+                                index === self.findIndex(m => m.time === marker.time && m.text === marker.text)
+                            );
+                            console.log('📊 Chart: [REALTIME] Markers después de deduplicar:', allMarkers.length, 'Eliminados:', beforeDedup - allMarkers.length);
+                            
+                            // Ordenar por tiempo
+                            allMarkers.sort((a, b) => a.time - b.time);
+                            console.log('📊 Chart: [REALTIME] Markers finales ordenados:', allMarkers);
+                            
+                            // Establecer todos los markers
+                            candlestickSeries.setMarkers(allMarkers);
+                            console.log('📊 Chart: Markers en tiempo real actualizados. Total:', allMarkers.length);
                         }
                     }
                     

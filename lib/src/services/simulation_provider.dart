@@ -661,13 +661,11 @@ class SimulationProvider with ChangeNotifier {
     // Use provided entry price or current tick price
     final price = entryPrice ?? currentTickPrice;
 
-    // Si se proporciona un precio específico, usar el tiempo del tick actual
-    // para mantener la sincronización temporal
+    // Para operaciones manuales (con entryPrice específico), usar el timestamp de la vela actual
+    // Para operaciones automáticas, usar el timestamp del tick actual
     final currentTime = entryPrice != null
-        ? (_syntheticTicks.isNotEmpty &&
-                  _currentTickIndex < _syntheticTicks.length
-              ? _syntheticTicks[_currentTickIndex].time
-              : historicalData[_currentCandleIndex].timestamp)
+        ? historicalData[_currentCandleIndex]
+              .timestamp // Siempre usar timestamp de la vela para operaciones manuales
         : (_syntheticTicks.isNotEmpty &&
                   _currentTickIndex < _syntheticTicks.length
               ? _syntheticTicks[_currentTickIndex].time
@@ -679,9 +677,15 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 SimulationProvider: executeManualTrade - Current tick index: $_currentTickIndex, Total ticks: ${_syntheticTicks.length}',
     );
+    debugPrint(
+      '🔥 SimulationProvider: executeManualTrade - Using timestamp: $currentTime (candle ${_currentCandleIndex})',
+    );
     if (entryPrice != null) {
       debugPrint(
         '🔥 SimulationProvider: executeManualTrade - Entry price provided: $entryPrice, will use this exact price',
+      );
+      debugPrint(
+        '🔥 SimulationProvider: executeManualTrade - Manual trade timestamp: $currentTime',
       );
     }
 
@@ -1184,6 +1188,13 @@ class SimulationProvider with ChangeNotifier {
             )
             .toList(),
       };
+
+      // Debug para timestamps de trades
+      for (final trade in _currentTrades) {
+        debugPrint(
+          '🔥 TICK: Trade timestamp - ID: ${trade.id}, Type: ${trade.type}, Timestamp: ${trade.timestamp}, Seconds: ${trade.timestamp.millisecondsSinceEpoch ~/ 1000}',
+        );
+      }
 
       debugPrint('🔥 TICK: Enviando vela al chart: $msg');
       _tickCallback!(msg);
