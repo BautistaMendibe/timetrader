@@ -15,7 +15,7 @@ class Tick {
 enum SimulationMode { manual }
 
 // --- TIMEFRAMES ---
-enum Timeframe { D1, H1, M15, M5, M1 }
+enum Timeframe { d1, h1, m15, m5, m1 }
 
 class SimulationProvider with ChangeNotifier {
   /// Valores de pip para los pares más tradeados
@@ -43,17 +43,17 @@ class SimulationProvider with ChangeNotifier {
 
   // --- MULTI-TIMEFRAME DATA ---
   late Map<Timeframe, List<Candle>> _allTimeframes;
-  Timeframe _activeTf = Timeframe.H1;
+  Timeframe _activeTf = Timeframe.h1;
 
   static const int baseTicksPerMinute = 10;
 
   // Mapa de ticks por vela para cada timeframe
   static final Map<Timeframe, int> _ticksPerCandleMap = {
-    Timeframe.M1: baseTicksPerMinute * 1, // 10 ticks por 1 m
-    Timeframe.M5: baseTicksPerMinute * 5, // 50 ticks por 5 m = 5×10
-    Timeframe.M15: baseTicksPerMinute * 15, // 150 ticks por 15 m = 15×10
-    Timeframe.H1: baseTicksPerMinute * 60, // 600 ticks por 1 h = 60×10
-    Timeframe.D1: baseTicksPerMinute * 1440, // 14400 ticks por 1 d = 1440×10
+    Timeframe.m1: baseTicksPerMinute * 1, // 10 ticks por 1 m
+    Timeframe.m5: baseTicksPerMinute * 5, // 50 ticks por 5 m = 5×10
+    Timeframe.m15: baseTicksPerMinute * 15, // 150 ticks por 15 m = 15×10
+    Timeframe.h1: baseTicksPerMinute * 60, // 600 ticks por 1 h = 60×10
+    Timeframe.d1: baseTicksPerMinute * 1440, // 14400 ticks por 1 d = 1440×10
   };
 
   bool _isSimulationRunning = false;
@@ -71,7 +71,6 @@ class SimulationProvider with ChangeNotifier {
   double _positionSize = 0.0;
   double _stopLossPrice = 0.0;
   double _takeProfitPrice = 0.0;
-  String _manualPositionType = 'buy'; // 'buy' or 'sell'
 
   // Simulation mode
   SimulationMode _simulationMode = SimulationMode.manual;
@@ -92,7 +91,7 @@ class SimulationProvider with ChangeNotifier {
   double _ticksPerSecondFactor = 1.0; // Para ajustar velocidad
 
   // --- ACUMULACIÓN DE TICKS PARA VELAS ---
-  List<Tick> _currentCandleTicks = [];
+  final List<Tick> _currentCandleTicks = [];
   DateTime? _currentCandleStartTime;
 
   // --- ENVÍO DE TICK AL CHART ---
@@ -101,9 +100,6 @@ class SimulationProvider with ChangeNotifier {
   /// Fija el símbolo activo (desde SimulationSetupScreen)
   void setActiveSymbol(String symbol) {
     _activeSymbol = symbol;
-    final pipValue = _pipValue;
-    // debugPrint('🔥 SimulationProvider: símbolo activo = $_activeSymbol');
-    // debugPrint('🔥 SimulationProvider: pip value = $pipValue');
 
     // Mostrar información específica del par
     if (_activeSymbol != null) {
@@ -159,17 +155,24 @@ class SimulationProvider with ChangeNotifier {
 
   // Get current tick price (for manual trades when simulation is paused)
   double get currentTickPrice {
-    if (_syntheticTicks.isEmpty ||
-        _currentTickIndex >= _syntheticTicks.length) {
+    if (_syntheticTicks.isEmpty) {
       final fallbackPrice = historicalData[_currentCandleIndex].close;
       // debugPrint(
       //   '🔥 SimulationProvider: currentTickPrice - usando precio de vela: $fallbackPrice (no hay ticks disponibles)',
       // );
       return fallbackPrice;
     }
-    final tickPrice = _syntheticTicks[_currentTickIndex].price;
+
+    // Usar el índice anterior al actual para obtener el precio del tick procesado
+    final tickIndex = _currentTickIndex > 0 ? _currentTickIndex - 1 : 0;
+    if (tickIndex >= _syntheticTicks.length) {
+      final fallbackPrice = historicalData[_currentCandleIndex].close;
+      return fallbackPrice;
+    }
+
+    final tickPrice = _syntheticTicks[tickIndex].price;
     // debugPrint(
-    //   '🔥 SimulationProvider: currentTickPrice - tick $_currentTickIndex: $tickPrice (simulación ${_isSimulationRunning ? 'corriendo' : 'pausada'})',
+    //   '🔥 SimulationProvider: currentTickPrice - tick $tickIndex: $tickPrice (simulación ${_isSimulationRunning ? 'corriendo' : 'pausada'})',
     // );
     return tickPrice;
   }
@@ -247,15 +250,15 @@ class SimulationProvider with ChangeNotifier {
 
     // Reagrupar datos en todos los timeframes
     _allTimeframes = {
-      Timeframe.D1: reaggregate(raw, const Duration(days: 1)),
-      Timeframe.H1: reaggregate(raw, const Duration(hours: 1)),
-      Timeframe.M15: reaggregate(raw, const Duration(minutes: 15)),
-      Timeframe.M5: reaggregate(raw, const Duration(minutes: 5)),
-      Timeframe.M1: reaggregate(raw, const Duration(minutes: 1)),
+      Timeframe.d1: reaggregate(raw, const Duration(days: 1)),
+      Timeframe.h1: reaggregate(raw, const Duration(hours: 1)),
+      Timeframe.m15: reaggregate(raw, const Duration(minutes: 15)),
+      Timeframe.m5: reaggregate(raw, const Duration(minutes: 5)),
+      Timeframe.m1: reaggregate(raw, const Duration(minutes: 1)),
     };
 
     // Inicializar con H1 por defecto
-    _activeTf = Timeframe.H1;
+    _activeTf = Timeframe.h1;
     _currentCandleIndex = 0;
 
     // Actualizar _ticksPerCandle según el timeframe inicial
@@ -263,11 +266,6 @@ class SimulationProvider with ChangeNotifier {
     // debugPrint(
     //   '🔥 SimulationProvider: _ticksPerCandle inicializado a $_ticksPerCandle para ${_activeTf.name}',
     // );
-
-    // debugPrint('🔥 SimulationProvider: Timeframes generados:');
-    for (final tf in Timeframe.values) {
-      // debugPrint('  ${tf.name}: ${_allTimeframes[tf]!.length} velas');
-    }
 
     _notifyChartReset();
   }
@@ -627,7 +625,7 @@ class SimulationProvider with ChangeNotifier {
       final pipsDistance = _currentSetup!.stopLossDistance;
       final calculatedPips = priceDistance / _pipValue;
       debugPrint(
-        '🔥 SimulationProvider: DEBUG - Pips calculation: ${pipsDistance} pips × ${_pipValue} pip value = ${calculatedPips} price distance',
+        '🔥 SimulationProvider: DEBUG - Pips calculation: $pipsDistance pips × $_pipValue pip value = $calculatedPips price distance',
       );
     }
 
@@ -635,13 +633,13 @@ class SimulationProvider with ChangeNotifier {
       _calculatedStopLossPrice = entryPrice - priceDistance;
       _calculatedTakeProfitPrice = entryPrice + (priceDistance * takeProfitRR);
       debugPrint(
-        '🔥 SimulationProvider: DEBUG - BUY - SL: $_calculatedStopLossPrice (${entryPrice} - ${priceDistance}), TP: $_calculatedTakeProfitPrice (${entryPrice} + ${priceDistance} * ${takeProfitRR})',
+        '🔥 SimulationProvider: DEBUG - BUY - SL: $_calculatedStopLossPrice ($entryPrice - $priceDistance), TP: $_calculatedTakeProfitPrice ($entryPrice + $priceDistance * $takeProfitRR)',
       );
     } else {
       _calculatedStopLossPrice = entryPrice + priceDistance;
       _calculatedTakeProfitPrice = entryPrice - (priceDistance * takeProfitRR);
       debugPrint(
-        '🔥 SimulationProvider: DEBUG - SELL - SL: $_calculatedStopLossPrice (${entryPrice} + ${priceDistance}), TP: $_calculatedTakeProfitPrice (${entryPrice} - ${priceDistance} * ${takeProfitRR})',
+        '🔥 SimulationProvider: DEBUG - SELL - SL: $_calculatedStopLossPrice ($entryPrice + $priceDistance), TP: $_calculatedTakeProfitPrice ($entryPrice - $priceDistance * $takeProfitRR)',
       );
     }
 
@@ -715,7 +713,6 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = true;
     _entryPrice = price;
     _positionSize = _calculatedPositionSize!;
-    _manualPositionType = type;
 
     // Enviar datos al WebView para dibujar las líneas
     if (_tickCallback != null) {
@@ -804,7 +801,6 @@ class SimulationProvider with ChangeNotifier {
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
-    _manualPositionType = 'buy';
 
     // Reset calculated parameters
     _calculatedPositionSize = null;
@@ -815,26 +811,17 @@ class SimulationProvider with ChangeNotifier {
 
     _currentTrades.clear();
 
-    // Enviar señal de cierre de orden al WebView para limpiar las líneas
-    if (_tickCallback != null) {
-      final closeOrderMsg = {'closeOrder': true};
-      debugPrint('🔥 SimulationProvider: Enviando señal closeOrder al WebView');
-      _tickCallback!(closeOrderMsg);
-    }
+    // Limpiar líneas del gráfico
+    debugPrint('🔥 closeManualPosition: Limpiando líneas del gráfico...');
+    _clearChartLines();
 
     _notifyUIUpdate();
   }
 
   // --- MÉTODO PARA CANCELAR ÓRDENES ---
   void cancelOrder() {
-    // Enviar señal de cierre de orden al WebView para limpiar las líneas
-    if (_tickCallback != null) {
-      final closeOrderMsg = {'closeOrder': true};
-      debugPrint(
-        '🔥 SimulationProvider: Enviando señal closeOrder al WebView (cancelación)',
-      );
-      _tickCallback!(closeOrderMsg);
-    }
+    // Limpiar líneas del gráfico
+    _clearChartLines();
   }
 
   // Validate if position can be calculated
@@ -1118,11 +1105,19 @@ class SimulationProvider with ChangeNotifier {
     }
 
     if (_currentTickIndex < _syntheticTicks.length) {
-      final tick = _syntheticTicks[_currentTickIndex++];
+      final tick = _syntheticTicks[_currentTickIndex];
+      final currentTickPrice =
+          tick.price; // Capturar precio antes de incrementar
+      _currentTickIndex++;
       debugPrint(
-        '🔥 SimulationProvider: Procesando tick ${tick.price} a las ${tick.time}',
+        '🔥 SimulationProvider: Procesando tick $currentTickPrice a las ${tick.time}',
       );
       _accumulateTickForCandle(tick);
+
+      // Notificar cambios de UI para actualizar P&L flotante en tiempo real
+      if (_inPosition) {
+        _notifyUIUpdate();
+      }
     } else {
       debugPrint('🔥 SimulationProvider: Índice de tick fuera de rango');
     }
@@ -1153,6 +1148,11 @@ class SimulationProvider with ChangeNotifier {
     debugPrint(
       '🔥 TICK: Tick agregado. Total acumulados: ${_currentCandleTicks.length}',
     );
+
+    // Verificar SL/TP si hay posición abierta
+    if (_inPosition && _currentTrades.isNotEmpty) {
+      _checkStopLossAndTakeProfit(tick.price);
+    }
 
     // Calcular OHLC de los ticks acumulados hasta ahora
     final prices = _currentCandleTicks.map((t) => t.price).toList();
@@ -1198,6 +1198,11 @@ class SimulationProvider with ChangeNotifier {
       debugPrint('🔥 TICK: Vela completada, limpiando ticks acumulados');
       _currentCandleTicks.clear();
       _currentCandleStartTime = null;
+    }
+
+    // Notificar cambios de UI para actualizar P&L flotante en tiempo real
+    if (_inPosition) {
+      _notifyUIUpdate();
     }
   }
 
@@ -1254,5 +1259,181 @@ class SimulationProvider with ChangeNotifier {
   /// Notifica cambios de estado de simulación sin reiniciar gráfico
   void _notifySimulationState() {
     notifyListeners();
+  }
+
+  // --- MÉTODO HELPER PARA LIMPIAR LÍNEAS DEL GRÁFICO ---
+  void _clearChartLines() {
+    if (_tickCallback != null) {
+      debugPrint(
+        '🔥 SimulationProvider: Enviando señal para limpiar líneas del gráfico',
+      );
+      final clearMsg = {'closeOrder': true};
+      debugPrint('🔥 SimulationProvider: Mensaje de limpieza: $clearMsg');
+      _tickCallback!(clearMsg);
+
+      // Esperar un momento y enviar un mensaje adicional para asegurar la limpieza
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_tickCallback != null) {
+          debugPrint(
+            '🔥 SimulationProvider: Enviando mensaje adicional de limpieza',
+          );
+          _tickCallback!({
+            'entryPrice': null,
+            'stopLoss': null,
+            'takeProfit': null,
+            'clearLines': true,
+          });
+        }
+      });
+    } else {
+      debugPrint(
+        '🔥 SimulationProvider: ERROR - _tickCallback es null, no se pueden limpiar las líneas',
+      );
+    }
+  }
+
+  // --- VERIFICACIÓN DE STOP LOSS Y TAKE PROFIT ---
+  void _checkStopLossAndTakeProfit(double currentPrice) {
+    if (!_inPosition || _currentTrades.isEmpty) return;
+
+    final lastTrade = _currentTrades.last;
+    String? closeReason;
+
+    // Verificar Stop Loss
+    if (_calculatedStopLossPrice != null) {
+      if (lastTrade.type == 'buy' &&
+          currentPrice <= _calculatedStopLossPrice!) {
+        closeReason = 'Stop Loss';
+        debugPrint(
+          '🔥 SL/TP: Stop Loss alcanzado - Precio: $currentPrice, SL: ${_calculatedStopLossPrice}',
+        );
+      } else if (lastTrade.type == 'sell' &&
+          currentPrice >= _calculatedStopLossPrice!) {
+        closeReason = 'Stop Loss';
+        debugPrint(
+          '🔥 SL/TP: Stop Loss alcanzado - Precio: $currentPrice, SL: ${_calculatedStopLossPrice}',
+        );
+      }
+    }
+
+    // Verificar Take Profit
+    if (_calculatedTakeProfitPrice != null && closeReason == null) {
+      if (lastTrade.type == 'buy' &&
+          currentPrice >= _calculatedTakeProfitPrice!) {
+        closeReason = 'Take Profit';
+        debugPrint(
+          '🔥 SL/TP: Take Profit alcanzado - Precio: $currentPrice, TP: ${_calculatedTakeProfitPrice}',
+        );
+      } else if (lastTrade.type == 'sell' &&
+          currentPrice <= _calculatedTakeProfitPrice!) {
+        closeReason = 'Take Profit';
+        debugPrint(
+          '🔥 SL/TP: Take Profit alcanzado - Precio: $currentPrice, TP: ${_calculatedTakeProfitPrice}',
+        );
+      }
+    }
+
+    // Cerrar posición si se alcanzó SL o TP
+    if (closeReason != null) {
+      _closePositionAtPrice(currentPrice, closeReason);
+    }
+  }
+
+  void _closePositionAtPrice(double closePrice, String reason) {
+    if (!_inPosition || _currentTrades.isEmpty) return;
+
+    final lastTrade = _currentTrades.last;
+
+    // Para mayor precisión, usar el precio exacto de SL/TP cuando corresponda
+    double exactClosePrice = closePrice;
+    if (reason == 'Take Profit' && _calculatedTakeProfitPrice != null) {
+      exactClosePrice = _calculatedTakeProfitPrice!;
+      debugPrint(
+        '🔥 SL/TP: Usando precio exacto de TP: $exactClosePrice en lugar de $closePrice',
+      );
+    } else if (reason == 'Stop Loss' && _calculatedStopLossPrice != null) {
+      exactClosePrice = _calculatedStopLossPrice!;
+      debugPrint(
+        '🔥 SL/TP: Usando precio exacto de SL: $exactClosePrice en lugar de $closePrice',
+      );
+    }
+
+    // Calcular P&L de la operación
+    double pnl;
+    if (lastTrade.type == 'buy') {
+      pnl =
+          (exactClosePrice - lastTrade.price) *
+          lastTrade.quantity *
+          lastTrade.leverage!;
+    } else {
+      pnl =
+          (lastTrade.price - exactClosePrice) *
+          lastTrade.quantity *
+          lastTrade.leverage!;
+    }
+
+    debugPrint('🔥 SL/TP: Cálculo P&L detallado:');
+    debugPrint('  - Tipo: ${lastTrade.type}');
+    debugPrint('  - Precio entrada: ${lastTrade.price}');
+    debugPrint('  - Precio cierre: $exactClosePrice');
+    debugPrint('  - Cantidad: ${lastTrade.quantity}');
+    debugPrint('  - Leverage: ${lastTrade.leverage}');
+    debugPrint('  - P&L calculado: $pnl');
+
+    // Crear trade de cierre
+    final closeTrade = Trade(
+      id: 'close_${DateTime.now().millisecondsSinceEpoch}',
+      timestamp: DateTime.now(),
+      type: lastTrade.type == 'buy' ? 'sell' : 'buy',
+      price: exactClosePrice,
+      quantity: lastTrade.quantity,
+      candleIndex: _currentCandleIndex,
+      reason: reason,
+      leverage: lastTrade.leverage,
+      pnl: pnl,
+      tradeGroupId: lastTrade.tradeGroupId,
+    );
+
+    // Agregar trade de cierre a la lista
+    _currentTrades.add(closeTrade);
+
+    // Crear operación completada
+    final completedOperation = CompletedTrade(
+      id: 'completed_${DateTime.now().millisecondsSinceEpoch}',
+      entryTrade: lastTrade,
+      exitTrade: closeTrade,
+      totalPnL: pnl,
+      entryTime: lastTrade.timestamp,
+      exitTime: closeTrade.timestamp,
+      entryPrice: lastTrade.price,
+      exitPrice: exactClosePrice,
+      quantity: lastTrade.quantity,
+      leverage: lastTrade.leverage,
+      reason: reason,
+    );
+
+    // Mover trades a operaciones completadas
+    _completedOperations.add(completedOperation);
+    _currentTrades.clear();
+
+    // Actualizar balance
+    _currentBalance += pnl;
+
+    // Limpiar estado de posición
+    _inPosition = false;
+    _entryPrice = 0.0;
+    _calculatedStopLossPrice = null;
+    _calculatedTakeProfitPrice = null;
+
+    debugPrint(
+      '🔥 SL/TP: Posición cerrada - Precio: $exactClosePrice, P&L: $pnl, Razón: $reason',
+    );
+
+    // Limpiar líneas del gráfico
+    debugPrint('🔥 SL/TP: Limpiando líneas del gráfico...');
+    _clearChartLines();
+
+    // Notificar cambios
+    _notifyUIUpdate();
   }
 }
