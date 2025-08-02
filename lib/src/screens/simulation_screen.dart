@@ -59,6 +59,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
               '🔥 CALLBACK: Enviando señal de limpieza al WebView: $tickData',
             );
             _chartKey.currentState!.sendMessageToWebView(tickData);
+          } else if (tickData.containsKey('trades') &&
+              !tickData.containsKey('candle') &&
+              !tickData.containsKey('tick')) {
+            // Es solo un mensaje de trades (cierre de posición) - enviar directamente
+            debugPrint(
+              '🔥 CALLBACK: Enviando trades de cierre al WebView: $tickData',
+            );
+            _chartKey.currentState!.sendMessageToWebView(tickData);
           } else {
             // Es un tick normal con vela
             final candle = tickData['candle'] ?? tickData['tick'];

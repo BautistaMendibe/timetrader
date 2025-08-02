@@ -781,6 +781,27 @@ class SimulationProvider with ChangeNotifier {
     _currentTrades.add(closeTrade);
     _currentBalance += pnl;
 
+    // Enviar el trade de cierre al WebView ANTES de limpiar
+    if (_tickCallback != null) {
+      final closeTradeMsg = {
+        'trades': [
+          {
+            'time': closeTrade.timestamp.millisecondsSinceEpoch ~/ 1000,
+            'type': closeTrade.type,
+            'price': closeTrade.price,
+            'amount': closeTrade.amount ?? 0.0,
+            'leverage': closeTrade.leverage ?? 1,
+            'reason': closeTrade.reason ?? '',
+            'pnl': closeTrade.pnl ?? 0.0,
+          },
+        ],
+      };
+      debugPrint(
+        '🔥 closeManualPosition: Enviando trade de cierre al WebView: $closeTradeMsg',
+      );
+      _tickCallback!(closeTradeMsg);
+    }
+
     // Crear la operación completa
     final completedOperation = CompletedTrade(
       id: tradeGroupId,
@@ -1394,7 +1415,8 @@ class SimulationProvider with ChangeNotifier {
     // Crear trade de cierre
     final closeTrade = Trade(
       id: 'close_${DateTime.now().millisecondsSinceEpoch}',
-      timestamp: DateTime.now(),
+      timestamp: historicalData[_currentCandleIndex]
+          .timestamp, // Usar timestamp de la vela actual
       type: lastTrade.type == 'buy' ? 'sell' : 'buy',
       price: exactClosePrice,
       quantity: lastTrade.quantity,
@@ -1407,6 +1429,27 @@ class SimulationProvider with ChangeNotifier {
 
     // Agregar trade de cierre a la lista
     _currentTrades.add(closeTrade);
+
+    // Enviar el trade de cierre al WebView ANTES de limpiar
+    if (_tickCallback != null) {
+      final closeTradeMsg = {
+        'trades': [
+          {
+            'time': closeTrade.timestamp.millisecondsSinceEpoch ~/ 1000,
+            'type': closeTrade.type,
+            'price': closeTrade.price,
+            'amount': closeTrade.amount ?? 0.0,
+            'leverage': closeTrade.leverage ?? 1,
+            'reason': closeTrade.reason ?? '',
+            'pnl': closeTrade.pnl ?? 0.0,
+          },
+        ],
+      };
+      debugPrint(
+        '🔥 SL/TP: Enviando trade de cierre al WebView: $closeTradeMsg',
+      );
+      _tickCallback!(closeTradeMsg);
+    }
 
     // Crear operación completada
     final completedOperation = CompletedTrade(
