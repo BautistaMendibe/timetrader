@@ -52,6 +52,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
               '🔥 CALLBACK: Enviando señal de control al WebView: $tickData',
             );
             _chartKey.currentState!.sendMessageToWebView(tickData);
+          } else if (tickData.containsKey('closeOrder') ||
+              tickData.containsKey('clearLines')) {
+            // Es una señal de limpieza - enviar directamente
+            debugPrint(
+              '🔥 CALLBACK: Enviando señal de limpieza al WebView: $tickData',
+            );
+            _chartKey.currentState!.sendMessageToWebView(tickData);
           } else {
             // Es un tick normal con vela
             final candle = tickData['candle'] ?? tickData['tick'];
@@ -80,20 +87,25 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 ? simulationProvider.unrealizedPnL
                 : 0.0; // P&L flotante en tiempo real
 
+            // Solo enviar datos de líneas si hay posición activa
+            final hasActivePosition =
+                simulationProvider.inPosition &&
+                simulationProvider.entryPrice > 0;
+
             _chartKey.currentState?.sendMessageToWebView({
               'candle': candle,
               'trades': trades,
-              'entryPrice': simulationProvider.entryPrice > 0
+              'entryPrice': hasActivePosition
                   ? simulationProvider.entryPrice
                   : null,
-              'stopLoss': stopLoss,
-              'takeProfit': takeProfit,
-              // añado porcentaje y valor en USD
-              'slPercent': slPercent,
-              'slValue': slValue,
-              'tpPercent': tpPercent,
-              'tpValue': tpValue,
-              'entryValue': entryValue,
+              'stopLoss': hasActivePosition ? stopLoss : null,
+              'takeProfit': hasActivePosition ? takeProfit : null,
+              // añado porcentaje y valor en USD solo si hay posición activa
+              'slPercent': hasActivePosition ? slPercent : null,
+              'slValue': hasActivePosition ? slValue : null,
+              'tpPercent': hasActivePosition ? tpPercent : null,
+              'tpValue': hasActivePosition ? tpValue : null,
+              'entryValue': hasActivePosition ? entryValue : null,
             });
           }
         }
