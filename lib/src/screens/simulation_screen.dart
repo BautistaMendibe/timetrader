@@ -79,6 +79,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
             // Enviar al WebView
             debugPrint(
+              '🔥 CALLBACK: Enviando vela al WebView - timeframe: ${candle['timeframe']}, time: ${candle['time']}, OHLC: ${candle['open']}/${candle['high']}/${candle['low']}/${candle['close']}, completed: ${candle['completed']}',
+            );
+            debugPrint(
               '🔥 Enviando al WebView: SL%=${-_slRiskPercent}, SLValue=${-(simulationProvider.currentBalance * (_slRiskPercent / 100))}, TP%=$_tpRiskPercent, TPValue=${simulationProvider.currentBalance * (_tpRiskPercent / 100)}',
             );
 
@@ -1181,7 +1184,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                 null &&
                                             !simulationProvider
                                                 .isSimulationRunning)
-                                      ? () => simulationProvider
+                                      ? () async => await simulationProvider
                                             .startTickSimulation(
                                               simulationProvider.currentSetup!,
                                               simulationProvider
@@ -1225,6 +1228,69 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   label: const Text('Pausar'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Test button for end-to-end testing
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    await simulationProvider
+                                        .triggerEndToEndTest();
+                                  },
+                                  icon: const Icon(Icons.science),
+                                  label: const Text('Test E2E'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF6B4EFF),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    simulationProvider
+                                        .verifyMultiTimeframeFunctionality();
+                                  },
+                                  icon: const Icon(Icons.verified),
+                                  label: const Text('Verify'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF4CAF50),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    simulationProvider.debugBufferState();
+                                  },
+                                  icon: const Icon(Icons.bug_report),
+                                  label: const Text('Debug'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF9800),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 12,

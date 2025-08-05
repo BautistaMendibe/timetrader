@@ -95,7 +95,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
 
       // Set data and start simulation
       simulationProvider.setHistoricalData(data);
-      simulationProvider.startTickSimulation(
+      await simulationProvider.startTickSimulation(
         _selectedSetup!,
         _selectedDate!,
         1.0,

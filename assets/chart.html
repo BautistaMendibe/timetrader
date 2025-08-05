@@ -412,7 +412,22 @@
                     tpVal: tpVal
                 });
 
-                // 3) Si viene una vela, actualizar el chart y luego las líneas de precio
+                // 3) Si viene reset, limpiar el chart completamente
+                if (data.reset) {
+                    console.log('📨 HTML: Recibido reset - limpiando chart');
+                    chart.removeAllSeries();
+                    candlestickSeries = chart.addCandlestickSeries();
+                    window.seriesLastTime = null;
+                    lastEntryPrice = NaN;
+                    lastStopLoss = NaN;
+                    lastTakeProfit = NaN;
+                    lastPrice = NaN;
+                    updatePriceLines(NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN);
+                    console.log('📨 HTML: Chart reseteado completamente');
+                    return;
+                }
+
+                // 4) Si viene una vela, actualizar el chart y luego las líneas de precio
                 if (data.candle) {
                     //console.log('🕯️ HTML: Recibida vela en tiempo real:', data.candle);
                     

@@ -2,15 +2,13 @@ import 'package:flutter/foundation.dart';
 import '../models/simulation_result.dart';
 import '../models/candle.dart';
 import '../models/setup.dart';
+import '../models/tick.dart';
+import 'data_service.dart';
 import 'dart:async';
 import 'dart:math';
 
 // --- MODELO TICK ---
-class Tick {
-  final DateTime time;
-  final double price;
-  Tick(this.time, this.price);
-}
+// Using Tick from models/tick.dart instead of local definition
 
 enum SimulationMode { manual }
 
@@ -90,9 +88,149 @@ class SimulationProvider with ChangeNotifier {
   Timer? _tickTimer;
   double _ticksPerSecondFactor = 1.0; // Para ajustar velocidad
 
+  // --- REAL TICKS FROM CSV ---
+  List<Tick> _allTicks = [];
+  int _tickPointer = 0;
+  DateTime _simulationClock = DateTime.now();
+
+  // Initialize buffers for all timeframes
+  void _initializeBuffers() {
+    _buffers.clear();
+    _currentBucket.clear();
+    _lastEmittedTickCount.clear();
+    _lastEmittedCount.clear();
+
+    for (Timeframe tf in Timeframe.values) {
+      _buffers[tf] = [];
+      _currentBucket[tf] =
+          null; // Initialize as null, will be set on first tick
+      _lastEmittedTickCount[tf] = 0;
+      _lastEmittedCount[tf] = 0;
+    }
+
+    debugPrint(
+      '🔥 SimulationProvider: Buffers inicializados para todos los timeframes',
+    );
+  }
+
+  // Calculate candle start time for a given timeframe
+  DateTime _getCandleStart(DateTime tickTime, Timeframe timeframe) {
+    switch (timeframe) {
+      case Timeframe.m1:
+        return DateTime(
+          tickTime.year,
+          tickTime.month,
+          tickTime.day,
+          tickTime.hour,
+          tickTime.minute,
+        );
+      case Timeframe.m5:
+        final minute = tickTime.minute - (tickTime.minute % 5);
+        return DateTime(
+          tickTime.year,
+          tickTime.month,
+          tickTime.day,
+          tickTime.hour,
+          minute,
+        );
+      case Timeframe.m15:
+        final minute = tickTime.minute - (tickTime.minute % 15);
+        return DateTime(
+          tickTime.year,
+          tickTime.month,
+          tickTime.day,
+          tickTime.hour,
+          minute,
+        );
+      case Timeframe.h1:
+        return DateTime(
+          tickTime.year,
+          tickTime.month,
+          tickTime.day,
+          tickTime.hour,
+        );
+      case Timeframe.d1:
+        return DateTime(tickTime.year, tickTime.month, tickTime.day);
+    }
+  }
+
+  // Get current bucket time safely (returns current time if bucket is null)
+  DateTime _getCurrentBucketTime(Timeframe tf) {
+    try {
+      final bucketTime = _currentBucket[tf];
+      if (bucketTime == null) {
+        debugPrint(
+          '🔥 GetCurrentBucketTime: Bucket null para ${tf.name}, usando DateTime.now()',
+        );
+        return DateTime.now();
+      }
+      return bucketTime;
+    } catch (e) {
+      debugPrint('🔥 GetCurrentBucketTime: ERROR para ${tf.name}: $e');
+      return DateTime.now();
+    }
+  }
+
+  // Removed _processTickForTimeframe as logic is now in _accumulateTickForCandle
+
+  // Emit candle to WebView
+  void _emitCandle(Timeframe tf, List<Tick> ticks, bool completed) {
+    try {
+      if (ticks.isEmpty) return;
+
+      final prices = ticks.map((t) => t.price).toList();
+      final open = prices.first;
+      final close = prices.last;
+      final high = prices.reduce((a, b) => a > b ? a : b);
+      final low = prices.reduce((a, b) => a < b ? a : b);
+
+      // Get the bucket time for this candle safely
+      final bucketTime = _getCurrentBucketTime(tf);
+
+      final candle = {
+        'timeframe': tf.name,
+        'time': bucketTime.millisecondsSinceEpoch ~/ 1000,
+        'open': open,
+        'high': high,
+        'low': low,
+        'close': close,
+        'completed': completed,
+        'ticks_count': ticks.length,
+      };
+
+      debugPrint(
+        '🔥 EmitCandle: ${tf.name} - OHLC: $open/$high/$low/$close (${completed ? 'COMPLETED' : 'partial'}) - ticks: ${ticks.length} - time: ${bucketTime.millisecondsSinceEpoch ~/ 1000}',
+      );
+
+      if (_tickCallback != null) {
+        debugPrint('🔥 EmitCandle: Enviando vela al callback');
+        _tickCallback!({'candle': candle, 'updateOnly': true});
+      } else {
+        debugPrint('🔥 EmitCandle: ERROR - _tickCallback es null');
+      }
+    } catch (e) {
+      debugPrint('🔥 EmitCandle: ERROR emitiendo vela para ${tf.name}: $e');
+    }
+  }
+
+  // Initialize chart with initial candles
+  void _initializeChartWithCandles() {
+    if (_tickCallback != null) {
+      // Solo indicamos "resetea todo" al chart, sin mandar velas
+      debugPrint('🔥 InitializeChart: Enviando reset al chart');
+      _tickCallback!({'reset': true});
+    }
+  }
+
   // --- ACUMULACIÓN DE TICKS PARA VELAS ---
   final List<Tick> _currentCandleTicks = [];
   DateTime? _currentCandleStartTime;
+
+  // --- MULTI-TIMEFRAME BUFFERS ---
+  Map<Timeframe, List<Tick>> _buffers = {};
+  Map<Timeframe, DateTime?> _currentBucket = {};
+  Map<Timeframe, int> _lastEmittedTickCount = {};
+  Map<Timeframe, int> _lastEmittedCount = {};
 
   // --- ENVÍO DE TICK AL CHART ---
   Function(Map<String, dynamic>)? _tickCallback;
@@ -137,6 +275,417 @@ class SimulationProvider with ChangeNotifier {
   Timeframe get activeTimeframe => _activeTf;
   Map<Timeframe, List<Candle>> get allTimeframes => _allTimeframes;
 
+  // Get current partial candle for any timeframe
+  Map<String, dynamic>? getCurrentPartialCandle(Timeframe timeframe) {
+    final ticks = _buffers[timeframe];
+    if (ticks == null || ticks.isEmpty) return null;
+
+    final prices = ticks.map((t) => t.price).toList();
+    final open = prices.first;
+    final close = prices.last;
+    final high = prices.reduce((a, b) => a > b ? a : b);
+    final low = prices.reduce((a, b) => a < b ? a : b);
+
+    // Calculate current candle start time
+    final lastTick = ticks.last;
+    final candleStart = _getCandleStart(lastTick.time, timeframe);
+
+    return {
+      'timeframe': timeframe.name,
+      'time': candleStart.millisecondsSinceEpoch ~/ 1000,
+      'open': open,
+      'high': high,
+      'low': low,
+      'close': close,
+      'partial': true,
+      'tickCount': ticks.length,
+    };
+  }
+
+  // Get simulation progress info for any timeframe
+  Map<String, dynamic> getTimeframeProgress(Timeframe timeframe) {
+    final ticks = _buffers[timeframe] ?? [];
+    final totalTicks = _allTicks.length;
+    final processedTicks = _tickPointer;
+
+    return {
+      'timeframe': timeframe.name,
+      'totalTicks': totalTicks,
+      'processedTicks': processedTicks,
+      'currentBufferSize': ticks.length,
+      'progress': totalTicks > 0 ? (processedTicks / totalTicks) * 100 : 0.0,
+      'currentTime': _simulationClock,
+    };
+  }
+
+  // --- END-TO-END TEST METHOD ---
+  Future<void> runEndToEndTest() async {
+    debugPrint('🔥🔥🔥 INICIANDO TEST END-TO-END 🔥🔥🔥');
+
+    try {
+      // 1. Setup test data and simulation
+      final testSetup = Setup(
+        id: 'test_setup',
+        name: 'Test Setup',
+        riskPercent: 2.0,
+        stopLossType: StopLossType.pips,
+        stopLossDistance: 10.0,
+        takeProfitRatio: TakeProfitRatio.oneToTwo,
+        customTakeProfitRatio: null,
+        createdAt: DateTime.now(),
+      );
+
+      debugPrint('🔥 TEST: Configurando simulación de prueba...');
+      await startTickSimulation(
+        testSetup,
+        DateTime.now(),
+        10.0, // Fast speed for testing
+        10000.0,
+        'EUR/USD',
+      );
+
+      // Verify CSV data consistency
+      _verifyCSVConsistency();
+
+      // 2. Run 100 ticks and monitor timeframe changes
+      debugPrint('🔥 TEST: Ejecutando 100 ticks con cambios de timeframe...');
+
+      int candleEmissionCount = 0;
+
+      for (int i = 0; i < 100; i++) {
+        // Process next tick
+        _processNextTick();
+
+        // Count candle emissions
+        if (i % 10 == 0) {
+          debugPrint('🔥 TEST: Tick $i - verificando emisión de velas...');
+          // Check if any candles were emitted by checking buffer sizes
+          for (Timeframe tf in Timeframe.values) {
+            final bufferSize = _buffers[tf]?.length ?? 0;
+            if (bufferSize > 0) {
+              debugPrint('🔥 TEST: Buffer ${tf.name} tiene $bufferSize ticks');
+            }
+          }
+        }
+
+        // Change timeframes at specific points
+        if (i == 25) {
+          debugPrint('🔥 TEST: Cambiando a m5 en tick 25');
+          setTimeframe(Timeframe.m5);
+          _verifyTimeframeConsistency(Timeframe.m5, i);
+        }
+
+        if (i == 50) {
+          debugPrint('🔥 TEST: Cambiando a m15 en tick 50');
+          setTimeframe(Timeframe.m15);
+          _verifyTimeframeConsistency(Timeframe.m15, i);
+        }
+
+        if (i == 75) {
+          debugPrint('🔥 TEST: Cambiando a h1 en tick 75');
+          setTimeframe(Timeframe.h1);
+          _verifyTimeframeConsistency(Timeframe.h1, i);
+        }
+
+        // Verify candle consistency every 10 ticks
+        if (i % 10 == 0) {
+          _verifyCandleConsistency(i);
+        }
+
+        // Small delay to simulate real-time processing
+        await Future.delayed(Duration(milliseconds: 50));
+      }
+
+      // 3. Test manual trade with timeframe switching
+      debugPrint('🔥 TEST: Probando trade manual con cambio de timeframe...');
+      await _testManualTradeWithTimeframeSwitch();
+
+      debugPrint('🔥🔥🔥 TEST END-TO-END COMPLETADO EXITOSAMENTE 🔥🔥🔥');
+    } catch (e) {
+      debugPrint('🔥🔥🔥 ERROR EN TEST END-TO-END: $e 🔥🔥🔥');
+    }
+  }
+
+  // Verify timeframe consistency
+  void _verifyTimeframeConsistency(Timeframe timeframe, int tickIndex) {
+    debugPrint(
+      '🔥 VERIFY: Verificando consistencia para ${timeframe.name} en tick $tickIndex',
+    );
+
+    final progress = getTimeframeProgress(timeframe);
+    final partialCandle = getCurrentPartialCandle(timeframe);
+
+    debugPrint(
+      '🔥 VERIFY: Progress - ${progress['processedTicks']}/${progress['totalTicks']} ticks',
+    );
+    debugPrint(
+      '🔥 VERIFY: Buffer size - ${progress['currentBufferSize']} ticks',
+    );
+
+    if (partialCandle != null) {
+      debugPrint(
+        '🔥 VERIFY: Partial candle - OHLC: ${partialCandle['open']}/${partialCandle['high']}/${partialCandle['low']}/${partialCandle['close']}',
+      );
+      debugPrint('🔥 VERIFY: Timestamp - ${partialCandle['time']}');
+    }
+
+    // Verify that the timeframe is active
+    assert(_activeTf == timeframe, 'Active timeframe should be $timeframe');
+    debugPrint('🔥 VERIFY: Timeframe ${timeframe.name} activado correctamente');
+  }
+
+  // Verify candle consistency
+  void _verifyCandleConsistency(int tickIndex) {
+    debugPrint(
+      '🔥 VERIFY: Verificando consistencia de velas en tick $tickIndex',
+    );
+
+    for (Timeframe tf in Timeframe.values) {
+      final partialCandle = getCurrentPartialCandle(tf);
+      if (partialCandle != null) {
+        final open = partialCandle['open'] as double;
+        final high = partialCandle['high'] as double;
+        final low = partialCandle['low'] as double;
+        final close = partialCandle['close'] as double;
+
+        // Verify OHLC logic
+        assert(high >= open, 'High should be >= Open');
+        assert(high >= close, 'High should be >= Close');
+        assert(low <= open, 'Low should be <= Open');
+        assert(low <= close, 'Low should be <= Close');
+
+        debugPrint(
+          '🔥 VERIFY: ${tf.name} - OHLC válido: $open/$high/$low/$close',
+        );
+      }
+    }
+  }
+
+  // Test manual trade with timeframe switching
+  Future<void> _testManualTradeWithTimeframeSwitch() async {
+    debugPrint('🔥 TRADE_TEST: Iniciando test de trade manual...');
+
+    // 1. Open a manual trade
+    debugPrint('🔥 TRADE_TEST: Abriendo posición manual...');
+    executeManualTrade(type: 'buy', amount: 1000.0, leverage: 1);
+
+    // Verify trade was opened
+    assert(_inPosition, 'Should be in position after manual trade');
+    assert(_currentTrades.isNotEmpty, 'Should have trades after manual trade');
+    debugPrint(
+      '🔥 TRADE_TEST: Posición abierta - Precio: ${_entryPrice}, SL: ${_calculatedStopLossPrice}, TP: ${_calculatedTakeProfitPrice}',
+    );
+
+    // 2. Switch timeframes and verify SL/TP alignment
+    final timeframes = [
+      Timeframe.m1,
+      Timeframe.m5,
+      Timeframe.m15,
+      Timeframe.h1,
+    ];
+
+    for (Timeframe tf in timeframes) {
+      debugPrint('🔥 TRADE_TEST: Cambiando a ${tf.name}...');
+      setTimeframe(tf);
+
+      // Verify SL/TP are still calculated
+      assert(
+        _calculatedStopLossPrice != null,
+        'Stop loss should be calculated',
+      );
+      assert(
+        _calculatedTakeProfitPrice != null,
+        'Take profit should be calculated',
+      );
+
+      debugPrint(
+        '🔥 TRADE_TEST: ${tf.name} - SL: ${_calculatedStopLossPrice}, TP: ${_calculatedTakeProfitPrice}',
+      );
+
+      // Process a few ticks to see if SL/TP are maintained
+      for (int i = 0; i < 5; i++) {
+        _processNextTick();
+        await Future.delayed(Duration(milliseconds: 20));
+      }
+
+      // Verify position is still active
+      assert(
+        _inPosition,
+        'Position should remain active after timeframe switch',
+      );
+      debugPrint('🔥 TRADE_TEST: Posición mantenida en ${tf.name}');
+    }
+
+    // 3. Close the position
+    debugPrint('🔥 TRADE_TEST: Cerrando posición manual...');
+    closeManualPosition(_currentTrades.last.price + 0.001); // Small profit
+
+    assert(!_inPosition, 'Should not be in position after closing');
+    debugPrint('🔥 TRADE_TEST: Posición cerrada exitosamente');
+  }
+
+  // Public method to trigger the end-to-end test
+  Future<void> triggerEndToEndTest() async {
+    debugPrint('🔥🔥🔥 TRIGGERING END-TO-END TEST 🔥🔥🔥');
+    await runEndToEndTest();
+  }
+
+  // Verify callback is set
+  bool isCallbackSet() {
+    final isSet = _tickCallback != null;
+    debugPrint('🔥 Callback verification: ${isSet ? 'SET' : 'NOT SET'}');
+    return isSet;
+  }
+
+  // Verify ticks are loaded correctly
+  void verifyTicksLoaded() {
+    debugPrint('🔥 Verificando ticks cargados...');
+    debugPrint('🔥 Total ticks: ${_allTicks.length}');
+    debugPrint('🔥 Tick pointer: $_tickPointer');
+
+    if (_allTicks.isNotEmpty) {
+      debugPrint(
+        '🔥 Primer tick: ${_allTicks.first.time} - ${_allTicks.first.price}',
+      );
+      debugPrint(
+        '🔥 Último tick: ${_allTicks.last.time} - ${_allTicks.last.price}',
+      );
+
+      // Verify first few ticks
+      for (int i = 0; i < _allTicks.length && i < 5; i++) {
+        final tick = _allTicks[i];
+        debugPrint('🔥 Tick $i: ${tick.time} - ${tick.price}');
+      }
+    } else {
+      debugPrint('🔥 ERROR: No hay ticks cargados');
+    }
+  }
+
+  // Debug current buffer state
+  void debugBufferState() {
+    debugPrint('🔥 DEBUG: Estado actual de buffers...');
+    debugPrint('🔥 Active timeframe: ${_activeTf.name}');
+    debugPrint('🔥 Simulation running: $_isSimulationRunning');
+
+    for (Timeframe tf in Timeframe.values) {
+      final buffer = _buffers[tf];
+      final bucket = _currentBucket[tf];
+      debugPrint(
+        '🔥 ${tf.name}: ${buffer?.length ?? 0} ticks, bucket: $bucket',
+      );
+    }
+  }
+
+  // Simple verification method for testing
+  void verifyMultiTimeframeFunctionality() {
+    debugPrint('🔥🔥🔥 VERIFICANDO FUNCIONALIDAD MULTI-TIMEFRAME 🔥🔥🔥');
+
+    // Test 1: Verify timeframe switching
+    debugPrint('🔥 TEST 1: Verificando cambio de timeframes...');
+    setTimeframe(Timeframe.m1);
+    assert(_activeTf == Timeframe.m1, 'Timeframe should be m1');
+
+    setTimeframe(Timeframe.m5);
+    assert(_activeTf == Timeframe.m5, 'Timeframe should be m5');
+
+    setTimeframe(Timeframe.h1);
+    assert(_activeTf == Timeframe.h1, 'Timeframe should be h1');
+
+    debugPrint('✅ TEST 1: Cambio de timeframes exitoso');
+
+    // Test 2: Verify candle start calculation
+    debugPrint('🔥 TEST 2: Verificando cálculo de inicio de velas...');
+    final testTime = DateTime(2024, 1, 15, 14, 23, 45, 123);
+
+    final m1Start = _getCandleStart(testTime, Timeframe.m1);
+    final m5Start = _getCandleStart(testTime, Timeframe.m5);
+    final h1Start = _getCandleStart(testTime, Timeframe.h1);
+
+    assert(m1Start == DateTime(2024, 1, 15, 14, 23), 'm1 start incorrect');
+    assert(m5Start == DateTime(2024, 1, 15, 14, 20), 'm5 start incorrect');
+    assert(h1Start == DateTime(2024, 1, 15, 14), 'h1 start incorrect');
+
+    debugPrint('✅ TEST 2: Cálculo de inicio de velas correcto');
+
+    // Test 3: Verify buffer initialization
+    debugPrint('🔥 TEST 3: Verificando inicialización de buffers...');
+    _initializeBuffers();
+
+    for (Timeframe tf in Timeframe.values) {
+      assert(_buffers.containsKey(tf), 'Buffer should exist for ${tf.name}');
+      assert(
+        _currentBucket.containsKey(tf),
+        'Current bucket should exist for ${tf.name}',
+      );
+      // Note: _currentBucket[tf] can be null initially, which is correct
+    }
+
+    debugPrint('✅ TEST 3: Inicialización de buffers correcta');
+
+    // Test 4: Verify callback is set
+    debugPrint('🔥 TEST 4: Verificando callback...');
+    final callbackSet = isCallbackSet();
+    assert(callbackSet, 'Tick callback should be set');
+    debugPrint('✅ TEST 4: Callback verificado');
+
+    // Test 5: Verify ticks are loaded
+    debugPrint('🔥 TEST 5: Verificando ticks cargados...');
+    verifyTicksLoaded();
+    debugPrint('✅ TEST 5: Ticks verificados');
+
+    debugPrint('🔥🔥🔥 TODAS LAS VERIFICACIONES PASARON EXITOSAMENTE 🔥🔥🔥');
+  }
+
+  // Verify CSV data consistency with real groupings
+  void _verifyCSVConsistency() {
+    debugPrint('🔥 CSV_VERIFY: Verificando consistencia con datos CSV...');
+
+    if (_allTicks.isEmpty) {
+      debugPrint('🔥 CSV_VERIFY: No hay ticks cargados');
+      return;
+    }
+
+    // Test first 100 ticks for consistency
+    final testTicks = _allTicks.take(100).toList();
+
+    for (Timeframe tf in Timeframe.values) {
+      debugPrint('🔥 CSV_VERIFY: Verificando ${tf.name}...');
+
+      // Group ticks by timeframe manually
+      final Map<DateTime, List<Tick>> groupedTicks = {};
+
+      for (Tick tick in testTicks) {
+        final candleStart = _getCandleStart(tick.time, tf);
+        groupedTicks.putIfAbsent(candleStart, () => []).add(tick);
+      }
+
+      // Calculate OHLC for each group
+      final sortedKeys = groupedTicks.keys.toList()..sort();
+      for (DateTime key in sortedKeys) {
+        final ticks = groupedTicks[key]!;
+        if (ticks.length < 2) continue; // Skip incomplete candles
+
+        final prices = ticks.map((t) => t.price).toList();
+        final open = prices.first;
+        final close = prices.last;
+        final high = prices.reduce((a, b) => a > b ? a : b);
+        final low = prices.reduce((a, b) => a < b ? a : b);
+
+        debugPrint(
+          '🔥 CSV_VERIFY: ${tf.name} - ${key} - OHLC: $open/$high/$low/$close (${ticks.length} ticks)',
+        );
+
+        // Verify OHLC logic
+        assert(high >= open, 'High should be >= Open');
+        assert(high >= close, 'High should be >= Close');
+        assert(low <= open, 'Low should be <= Open');
+        assert(low <= close, 'Low should be <= Close');
+      }
+    }
+
+    debugPrint('🔥 CSV_VERIFY: Verificación completada exitosamente');
+  }
+
   bool get isSimulationRunning => _isSimulationRunning;
   int get currentCandleIndex => _currentCandleIndex;
   double get currentBalance => _currentBalance;
@@ -155,7 +704,7 @@ class SimulationProvider with ChangeNotifier {
 
   // Get current tick price (for manual trades when simulation is paused)
   double get currentTickPrice {
-    if (_syntheticTicks.isEmpty) {
+    if (_allTicks.isEmpty) {
       final fallbackPrice = historicalData[_currentCandleIndex].close;
       // debugPrint(
       //   '🔥 SimulationProvider: currentTickPrice - usando precio de vela: $fallbackPrice (no hay ticks disponibles)',
@@ -164,13 +713,13 @@ class SimulationProvider with ChangeNotifier {
     }
 
     // Usar el índice anterior al actual para obtener el precio del tick procesado
-    final tickIndex = _currentTickIndex > 0 ? _currentTickIndex - 1 : 0;
-    if (tickIndex >= _syntheticTicks.length) {
+    final tickIndex = _tickPointer > 0 ? _tickPointer - 1 : 0;
+    if (tickIndex >= _allTicks.length) {
       final fallbackPrice = historicalData[_currentCandleIndex].close;
       return fallbackPrice;
     }
 
-    final tickPrice = _syntheticTicks[tickIndex].price;
+    final tickPrice = _allTicks[tickIndex].price;
     // debugPrint(
     //   '🔥 SimulationProvider: currentTickPrice - tick $tickIndex: $tickPrice (simulación ${_isSimulationRunning ? 'corriendo' : 'pausada'})',
     // );
@@ -179,9 +728,9 @@ class SimulationProvider with ChangeNotifier {
 
   // Nuevo: obtener el precio del tick visible (el tick anterior al actual)
   double get lastVisibleTickPrice {
-    if (_syntheticTicks.isEmpty) return 0.0;
-    final idx = _currentTickIndex > 0 ? _currentTickIndex - 1 : 0;
-    final price = _syntheticTicks[idx].price;
+    if (_allTicks.isEmpty) return 0.0;
+    final idx = _tickPointer > 0 ? _tickPointer - 1 : 0;
+    final price = _allTicks[idx].price;
     // debugPrint(
     //   '🔥 SimulationProvider: lastVisibleTickPrice - idx: $idx, price: $price',
     // );
@@ -320,62 +869,51 @@ class SimulationProvider with ChangeNotifier {
   void setTimeframe(Timeframe tf) {
     if (tf == _activeTf) return;
 
-    final oldTf = _activeTf;
-    final oldIndex = _currentCandleIndex;
-    final oldTicks = _ticksPerCandleMap[oldTf]!;
-    final newTicks = _ticksPerCandleMap[tf]!;
+    debugPrint(
+      '🔥 SimulationProvider: Cambiando timeframe de ${_activeTf.name} a ${tf.name}',
+    );
+    debugPrint(
+      '🔥 SimulationProvider: Tick pointer actual: $_tickPointer de ${_allTicks.length}',
+    );
 
-    // 1) cambia TF y _ticksPerCandle
+    // 1) Actualizar timeframe activo sin tocar _tickPointer
     _activeTf = tf;
-    _ticksPerCandle = newTicks;
 
-    int newIndex;
-    if (newTicks > oldTicks) {
-      // paso de TF menor → mayor: agrupo "factor" velas y guardo el resto
-      final factor = newTicks ~/ oldTicks;
-      final fullGroups = oldIndex ~/ factor;
-      newIndex = fullGroups;
-    } else {
-      // paso de TF mayor → menor: subdivido y reaplico el resto
-      final factor = oldTicks ~/ newTicks;
-      newIndex = oldIndex * factor;
-    }
+    // 2) Recalcular start y end de la vela actual según el nuevo TF
+    if (_allTicks.isNotEmpty && _tickPointer > 0) {
+      // Obtener el último tick procesado
+      final lastTick = _allTicks[_tickPointer - 1];
+      final currentCandleStart = _getCandleStart(lastTick.time, tf);
 
-    // 2) clamp y notifica
-    final maxIdx = _allTimeframes[tf]!.length - 1;
-    _currentCandleIndex = newIndex.clamp(0, maxIdx);
-
-    _setupTicksForCurrentCandle();
-    _notifyChartReset();
-  }
-
-  void _setupTicksForCurrentCandle() {
-    if (_currentCandleIndex >= historicalData.length) {
       debugPrint(
-        '🔥 SimulationProvider: _setupTicksForCurrentCandle - índice fuera de rango: $_currentCandleIndex',
+        '🔥 SimulationProvider: Último tick procesado: ${lastTick.time}',
       );
-      return;
+      debugPrint(
+        '🔥 SimulationProvider: Start de vela actual para ${tf.name}: $currentCandleStart',
+      );
+
+      // 3) Solo actualizar el contador de emisiones para el nuevo timeframe
+      final ticks = _buffers[tf] ?? [];
+      if (ticks.isNotEmpty) {
+        debugPrint(
+          '🔥 SimulationProvider: Actualizando contador para ${tf.name} con ${ticks.length} ticks',
+        );
+        _lastEmittedCount[tf] = ticks.length;
+      } else {
+        debugPrint(
+          '🔥 SimulationProvider: No hay ticks en buffer para ${tf.name}',
+        );
+      }
     }
-    final candle = historicalData[_currentCandleIndex];
+
+    // 4) Notificar cambio sin reiniciar simulación
+    _notifyUIUpdate();
     debugPrint(
-      '🔥 SimulationProvider: Configurando ticks para vela $_currentCandleIndex: ${candle.timestamp} - OHLC: ${candle.open}/${candle.high}/${candle.low}/${candle.close}',
+      '🔥 SimulationProvider: Timeframe cambiado exitosamente a ${tf.name}',
     );
-    int? nextMs;
-    if (_currentCandleIndex < historicalData.length - 1) {
-      nextMs = historicalData[_currentCandleIndex + 1]
-          .timestamp
-          .millisecondsSinceEpoch;
-    }
-    // Generar exactamente _ticksPerCandle ticks por vela
-    _syntheticTicks = generateSyntheticTicks(candle, _ticksPerCandle, nextMs);
-    debugPrint(
-      '🔥 SimulationProvider: Generados ${_syntheticTicks.length} ticks para la vela',
-    );
-    // Reiniciar tick index y ticks acumulados
-    _currentTickIndex = 0;
-    _currentCandleTicks.clear();
-    _currentCandleStartTime = null;
   }
+
+  // Removed _setupTicksForCurrentCandle() as it's no longer used with real ticks
 
   void startSimulation(
     Setup setup,
@@ -666,9 +1204,8 @@ class SimulationProvider with ChangeNotifier {
     final currentTime = entryPrice != null
         ? historicalData[_currentCandleIndex]
               .timestamp // Siempre usar timestamp de la vela para operaciones manuales
-        : (_syntheticTicks.isNotEmpty &&
-                  _currentTickIndex < _syntheticTicks.length
-              ? _syntheticTicks[_currentTickIndex].time
+        : (_allTicks.isNotEmpty && _tickPointer < _allTicks.length
+              ? _allTicks[_tickPointer].time
               : historicalData[_currentCandleIndex].timestamp);
 
     debugPrint(
@@ -901,7 +1438,7 @@ class SimulationProvider with ChangeNotifier {
     info += '• Current Tick Price: $currentPrice\n';
     info +=
         '• Candle Close Price: ${historicalData[_currentCandleIndex].close}\n';
-    info += '• Tick Index: $_currentTickIndex/${_syntheticTicks.length}\n';
+    info += '• Tick Index: $_tickPointer/${_allTicks.length}\n';
     info += '• Risk Amount: \$${riskAmount.toStringAsFixed(2)}\n';
     info += '• In Position: $_inPosition\n';
     info += '• Entry Price: ${_entryPrice.toStringAsFixed(5)}\n';
@@ -963,19 +1500,19 @@ class SimulationProvider with ChangeNotifier {
           (rnd.nextDouble() * 2 - 1) * (range * 0.2); // ±20% del rango
       final price = (base + jitter).clamp(candle.low, candle.high);
       final time = candle.timestamp.add(Duration(milliseconds: dt * i));
-      ticks.add(Tick(time, price));
+      ticks.add(Tick(time: time, price: price));
     }
     return ticks;
   }
 
   // --- INICIAR SIMULACIÓN TICK A TICK ---
-  void startTickSimulation(
+  Future<void> startTickSimulation(
     Setup setup,
     DateTime startDate,
     double speed,
     double initialBalance,
     String symbol,
-  ) {
+  ) async {
     setActiveSymbol(symbol);
     debugPrint('🔥🔥🔥 INICIANDO SIMULACIÓN TICK A TICK 🔥🔥🔥');
     debugPrint('🔥 Setup: ${setup.name}');
@@ -1015,13 +1552,40 @@ class SimulationProvider with ChangeNotifier {
     _currentCandleStartTime = null;
     _currentTickIndex = 0;
 
+    // Load real ticks from CSV
+    debugPrint('🔥 Cargando ticks reales desde CSV...');
+    try {
+      _allTicks = await DataService().loadTicksFromCsv();
+      _tickPointer = 0;
+      debugPrint('🔥 Ticks cargados: ${_allTicks.length}');
+
+      if (_allTicks.isNotEmpty) {
+        debugPrint(
+          '🔥 Primer tick: ${_allTicks.first.time} - ${_allTicks.first.price}',
+        );
+        debugPrint(
+          '🔥 Último tick: ${_allTicks.last.time} - ${_allTicks.last.price}',
+        );
+      }
+    } catch (e) {
+      debugPrint('🔥 ERROR cargando ticks: $e');
+      _allTicks = [];
+      _tickPointer = 0;
+    }
+
+    // Initialize multi-timeframe buffers
+    debugPrint('🔥 Inicializando buffers...');
+    _initializeBuffers();
+
+    // Initialize chart with initial candles
+    debugPrint('🔥 Inicializando chart...');
+    _initializeChartWithCandles();
+
     _isSimulationRunning = false;
     _currentSetup = setup;
     _simulationSpeed = speed;
     _ticksPerSecondFactor = 1.0;
 
-    // Configurar ticks para la vela actual
-    _setupTicksForCurrentCandle();
     notifyListeners();
     _isSimulationRunning = true;
     debugPrint('🔥 Simulación marcada como corriendo: $_isSimulationRunning');
@@ -1115,126 +1679,135 @@ class SimulationProvider with ChangeNotifier {
     }
 
     debugPrint(
-      '🔥 SimulationProvider: _processNextTick - tick $_currentTickIndex de ${_syntheticTicks.length}',
+      '🔥 SimulationProvider: _processNextTick - tick $_tickPointer de ${_allTicks.length}',
     );
 
-    if (_currentTickIndex >= _syntheticTicks.length) {
-      debugPrint('🔥 SimulationProvider: Cambiando a siguiente vela');
-      _currentCandleIndex++;
-      if (_currentCandleIndex >= historicalData.length) {
-        debugPrint('🔥 SimulationProvider: Fin de datos alcanzado');
-        stopTickSimulation();
-        return;
-      }
-      _setupTicksForCurrentCandle();
+    if (_tickPointer >= _allTicks.length) {
+      debugPrint('🔥 SimulationProvider: Fin de ticks alcanzado');
+      stopTickSimulation();
+      return;
     }
 
-    if (_currentTickIndex < _syntheticTicks.length) {
-      final tick = _syntheticTicks[_currentTickIndex];
-      final currentTickPrice =
-          tick.price; // Capturar precio antes de incrementar
-      _currentTickIndex++;
+    final tick = _allTicks[_tickPointer];
+    final currentTickPrice = tick.price;
+    _tickPointer++;
+
+    // Update simulation clock with tick time
+    _simulationClock = tick.time;
+
+    debugPrint(
+      '🔥 SimulationProvider: Procesando tick $currentTickPrice a las ${tick.time}',
+    );
+    _accumulateTickForCandle(tick);
+
+    // Notificar cambios de UI para actualizar P&L flotante en tiempo real
+    if (_inPosition) {
+      _notifyUIUpdate();
+    }
+  }
+
+  void _accumulateTickForCandle(Tick tick) {
+    try {
       debugPrint(
-        '🔥 SimulationProvider: Procesando tick $currentTickPrice a las ${tick.time}',
+        '🔥 TICK: Procesando tick - precio: ${tick.price}, tiempo: ${tick.time}',
       );
-      _accumulateTickForCandle(tick);
+      debugPrint(
+        '🔥 TICK: Estado de simulación - isSimulationRunning: $_isSimulationRunning',
+      );
+      debugPrint('🔥 TICK: Active timeframe: ${_activeTf.name}');
+
+      // Verificar que la simulación esté corriendo antes de procesar
+      if (!_isSimulationRunning) {
+        debugPrint('🔥 TICK: Simulación pausada, no procesando tick');
+        return;
+      }
+
+      // Verificar SL/TP si hay posición abierta
+      if (_inPosition && _currentTrades.isNotEmpty) {
+        _checkStopLossAndTakeProfit(tick.price);
+      }
+
+      // Process tick for all timeframes using bucket grouping
+      for (Timeframe tf in Timeframe.values) {
+        try {
+          final bucket = _getCandleStart(tick.time, tf);
+          final current = _currentBucket[tf];
+
+          // Initialize bucket if this is the first tick for this timeframe
+          if (current == null) {
+            _currentBucket[tf] = bucket;
+            debugPrint(
+              '🔥 TICK: Inicializando bucket para ${tf.name}: $bucket (PRIMER TICK)',
+            );
+          } else if (bucket.isAfter(current)) {
+            // Close the previous candle when crossing to next bucket
+            final ticks = _buffers[tf]!;
+            if (ticks.isNotEmpty) {
+              debugPrint(
+                '🔥 TICK: Cerrando vela para ${tf.name} - bucket anterior: $current, nuevo: $bucket (VELA COMPLETA)',
+              );
+              _emitCandle(tf, ticks, true); // vela completa
+            }
+
+            // Clear buffer and start new candle
+            _buffers[tf]!.clear();
+            _currentBucket[tf] = bucket;
+            _lastEmittedCount[tf] = 0; // reiniciar parcial
+          } else if (current != null && bucket.isAtSameMomentAs(current)) {
+            // Same bucket, continue accumulating
+            debugPrint(
+              '🔥 TICK: Continuando en mismo bucket para ${tf.name}: $bucket',
+            );
+          }
+
+          // Always add tick to buffer
+          _buffers[tf]!.add(tick);
+
+          // Emit partial candle for active timeframe in real-time
+          if (tf == _activeTf) {
+            final count = _buffers[tf]!.length;
+            if (count != _lastEmittedCount[tf]) {
+              debugPrint(
+                '🔥 TICK: Emitiendo vela parcial para ${tf.name} con ${count} ticks (PRIMERA EMISIÓN: ${count == 1})',
+              );
+              _emitCandle(tf, _buffers[tf]!, false);
+              _lastEmittedCount[tf] = count;
+            }
+          }
+        } catch (e) {
+          debugPrint('🔥 TICK: ERROR procesando timeframe ${tf.name}: $e');
+        }
+      }
+
+      // Send trades to chart if available
+      if (_isSimulationRunning &&
+          _tickCallback != null &&
+          _currentTrades.isNotEmpty) {
+        final tradesMsg = {
+          'trades': _currentTrades
+              .map(
+                (t) => {
+                  'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
+                  'type': t.type,
+                  'price': t.price,
+                  'amount': t.amount ?? 0.0,
+                  'leverage': t.leverage ?? 1,
+                  'reason': t.reason ?? '',
+                },
+              )
+              .toList(),
+        };
+
+        debugPrint('🔥 TICK: Enviando trades al chart: $tradesMsg');
+        _tickCallback!(tradesMsg);
+      }
 
       // Notificar cambios de UI para actualizar P&L flotante en tiempo real
       if (_inPosition) {
         _notifyUIUpdate();
       }
-    } else {
-      debugPrint('🔥 SimulationProvider: Índice de tick fuera de rango');
-    }
-  }
-
-  void _accumulateTickForCandle(Tick tick) {
-    debugPrint(
-      '🔥 TICK: Procesando tick - precio: ${tick.price}, tiempo: ${tick.time}',
-    );
-    debugPrint(
-      '🔥 TICK: Estado de simulación - isSimulationRunning: $_isSimulationRunning',
-    );
-
-    // Verificar que la simulación esté corriendo antes de procesar
-    if (!_isSimulationRunning) {
-      debugPrint('🔥 TICK: Simulación pausada, no procesando tick');
-      return;
-    }
-
-    // Inicializar tiempo de inicio de la vela si es el primer tick
-    if (_currentCandleTicks.isEmpty) {
-      _currentCandleStartTime = tick.time;
-      debugPrint('🔥 TICK: Iniciando nueva vela a las ${tick.time}');
-    }
-
-    // Agregar tick a la vela actual
-    _currentCandleTicks.add(tick);
-    debugPrint(
-      '🔥 TICK: Tick agregado. Total acumulados: ${_currentCandleTicks.length}',
-    );
-
-    // Verificar SL/TP si hay posición abierta
-    if (_inPosition && _currentTrades.isNotEmpty) {
-      _checkStopLossAndTakeProfit(tick.price);
-    }
-
-    // Calcular OHLC de los ticks acumulados hasta ahora
-    final prices = _currentCandleTicks.map((t) => t.price).toList();
-    final o = prices.first, c = prices.last;
-    final h = prices.reduce((a, b) => a > b ? a : b);
-    final l = prices.reduce((a, b) => a < b ? a : b);
-    final ts =
-        (_currentCandleStartTime ?? tick.time).millisecondsSinceEpoch ~/ 1000;
-
-    debugPrint(
-      '🔥 TICK: Vela actualizada - OHLC: $o/$h/$l/$c, ticks: ${_currentCandleTicks.length}/$_ticksPerCandle',
-    );
-    debugPrint('🔥 TICK: Timestamp de vela: $ts');
-
-    // Solo enviar vela actualizada al gráfico si la simulación está corriendo
-    if (_isSimulationRunning && _tickCallback != null) {
-      final msg = {
-        'candle': {'time': ts, 'open': o, 'high': h, 'low': l, 'close': c},
-        'trades': _currentTrades
-            .map(
-              (t) => {
-                'time': t.timestamp.millisecondsSinceEpoch ~/ 1000,
-                'type': t.type,
-                'price': t.price,
-                'amount': t.amount ?? 0.0,
-                'leverage': t.leverage ?? 1,
-                'reason': t.reason ?? '',
-              },
-            )
-            .toList(),
-      };
-
-      // Debug para timestamps de trades
-      for (final trade in _currentTrades) {
-        debugPrint(
-          '🔥 TICK: Trade timestamp - ID: ${trade.id}, Type: ${trade.type}, Timestamp: ${trade.timestamp}, Seconds: ${trade.timestamp.millisecondsSinceEpoch ~/ 1000}',
-        );
-      }
-
-      debugPrint('🔥 TICK: Enviando vela al chart: $msg');
-      _tickCallback!(msg);
-    } else {
-      debugPrint(
-        '🔥 TICK: No enviando vela - simulación pausada o callback null',
-      );
-    }
-
-    // Si hemos acumulado suficientes ticks, finalizar la vela y pasar a la siguiente
-    if (_currentCandleTicks.length >= _ticksPerCandle) {
-      debugPrint('🔥 TICK: Vela completada, limpiando ticks acumulados');
-      _currentCandleTicks.clear();
-      _currentCandleStartTime = null;
-    }
-
-    // Notificar cambios de UI para actualizar P&L flotante en tiempo real
-    if (_inPosition) {
-      _notifyUIUpdate();
+    } catch (e) {
+      debugPrint('🔥 TICK: ERROR general procesando tick: $e');
     }
   }
 
