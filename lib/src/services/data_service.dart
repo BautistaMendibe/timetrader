@@ -72,8 +72,43 @@ class DataService {
       // Skip header and map each row to Candle
       final candles = rows.skip(1).map((r) {
         try {
+          // Parse custom timestamp format: "07.08.2025 06:00:00.000 UTC"
+          final timestampStr = (r[0] as String).trim();
+          final cleanTimestamp = timestampStr.replaceAll(' UTC', '');
+
+          // Split into date and time parts
+          final parts = cleanTimestamp.split(' ');
+          if (parts.length != 2) {
+            throw FormatException('Invalid timestamp format: $timestampStr');
+          }
+
+          final datePart = parts[0].split('.');
+          final timePart = parts[1].split(':');
+
+          if (datePart.length != 3 || timePart.length < 2) {
+            throw FormatException('Invalid date/time format: $timestampStr');
+          }
+
+          final day = int.parse(datePart[0]);
+          final month = int.parse(datePart[1]);
+          final year = int.parse(datePart[2]);
+          final hour = int.parse(timePart[0]);
+          final minute = int.parse(timePart[1]);
+          final second = timePart.length > 2
+              ? int.parse(timePart[2].split('.')[0])
+              : 0;
+
+          final timestamp = DateTime.utc(
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+          );
+
           return Candle(
-            timestamp: DateTime.parse(r[0] as String),
+            timestamp: timestamp,
             open: (r[1] as num).toDouble(),
             high: (r[2] as num).toDouble(),
             low: (r[3] as num).toDouble(),
@@ -98,6 +133,18 @@ class DataService {
         debugPrint(
           '🔥 DataService: Last candle: ${candles.last.timestamp} - ${candles.last.close}',
         );
+
+        // Log time differences between first few candles to verify M1 intervals
+        if (candles.length > 3) {
+          for (int i = 1; i < 4; i++) {
+            final diff = candles[i].timestamp.difference(
+              candles[i - 1].timestamp,
+            );
+            debugPrint(
+              '🔥 DataService: Candle $i time diff: ${diff.inMinutes} minutes, ${diff.inSeconds} seconds',
+            );
+          }
+        }
       }
 
       return candles;

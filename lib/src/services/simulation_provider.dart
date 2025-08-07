@@ -367,7 +367,12 @@ class SimulationProvider with ChangeNotifier {
           .millisecondsSinceEpoch;
     }
     // Generar exactamente _ticksPerCandle ticks por vela
-    _syntheticTicks = generateSyntheticTicks(candle, _ticksPerCandle, nextMs);
+    _syntheticTicks = generateSyntheticTicks(
+      candle,
+      _ticksPerCandle,
+      nextMs,
+      _activeTf,
+    );
     debugPrint(
       '🔥 SimulationProvider: Generados ${_syntheticTicks.length} ticks para la vela',
     );
@@ -957,15 +962,43 @@ class SimulationProvider with ChangeNotifier {
     Candle candle,
     int steps, [
     int? nextCandleMs,
+    Timeframe? timeframe,
   ]) {
     final List<Tick> ticks = [];
     // Calcular duración de la vela
+    int fallbackDurationMs;
+    if (timeframe != null) {
+      switch (timeframe) {
+        case Timeframe.m1:
+          fallbackDurationMs = 60 * 1000; // 1 minute
+          break;
+        case Timeframe.m5:
+          fallbackDurationMs = 5 * 60 * 1000; // 5 minutes
+          break;
+        case Timeframe.m15:
+          fallbackDurationMs = 15 * 60 * 1000; // 15 minutes
+          break;
+        case Timeframe.h1:
+          fallbackDurationMs = 60 * 60 * 1000; // 1 hour
+          break;
+        case Timeframe.d1:
+          fallbackDurationMs = 24 * 60 * 60 * 1000; // 1 day
+          break;
+      }
+    } else {
+      fallbackDurationMs = 60 * 60 * 1000; // fallback: 1h
+    }
+
     final durationMs = nextCandleMs != null
         ? nextCandleMs - candle.timestamp.millisecondsSinceEpoch
-        : 60 * 60 * 1000; // fallback: 1h
+        : fallbackDurationMs;
     final dt = durationMs ~/ steps;
     final range = candle.high - candle.low;
     final Random rnd = Random(candle.timestamp.millisecondsSinceEpoch);
+    debugPrint(
+      '🔥 generateSyntheticTicks: Candle ${candle.timestamp}, duration: ${durationMs}ms, dt: ${dt}ms',
+    );
+
     for (int i = 0; i < steps; i++) {
       final base =
           candle.open + (candle.close - candle.open) * (i / (steps - 1));
@@ -974,6 +1007,12 @@ class SimulationProvider with ChangeNotifier {
       final price = (base + jitter).clamp(candle.low, candle.high);
       final time = candle.timestamp.add(Duration(milliseconds: dt * i));
       ticks.add(Tick(time, price));
+    }
+
+    if (ticks.isNotEmpty) {
+      debugPrint(
+        '🔥 generateSyntheticTicks: First tick: ${ticks.first.time}, Last tick: ${ticks.last.time}',
+      );
     }
     return ticks;
   }
