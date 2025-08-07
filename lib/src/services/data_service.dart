@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:csv/csv.dart';
 import '../models/candle.dart';
 
 class DataService {
@@ -12,62 +13,97 @@ class DataService {
   Future<List<Candle>> loadHistorical(String asset, DateTime date) async {
     debugPrint('🔥 DataService: loadHistorical() - Asset: $asset, Date: $date');
     try {
-      // Determine which JSON file to load based on the asset
-      String jsonFileName;
+      // For EUR/USD, use CSV minute data
       switch (asset.toUpperCase()) {
         case 'EUR/USD':
         case 'EURUSD':
-          jsonFileName = 'assets/data/eurusd_sample.json';
-          debugPrint('🔥 DataService: Cargando datos de EUR/USD');
-          break;
+          debugPrint('🔥 DataService: Loading EUR/USD from CSV minute data');
+          return await loadMinuteCandles();
         case 'BTC/USD':
         case 'BTCUSD':
-          jsonFileName = 'assets/data/btc_usd_sample.json';
-          debugPrint('🔥 DataService: Cargando datos de BTC/USD');
-          break;
-        default:
-          jsonFileName = 'assets/data/btc_usd_sample.json'; // Default fallback
+          debugPrint('🔥 DataService: Loading BTC/USD from JSON');
+          final jsonFileName = 'assets/data/btc_usd_sample.json';
+          final String jsonString = await rootBundle.loadString(jsonFileName);
+          final List<dynamic> jsonData = json.decode(jsonString);
+          final candles = jsonData
+              .map((json) => Candle.fromJson(json))
+              .toList();
           debugPrint(
-            '🔥 DataService: Asset no reconocido, usando BTC/USD como fallback',
+            '🔥 DataService: Loaded ${candles.length} candles from JSON',
           );
+          return candles;
+        default:
+          debugPrint(
+            '🔥 DataService: Asset not recognized, using BTC/USD as fallback',
+          );
+          final jsonFileName = 'assets/data/btc_usd_sample.json';
+          final String jsonString = await rootBundle.loadString(jsonFileName);
+          final List<dynamic> jsonData = json.decode(jsonString);
+          final candles = jsonData
+              .map((json) => Candle.fromJson(json))
+              .toList();
+          return candles;
+      }
+    } catch (e) {
+      debugPrint(
+        '🔥 DataService: Error loading data, generating mock data: $e',
+      );
+      // Return mock data if file doesn't exist
+      return _generateMockData(date, asset);
+    }
+  }
+
+  Future<List<Candle>> loadMinuteCandles() async {
+    debugPrint(
+      '🔥 DataService: loadMinuteCandles() - Loading EUR/USD M1 data from CSV',
+    );
+    try {
+      final raw = await rootBundle.loadString('assets/data/eur_usd_m1.csv');
+      debugPrint('🔥 DataService: CSV file loaded, length: ${raw.length}');
+
+      final rows = const CsvToListConverter().convert(raw, eol: '\n');
+      debugPrint('🔥 DataService: CSV parsed, rows: ${rows.length}');
+
+      // Debug: print first few rows to see structure
+      for (int i = 0; i < (rows.length < 3 ? rows.length : 3); i++) {
+        debugPrint('🔥 DataService: Row $i: ${rows[i]}');
       }
 
-      // Try to load sample data from assets
-      debugPrint(
-        '🔥 DataService: Intentando cargar archivo JSON: $jsonFileName',
-      );
-      final String jsonString = await rootBundle.loadString(jsonFileName);
-      debugPrint(
-        '🔥 DataService: Archivo JSON cargado, longitud: ${jsonString.length}',
-      );
+      // Skip header and map each row to Candle
+      final candles = rows.skip(1).map((r) {
+        try {
+          return Candle(
+            timestamp: DateTime.parse(r[0] as String),
+            open: (r[1] as num).toDouble(),
+            high: (r[2] as num).toDouble(),
+            low: (r[3] as num).toDouble(),
+            close: (r[4] as num).toDouble(),
+            volume: (r[5] as num).toDouble(),
+          );
+        } catch (e) {
+          debugPrint('🔥 DataService: Error parsing row: $r, error: $e');
+          rethrow;
+        }
+      }).toList();
 
-      final List<dynamic> jsonData = json.decode(jsonString);
       debugPrint(
-        '🔥 DataService: JSON decodificado, elementos: ${jsonData.length}',
-      );
-
-      final candles = jsonData.map((json) => Candle.fromJson(json)).toList();
-      debugPrint(
-        '🔥 DataService: Cargados ${candles.length} velas desde archivo JSON',
+        '🔥 DataService: Loaded ${candles.length} minute candles from CSV',
       );
 
       // Log first and last candle for verification
       if (candles.isNotEmpty) {
         debugPrint(
-          '🔥 DataService: Primera vela: ${candles.first.timestamp} - ${candles.first.close}',
+          '🔥 DataService: First candle: ${candles.first.timestamp} - ${candles.first.close}',
         );
         debugPrint(
-          '🔥 DataService: Última vela: ${candles.last.timestamp} - ${candles.last.close}',
+          '🔥 DataService: Last candle: ${candles.last.timestamp} - ${candles.last.close}',
         );
       }
 
       return candles;
     } catch (e) {
-      debugPrint(
-        '🔥 DataService: Error cargando JSON, generando datos de prueba: $e',
-      );
-      // Return mock data if file doesn't exist
-      return _generateMockData(date, asset);
+      debugPrint('🔥 DataService: Error loading CSV: $e');
+      rethrow;
     }
   }
 

@@ -43,7 +43,7 @@ class SimulationProvider with ChangeNotifier {
 
   // --- MULTI-TIMEFRAME DATA ---
   late Map<Timeframe, List<Candle>> _allTimeframes;
-  Timeframe _activeTf = Timeframe.h1;
+  Timeframe _activeTf = Timeframe.m1;
 
   static const int baseTicksPerMinute = 10;
 
@@ -257,8 +257,8 @@ class SimulationProvider with ChangeNotifier {
       Timeframe.m1: reaggregate(raw, const Duration(minutes: 1)),
     };
 
-    // Inicializar con H1 por defecto
-    _activeTf = Timeframe.h1;
+    // Inicializar con M1 por defecto
+    _activeTf = Timeframe.m1;
     _currentCandleIndex = 0;
 
     // Actualizar _ticksPerCandle según el timeframe inicial
@@ -442,11 +442,19 @@ class SimulationProvider with ChangeNotifier {
 
     final maxDrawdown = _calculateMaxDrawdown();
 
+    // Provide fallback dates if historicalData is empty
+    final startDate = historicalData.isNotEmpty
+        ? historicalData.first.timestamp
+        : DateTime.now().subtract(const Duration(days: 1));
+    final endDate = historicalData.isNotEmpty
+        ? historicalData.last.timestamp
+        : DateTime.now();
+
     _currentSimulation = SimulationResult(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       setupId: _currentSetup?.id ?? 'unknown',
-      startDate: historicalData.first.timestamp,
-      endDate: historicalData.last.timestamp,
+      startDate: startDate,
+      endDate: endDate,
       initialBalance: 10000.0,
       finalBalance: _currentBalance,
       netPnL: _currentBalance - 10000.0,
@@ -466,6 +474,8 @@ class SimulationProvider with ChangeNotifier {
   }
 
   double _calculateMaxDrawdown() {
+    if (_equityCurve.isEmpty) return 0.0;
+
     double maxDrawdown = 0.0;
     double peak = _equityCurve.first;
 
@@ -473,7 +483,7 @@ class SimulationProvider with ChangeNotifier {
       if (value > peak) {
         peak = value;
       }
-      double drawdown = (peak - value) / peak;
+      double drawdown = peak > 0 ? (peak - value) / peak : 0.0;
       if (drawdown > maxDrawdown) {
         maxDrawdown = drawdown;
       }
