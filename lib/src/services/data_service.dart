@@ -59,15 +59,15 @@ class DataService {
     );
     try {
       final raw = await rootBundle.loadString('assets/data/eur_usd_m1.csv');
-      debugPrint('🔥 DataService: CSV file loaded, length: ${raw.length}');
+      // debugPrint('🔥 DataService: CSV file loaded, length: ${raw.length}');
 
       final rows = const CsvToListConverter().convert(raw, eol: '\n');
       debugPrint('🔥 DataService: CSV parsed, rows: ${rows.length}');
 
       // Debug: print first few rows to see structure
-      for (int i = 0; i < (rows.length < 3 ? rows.length : 3); i++) {
-        debugPrint('🔥 DataService: Row $i: ${rows[i]}');
-      }
+      // for (int i = 0; i < (rows.length < 3 ? rows.length : 3); i++) {
+      //   debugPrint('🔥 DataService: Row $i: ${rows[i]}');
+      // }
 
       // Skip header and map each row to Candle
       final candles = rows.skip(1).map((r) {
@@ -135,16 +135,16 @@ class DataService {
         );
 
         // Log time differences between first few candles to verify M1 intervals
-        if (candles.length > 3) {
-          for (int i = 1; i < 4; i++) {
-            final diff = candles[i].timestamp.difference(
-              candles[i - 1].timestamp,
-            );
-            debugPrint(
-              '🔥 DataService: Candle $i time diff: ${diff.inMinutes} minutes, ${diff.inSeconds} seconds',
-            );
-          }
-        }
+        // if (candles.length > 3) {
+        //   for (int i = 1; i < 4; i++) {
+        //     final diff = candles[i].timestamp.difference(
+        //       candles[i - 1].timestamp,
+        //     );
+        //     debugPrint(
+        //       '🔥 DataService: Candle $i time diff: ${diff.inMinutes} minutes, ${diff.inSeconds} seconds',
+        //     );
+        //   }
+        // }
       }
 
       return candles;

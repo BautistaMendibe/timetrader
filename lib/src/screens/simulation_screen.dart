@@ -22,6 +22,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
   // GlobalKey para acceder al TradingViewChart
   final GlobalKey<TradingViewChartState> _chartKey =
       GlobalKey<TradingViewChartState>();
+
   Timeframe? _selectedTimeframe; // NUEVO: para opciones avanzadas
   bool _isAdjustingSpeed =
       false; // Para controlar pausa durante ajuste de velocidad
@@ -57,6 +58,12 @@ class _SimulationScreenState extends State<SimulationScreen> {
             // Es una señal de limpieza - enviar directamente
             debugPrint(
               '🔥 CALLBACK: Enviando señal de limpieza al WebView: $tickData',
+            );
+            _chartKey.currentState!.sendMessageToWebView(tickData);
+          } else if (tickData.containsKey('resetChart')) {
+            // Es una señal de reset del chart - enviar directamente
+            debugPrint(
+              '🔥🔥🔥 CALLBACK: Enviando señal de RESET al WebView: $tickData',
             );
             _chartKey.currentState!.sendMessageToWebView(tickData);
           } else if (tickData.containsKey('trades') &&
@@ -124,6 +131,12 @@ class _SimulationScreenState extends State<SimulationScreen> {
         _showSLTPContainer = false;
         _isBuyOrder = true;
         _selectedTimeframe = simulationProvider.activeTimeframe; // NUEVO
+        debugPrint(
+          '🔥🔥🔥 UI: Initialized _selectedTimeframe = ${_selectedTimeframe?.name}',
+        );
+        debugPrint(
+          '🔥🔥🔥 UI: Provider activeTimeframe = ${simulationProvider.activeTimeframe.name}',
+        );
       });
     });
   }
@@ -1114,7 +1127,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   border: Border.all(color: Colors.grey[600]!),
                                 ),
                                 child: DropdownButton<Timeframe>(
-                                  value: _selectedTimeframe,
+                                  value:
+                                      _selectedTimeframe ??
+                                      simulationProvider.activeTimeframe,
                                   dropdownColor: const Color(0xFF2C2C2C),
                                   underline: Container(), // Sin línea
                                   icon: const Icon(
@@ -1154,8 +1169,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     );
                                   }).toList(),
                                   onChanged: (tf) {
+                                    debugPrint(
+                                      '🔥🔥🔥 UI: Timeframe dropdown changed to: ${tf?.name}',
+                                    );
                                     setState(() => _selectedTimeframe = tf);
                                     if (tf != null) {
+                                      debugPrint(
+                                        '🔥🔥🔥 UI: Calling simulationProvider.setTimeframe(${tf.name})',
+                                      );
                                       simulationProvider.setTimeframe(tf);
                                     }
                                   },

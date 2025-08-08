@@ -134,11 +134,13 @@ class SimulationProvider with ChangeNotifier {
 
   // --- MULTI-TIMEFRAME GETTERS ---
   List<Candle> get historicalData => _allTimeframes[_activeTf]!;
+
   Timeframe get activeTimeframe => _activeTf;
   Map<Timeframe, List<Candle>> get allTimeframes => _allTimeframes;
 
   bool get isSimulationRunning => _isSimulationRunning;
   int get currentCandleIndex => _currentCandleIndex;
+
   double get currentBalance => _currentBalance;
   List<Trade> get currentTrades => _currentTrades;
   List<Trade> get completedTrades => _completedTrades;
@@ -317,36 +319,325 @@ class SimulationProvider with ChangeNotifier {
     return aggregated;
   }
 
+  List<Candle> reaggregateWithCurrentCandle(
+    List<Candle> raw,
+    Duration interval,
+    int currentIndex,
+  ) {
+    if (raw.isEmpty) return [];
+
+    // Solo usar las velas hasta el índice actual (inclusive)
+    final currentData = raw.take(currentIndex + 1).toList();
+
+    final List<Candle> aggregated = [];
+    final Map<DateTime, List<Candle>> grouped = {};
+
+    // Agrupar velas por intervalo
+    for (final candle in currentData) {
+      final intervalStart = DateTime(
+        candle.timestamp.year,
+        candle.timestamp.month,
+        candle.timestamp.day,
+        candle.timestamp.hour,
+        candle.timestamp.minute -
+            (candle.timestamp.minute % interval.inMinutes),
+      );
+
+      grouped.putIfAbsent(intervalStart, () => []).add(candle);
+    }
+
+    // Crear velas agregadas
+    final sortedKeys = grouped.keys.toList()..sort();
+    for (final key in sortedKeys) {
+      final candles = grouped[key]!;
+      if (candles.isEmpty) continue;
+
+      final open = candles.first.open;
+      final close = candles.last.close;
+      final high = candles.map((c) => c.high).reduce((a, b) => a > b ? a : b);
+      final low = candles.map((c) => c.low).reduce((a, b) => a < b ? a : b);
+      final volume = candles.map((c) => c.volume).reduce((a, b) => a + b);
+
+      aggregated.add(
+        Candle(
+          timestamp: key,
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          volume: volume,
+        ),
+      );
+    }
+
+    debugPrint(
+      '🔥 reaggregateWithCurrentCandle: Raw data ${currentData.length} candles -> ${aggregated.length} aggregated candles',
+    );
+    return aggregated;
+  }
+
+  List<Candle> _reaggregateUpToTime(
+    List<Candle> m1Data,
+    Duration interval,
+    DateTime upToTime,
+  ) {
+    if (m1Data.isEmpty) return [];
+
+    final List<Candle> aggregated = [];
+    final Map<DateTime, List<Candle>> grouped = {};
+
+    // Solo procesar velas hasta el tiempo especificado (inclusive)
+    for (final candle in m1Data) {
+      if (candle.timestamp.isAfter(upToTime)) {
+        break; // No procesar velas posteriores al tiempo actual simulado
+      }
+
+      final intervalStart = DateTime(
+        candle.timestamp.year,
+        candle.timestamp.month,
+        candle.timestamp.day,
+        candle.timestamp.hour,
+        candle.timestamp.minute -
+            (candle.timestamp.minute % interval.inMinutes),
+      );
+
+      grouped.putIfAbsent(intervalStart, () => []).add(candle);
+    }
+
+    // Crear velas agregadas
+    final sortedKeys = grouped.keys.toList()..sort();
+    for (final key in sortedKeys) {
+      final candles = grouped[key]!;
+      if (candles.isEmpty) continue;
+
+      final open = candles.first.open;
+      final close = candles.last.close;
+      final high = candles.map((c) => c.high).reduce((a, b) => a > b ? a : b);
+      final low = candles.map((c) => c.low).reduce((a, b) => a < b ? a : b);
+      final volume = candles.map((c) => c.volume).reduce((a, b) => a + b);
+
+      aggregated.add(
+        Candle(
+          timestamp: key,
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          volume: volume,
+        ),
+      );
+    }
+
+    debugPrint(
+      '🔥 _reaggregateUpToTime: M1 data up to $upToTime -> ${aggregated.length} ${interval.inMinutes}min candles',
+    );
+    return aggregated;
+  }
+
+  List<Candle> _reaggregateAllData(List<Candle> m1Data, Duration interval) {
+    if (m1Data.isEmpty) return [];
+
+    final List<Candle> aggregated = [];
+    final Map<DateTime, List<Candle>> grouped = {};
+
+    // Procesar todas las velas M1
+    for (final candle in m1Data) {
+      final intervalStart = DateTime(
+        candle.timestamp.year,
+        candle.timestamp.month,
+        candle.timestamp.day,
+        candle.timestamp.hour,
+        candle.timestamp.minute -
+            (candle.timestamp.minute % interval.inMinutes),
+      );
+
+      grouped.putIfAbsent(intervalStart, () => []).add(candle);
+    }
+
+    // Crear velas agregadas
+    final sortedKeys = grouped.keys.toList()..sort();
+    for (final key in sortedKeys) {
+      final candles = grouped[key]!;
+      if (candles.isEmpty) continue;
+
+      final open = candles.first.open;
+      final close = candles.last.close;
+      final high = candles.map((c) => c.high).reduce((a, b) => a > b ? a : b);
+      final low = candles.map((c) => c.low).reduce((a, b) => a < b ? a : b);
+      final volume = candles.map((c) => c.volume).reduce((a, b) => a + b);
+
+      aggregated.add(
+        Candle(
+          timestamp: key,
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          volume: volume,
+        ),
+      );
+    }
+
+    debugPrint(
+      '🔥 _reaggregateAllData: M1 data -> ${aggregated.length} ${interval.inMinutes}min candles',
+    );
+    return aggregated;
+  }
+
   void setTimeframe(Timeframe tf) {
     if (tf == _activeTf) return;
 
-    final oldTf = _activeTf;
-    final oldIndex = _currentCandleIndex;
-    final oldTicks = _ticksPerCandleMap[oldTf]!;
-    final newTicks = _ticksPerCandleMap[tf]!;
+    debugPrint(
+      '🔥🔥🔥 SETtimeframe START: ${_activeTf.name} -> ${tf.name} 🔥🔥🔥',
+    );
 
-    // 1) cambia TF y _ticksPerCandle
-    _activeTf = tf;
-    _ticksPerCandle = newTicks;
+    final wasRunning = _isSimulationRunning;
+    debugPrint('🔥 SimulationProvider: Was running before change: $wasRunning');
 
-    int newIndex;
-    if (newTicks > oldTicks) {
-      // paso de TF menor → mayor: agrupo "factor" velas y guardo el resto
-      final factor = newTicks ~/ oldTicks;
-      final fullGroups = oldIndex ~/ factor;
-      newIndex = fullGroups;
-    } else {
-      // paso de TF mayor → menor: subdivido y reaplico el resto
-      final factor = oldTicks ~/ newTicks;
-      newIndex = oldIndex * factor;
+    // 1. Pausar la simulación si está corriendo
+    if (_isSimulationRunning) {
+      debugPrint(
+        '🔥 SimulationProvider: Pausing simulation for timeframe change',
+      );
+      _isSimulationRunning = false;
+      debugPrint(
+        '🔥 SimulationProvider: Simulation paused, _isSimulationRunning = $_isSimulationRunning',
+      );
     }
 
-    // 2) clamp y notifica
-    final maxIdx = _allTimeframes[tf]!.length - 1;
-    _currentCandleIndex = newIndex.clamp(0, maxIdx);
+    // 2. Obtener el tiempo actual simulado desde los datos M1
+    final m1Data = _allTimeframes[Timeframe.m1]!;
+    final currentM1Index = _currentCandleIndex;
 
-    _setupTicksForCurrentCandle();
+    debugPrint('🔥 SimulationProvider: M1 data length: ${m1Data.length}');
+    debugPrint('🔥 SimulationProvider: Current M1 index: $currentM1Index');
+
+    if (currentM1Index >= m1Data.length) {
+      debugPrint(
+        '🔥 SimulationProvider: ERROR - Current M1 index out of range!',
+      );
+      return;
+    }
+
+    final currentSimulatedTime = m1Data[currentM1Index].timestamp;
+    debugPrint(
+      '🔥 SimulationProvider: Current simulated time: $currentSimulatedTime',
+    );
+
+    // 3. Calcular las velas del nuevo timeframe hasta el tiempo actual
+    Duration interval;
+    switch (tf) {
+      case Timeframe.m1:
+        interval = const Duration(minutes: 1);
+        break;
+      case Timeframe.m5:
+        interval = const Duration(minutes: 5);
+        break;
+      case Timeframe.m15:
+        interval = const Duration(minutes: 15);
+        break;
+      case Timeframe.h1:
+        interval = const Duration(hours: 1);
+        break;
+      case Timeframe.d1:
+        interval = const Duration(days: 1);
+        break;
+    }
+
+    // 4. Reagregar TODOS los datos M1 al nuevo timeframe
+    debugPrint(
+      '🔥 SimulationProvider: About to reaggregate ALL M1 data with interval: ${interval.inMinutes} minutes',
+    );
+    final allTimeframeData = _reaggregateAllData(m1Data, interval);
+    debugPrint(
+      '🔥 SimulationProvider: Full reaggregation completed, got ${allTimeframeData.length} candles',
+    );
+
+    // 5. Actualizar el timeframe activo y los datos completos
+    debugPrint('🔥 SimulationProvider: Updating active timeframe and data...');
+    _activeTf = tf;
+    _ticksPerCandle = _ticksPerCandleMap[tf]!;
+    _allTimeframes[tf] = allTimeframeData;
+    debugPrint(
+      '🔥 SimulationProvider: Updated _activeTf = ${_activeTf.name}, _ticksPerCandle = $_ticksPerCandle',
+    );
+
+    // 6. Calcular el nuevo índice de vela para el nuevo timeframe
+    // Buscar la vela correspondiente al tiempo actual simulado
+    int newIndex = 0;
+    if (allTimeframeData.isNotEmpty) {
+      // Buscar la vela que contiene o es más cercana al tiempo actual simulado
+      for (int i = 0; i < allTimeframeData.length; i++) {
+        final candle = allTimeframeData[i];
+        if (candle.timestamp.isAfter(currentSimulatedTime)) {
+          // Si encontramos una vela posterior, usar la anterior
+          newIndex = i > 0 ? i - 1 : 0;
+          break;
+        } else if (i == allTimeframeData.length - 1) {
+          // Si llegamos al final, usar la última vela
+          newIndex = i;
+        }
+      }
+    }
+    _currentCandleIndex = newIndex;
+
+    debugPrint(
+      '🔥 SimulationProvider: New timeframe has ${allTimeframeData.length} candles, current index: $_currentCandleIndex',
+    );
+    debugPrint(
+      '🔥 SimulationProvider: Current simulated time: $currentSimulatedTime',
+    );
+    if (allTimeframeData.isNotEmpty &&
+        _currentCandleIndex < allTimeframeData.length) {
+      debugPrint(
+        '🔥 SimulationProvider: Selected candle time: ${allTimeframeData[_currentCandleIndex].timestamp}',
+      );
+      debugPrint(
+        '🔥 SimulationProvider: Selected candle OHLC: ${allTimeframeData[_currentCandleIndex].open}/${allTimeframeData[_currentCandleIndex].high}/${allTimeframeData[_currentCandleIndex].low}/${allTimeframeData[_currentCandleIndex].close}',
+      );
+    }
+
+    // Debug: Check if we're at the end of data
+    if (allTimeframeData.isNotEmpty) {
+      final isLastCandle = _currentCandleIndex >= allTimeframeData.length - 1;
+      debugPrint(
+        '🔥 SimulationProvider: Is last candle: $isLastCandle (index: $_currentCandleIndex, total: ${allTimeframeData.length})',
+      );
+    }
+
+    // 7. Configurar ticks para la nueva vela actual
+    debugPrint('🔥 SimulationProvider: Setting up ticks for current candle...');
+    try {
+      _setupTicksForCurrentCandle();
+      debugPrint('🔥 SimulationProvider: Ticks setup completed successfully');
+      debugPrint(
+        '🔥 SimulationProvider: Generated ${_syntheticTicks.length} ticks, current index: $_currentTickIndex',
+      );
+    } catch (e) {
+      debugPrint('🔥 SimulationProvider: ERROR setting up ticks: $e');
+    }
+
+    // 8. Resetear el gráfico completamente
+    debugPrint('🔥 SimulationProvider: Notifying chart reset...');
     _notifyChartReset();
+
+    // 9. Reanudar la simulación si estaba corriendo
+    if (wasRunning) {
+      debugPrint(
+        '🔥 SimulationProvider: Resuming simulation with new timeframe',
+      );
+      _isSimulationRunning = true;
+      debugPrint(
+        '🔥 SimulationProvider: Simulation resumed, _isSimulationRunning = $_isSimulationRunning',
+      );
+      _notifySimulationState();
+    } else {
+      debugPrint(
+        '🔥 SimulationProvider: Simulation was not running, keeping it paused',
+      );
+    }
+
+    debugPrint('🔥🔥🔥 SETtimeframe COMPLETED 🔥🔥🔥');
   }
 
   void _setupTicksForCurrentCandle() {
@@ -357,9 +648,9 @@ class SimulationProvider with ChangeNotifier {
       return;
     }
     final candle = historicalData[_currentCandleIndex];
-    debugPrint(
-      '🔥 SimulationProvider: Configurando ticks para vela $_currentCandleIndex: ${candle.timestamp} - OHLC: ${candle.open}/${candle.high}/${candle.low}/${candle.close}',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: Configurando ticks para vela $_currentCandleIndex: ${candle.timestamp} - OHLC: ${candle.open}/${candle.high}/${candle.low}/${candle.close}',
+    // );
     int? nextMs;
     if (_currentCandleIndex < historicalData.length - 1) {
       nextMs = historicalData[_currentCandleIndex + 1]
@@ -373,9 +664,9 @@ class SimulationProvider with ChangeNotifier {
       nextMs,
       _activeTf,
     );
-    debugPrint(
-      '🔥 SimulationProvider: Generados ${_syntheticTicks.length} ticks para la vela',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: Generados ${_syntheticTicks.length} ticks para la vela',
+    // );
     // Reiniciar tick index y ticks acumulados
     _currentTickIndex = 0;
     _currentCandleTicks.clear();
@@ -420,13 +711,29 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void pauseSimulation() {
+    debugPrint('🔥 SimulationProvider: pauseSimulation() called');
+    debugPrint(
+      '🔥 SimulationProvider: _isSimulationRunning before: $_isSimulationRunning',
+    );
     _isSimulationRunning = false;
+    debugPrint(
+      '🔥 SimulationProvider: _isSimulationRunning after: $_isSimulationRunning',
+    );
     _notifySimulationState();
+    debugPrint('🔥 SimulationProvider: pauseSimulation() completed');
   }
 
   void resumeSimulation() {
+    debugPrint('🔥 SimulationProvider: resumeSimulation() called');
+    debugPrint(
+      '🔥 SimulationProvider: _isSimulationRunning before: $_isSimulationRunning',
+    );
     _isSimulationRunning = true;
+    debugPrint(
+      '🔥 SimulationProvider: _isSimulationRunning after: $_isSimulationRunning',
+    );
     _notifySimulationState();
+    debugPrint('🔥 SimulationProvider: resumeSimulation() completed');
   }
 
   void stopSimulation() {
@@ -995,9 +1302,9 @@ class SimulationProvider with ChangeNotifier {
     final dt = durationMs ~/ steps;
     final range = candle.high - candle.low;
     final Random rnd = Random(candle.timestamp.millisecondsSinceEpoch);
-    debugPrint(
-      '🔥 generateSyntheticTicks: Candle ${candle.timestamp}, duration: ${durationMs}ms, dt: ${dt}ms',
-    );
+    // debugPrint(
+    //   '🔥 generateSyntheticTicks: Candle ${candle.timestamp}, duration: ${durationMs}ms, dt: ${dt}ms',
+    // );
 
     for (int i = 0; i < steps; i++) {
       final base =
@@ -1009,11 +1316,11 @@ class SimulationProvider with ChangeNotifier {
       ticks.add(Tick(time, price));
     }
 
-    if (ticks.isNotEmpty) {
-      debugPrint(
-        '🔥 generateSyntheticTicks: First tick: ${ticks.first.time}, Last tick: ${ticks.last.time}',
-      );
-    }
+    // if (ticks.isNotEmpty) {
+    //   debugPrint(
+    //     '🔥 generateSyntheticTicks: First tick: ${ticks.first.time}, Last tick: ${ticks.last.time}',
+    //   );
+    // }
     return ticks;
   }
 
@@ -1158,23 +1465,38 @@ class SimulationProvider with ChangeNotifier {
   void _processNextTick() {
     if (!_isSimulationRunning) {
       debugPrint(
-        '🔥 SimulationProvider: _processNextTick - simulación no está corriendo',
+        '🔥 SimulationProvider: _processNextTick - simulación no está corriendo (isRunning: $_isSimulationRunning)',
       );
       return;
     }
 
-    debugPrint(
-      '🔥 SimulationProvider: _processNextTick - tick $_currentTickIndex de ${_syntheticTicks.length}',
-    );
+    // debugPrint(
+    //   '🔥 SimulationProvider: _processNextTick - START (timeframe: ${_activeTf.name})',
+    // );
+
+    // debugPrint(
+    //   '🔥 SimulationProvider: _processNextTick - tick $_currentTickIndex de ${_syntheticTicks.length}',
+    // );
 
     if (_currentTickIndex >= _syntheticTicks.length) {
-      debugPrint('🔥 SimulationProvider: Cambiando a siguiente vela');
+      debugPrint(
+        '🔥 SimulationProvider: Cambiando a siguiente vela - índice actual: $_currentCandleIndex, total velas: ${historicalData.length}',
+      );
       _currentCandleIndex++;
+      debugPrint(
+        '🔥 SimulationProvider: Nuevo índice de vela: $_currentCandleIndex',
+      );
       if (_currentCandleIndex >= historicalData.length) {
         debugPrint('🔥 SimulationProvider: Fin de datos alcanzado');
+        debugPrint(
+          '🔥 SimulationProvider: Última vela procesada, deteniendo simulación',
+        );
         stopTickSimulation();
         return;
       }
+      debugPrint(
+        '🔥 SimulationProvider: Configurando ticks para vela $_currentCandleIndex',
+      );
       _setupTicksForCurrentCandle();
     }
 
@@ -1183,9 +1505,9 @@ class SimulationProvider with ChangeNotifier {
       final currentTickPrice =
           tick.price; // Capturar precio antes de incrementar
       _currentTickIndex++;
-      debugPrint(
-        '🔥 SimulationProvider: Procesando tick $currentTickPrice a las ${tick.time}',
-      );
+      // debugPrint(
+      //   '🔥 SimulationProvider: Procesando tick $currentTickPrice a las ${tick.time}',
+      // );
       _accumulateTickForCandle(tick);
 
       // Notificar cambios de UI para actualizar P&L flotante en tiempo real
@@ -1198,12 +1520,12 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void _accumulateTickForCandle(Tick tick) {
-    debugPrint(
-      '🔥 TICK: Procesando tick - precio: ${tick.price}, tiempo: ${tick.time}',
-    );
-    debugPrint(
-      '🔥 TICK: Estado de simulación - isSimulationRunning: $_isSimulationRunning',
-    );
+    // debugPrint(
+    //   '🔥 TICK: Procesando tick - precio: ${tick.price}, tiempo: ${tick.time}',
+    // );
+    // debugPrint(
+    //   '🔥 TICK: Estado de simulación - isSimulationRunning: $_isSimulationRunning',
+    // );
 
     // Verificar que la simulación esté corriendo antes de procesar
     if (!_isSimulationRunning) {
@@ -1334,6 +1656,35 @@ class SimulationProvider with ChangeNotifier {
 
   /// Notifica cambios que SÍ requieren reinicio del gráfico (solo cuando cambian las velas base)
   void _notifyChartReset() {
+    if (_tickCallback != null) {
+      debugPrint('🔥🔥🔥 SimulationProvider: Enviando señal de RESET al chart');
+
+      // Obtener solo las velas históricas hasta la vela actual (inclusive)
+      final historicalCandles = historicalData
+          .take(_currentCandleIndex + 1)
+          .toList();
+
+      debugPrint(
+        '🔥🔥🔥 SimulationProvider: Enviando ${historicalCandles.length} velas históricas al chart (índice actual: $_currentCandleIndex)',
+      );
+
+      final resetMsg = {
+        'resetChart': true,
+        'newTimeframe': _activeTf.name,
+        'historicalData': historicalCandles
+            .map(
+              (candle) => {
+                'time': candle.timestamp.millisecondsSinceEpoch ~/ 1000,
+                'open': candle.open,
+                'high': candle.high,
+                'low': candle.low,
+                'close': candle.close,
+              },
+            )
+            .toList(),
+      };
+      _tickCallback!(resetMsg);
+    }
     notifyListeners();
   }
 
