@@ -389,7 +389,52 @@
                     return;
                 }
 
-                // 2) Si vienen datos de posición (entryPrice, stopLoss, takeProfit)
+                // 2) Si viene la señal de reset del chart, resetear completamente
+                if (data.resetChart === true) {
+                    console.log('🔥🔥🔥 HTML: RESETEANDO CHART COMPLETAMENTE - Nuevo timeframe:', data.newTimeframe);
+                    console.log('🔥🔥🔥 HTML: Datos históricos recibidos:', data.historicalData ? data.historicalData.length : 0, 'velas');
+                    
+                    // Limpiar todas las series existentes
+                    if (candlestickSeries) {
+                        chart.removeSeries(candlestickSeries);
+                    }
+                    
+                    // Crear nueva serie de velas
+                    candlestickSeries = chart.addCandlestickSeries({
+                        upColor: '#21CE99',
+                        downColor: '#FF5A5F',
+                        borderDownColor: '#FF5A5F',
+                        borderUpColor: '#21CE99',
+                        wickDownColor: '#FF5A5F',
+                        wickUpColor: '#21CE99',
+                        priceFormat: {
+                            type: 'price',
+                            precision: 5, // Show 5 decimal places for forex
+                            minMove: 0.00001, // Minimum price movement
+                        },
+                    });
+
+                    // Cargar todos los datos históricos si están disponibles
+                    if (data.historicalData && data.historicalData.length > 0) {
+                        console.log('🔥🔥🔥 HTML: Cargando', data.historicalData.length, 'velas históricas');
+                        candlestickSeries.setData(data.historicalData);
+                        
+                        // No ajustar automáticamente la vista para mantener la escala de precios
+                        // chart.timeScale().fitContent();
+                    }
+
+                    // Limpiar líneas de precio
+                    lastEntryPrice = NaN;
+                    lastStopLoss = NaN;
+                    lastTakeProfit = NaN;
+                    lastPrice = NaN;
+                    updatePriceLines(NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN);
+                    
+                    console.log('🔥🔥🔥 HTML: RESET COMPLETADO');
+                    return;
+                }
+
+                // 3) Si vienen datos de posición (entryPrice, stopLoss, takeProfit)
                 if (data.entryPrice != null) lastEntryPrice = parseFloat(data.entryPrice);
                 if (data.stopLoss != null) lastStopLoss = parseFloat(data.stopLoss);
                 if (data.takeProfit != null) lastTakeProfit = parseFloat(data.takeProfit);
@@ -412,7 +457,7 @@
                     tpVal: tpVal
                 });
 
-                // 3) Si viene una vela, actualizar el chart y luego las líneas de precio
+                // 4) Si viene una vela, actualizar el chart y luego las líneas de precio
                 if (data.candle) {
                     //console.log('🕯️ HTML: Recibida vela en tiempo real:', data.candle);
                     
