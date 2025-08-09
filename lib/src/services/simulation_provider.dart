@@ -505,21 +505,68 @@ class SimulationProvider with ChangeNotifier {
       );
     }
 
-    // 2. Obtener el tiempo actual simulado desde los datos M1
-    final m1Data = _allTimeframes[Timeframe.m1]!;
-    final currentM1Index = _currentCandleIndex;
+    // 2. Obtener el tiempo actual simulado
+    DateTime currentSimulatedTime;
 
-    debugPrint('🔥 SimulationProvider: M1 data length: ${m1Data.length}');
-    debugPrint('🔥 SimulationProvider: Current M1 index: $currentM1Index');
-
-    if (currentM1Index >= m1Data.length) {
+    if (_activeTf == Timeframe.m1) {
+      // Si estamos en M1, usar el índice actual directamente
+      final m1Data = _allTimeframes[Timeframe.m1]!;
+      if (_currentCandleIndex >= m1Data.length) {
+        debugPrint(
+          '🔥 SimulationProvider: ERROR - Current M1 index out of range!',
+        );
+        return;
+      }
+      currentSimulatedTime = m1Data[_currentCandleIndex].timestamp;
       debugPrint(
-        '🔥 SimulationProvider: ERROR - Current M1 index out of range!',
+        '🔥 SimulationProvider: Using current M1 index: $_currentCandleIndex',
       );
-      return;
+    } else {
+      // Si estamos en otro timeframe, calcular el tiempo desde la vela actual
+      final currentTfData = _allTimeframes[_activeTf]!;
+      if (_currentCandleIndex >= currentTfData.length) {
+        debugPrint(
+          '🔥 SimulationProvider: ERROR - Current ${_activeTf.name} index out of range!',
+        );
+        return;
+      }
+
+      // Obtener el tiempo de la vela actual en el timeframe actual
+      final currentCandleTime = currentTfData[_currentCandleIndex].timestamp;
+
+      // Calcular cuánto tiempo ha pasado desde el inicio de esa vela
+      // Para esto, necesitamos saber cuántos ticks han pasado
+      final ticksPassed = _currentTickIndex;
+      final totalTicks = _ticksPerCandle;
+      final progressRatio = ticksPassed / totalTicks;
+
+      // Calcular el tiempo simulado actual dentro de la vela
+      Duration candleDuration;
+      switch (_activeTf) {
+        case Timeframe.m5:
+          candleDuration = const Duration(minutes: 5);
+          break;
+        case Timeframe.m15:
+          candleDuration = const Duration(minutes: 15);
+          break;
+        case Timeframe.h1:
+          candleDuration = const Duration(hours: 1);
+          break;
+        case Timeframe.d1:
+          candleDuration = const Duration(days: 1);
+          break;
+        default:
+          candleDuration = const Duration(minutes: 1);
+      }
+
+      final timeProgress = candleDuration * progressRatio;
+      currentSimulatedTime = currentCandleTime.add(timeProgress);
+
+      debugPrint(
+        '🔥 SimulationProvider: Calculated time from ${_activeTf.name}: $currentCandleTime + $timeProgress = $currentSimulatedTime',
+      );
     }
 
-    final currentSimulatedTime = m1Data[currentM1Index].timestamp;
     debugPrint(
       '🔥 SimulationProvider: Current simulated time: $currentSimulatedTime',
     );
@@ -545,6 +592,7 @@ class SimulationProvider with ChangeNotifier {
     }
 
     // 4. Reagregar TODOS los datos M1 al nuevo timeframe
+    final m1Data = _allTimeframes[Timeframe.m1]!;
     debugPrint(
       '🔥 SimulationProvider: About to reaggregate ALL M1 data with interval: ${interval.inMinutes} minutes',
     );
