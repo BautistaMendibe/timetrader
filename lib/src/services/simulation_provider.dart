@@ -58,7 +58,8 @@ class SimulationProvider with ChangeNotifier {
 
   bool _isSimulationRunning = false;
   int _currentCandleIndex = 0;
-  double _currentBalance = 10000.0;
+  double _currentBalance =
+      1000.0; // Default balance, will be set by startTickSimulation
   List<Trade> _currentTrades = [];
   List<Trade> _completedTrades = [];
   List<CompletedTrade> _completedOperations = [];
@@ -210,7 +211,11 @@ class SimulationProvider with ChangeNotifier {
 
   // P&L total (realizado + flotante)
   double get totalPnL {
-    double realizedPnL = _currentBalance - 10000.0; // Balance inicial
+    // Necesitamos trackear el balance inicial para calcular P&L realizado
+    double initialBalance = _equityCurve.isNotEmpty
+        ? _equityCurve.first
+        : _currentBalance;
+    double realizedPnL = _currentBalance - initialBalance;
     return realizedPnL + unrealizedPnL;
   }
 
@@ -781,14 +786,19 @@ class SimulationProvider with ChangeNotifier {
         ? historicalData.last.timestamp
         : DateTime.now();
 
+    // Obtener el balance inicial de la equity curve
+    double initialBalance = _equityCurve.isNotEmpty
+        ? _equityCurve.first
+        : _currentBalance;
+
     _currentSimulation = SimulationResult(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       setupId: _currentSetup?.id ?? 'unknown',
       startDate: startDate,
       endDate: endDate,
-      initialBalance: 10000.0,
+      initialBalance: initialBalance,
       finalBalance: _currentBalance,
-      netPnL: _currentBalance - 10000.0,
+      netPnL: _currentBalance - initialBalance,
       winRate: winRate,
       maxDrawdown: maxDrawdown,
       totalTrades: completedOperations.length,
@@ -826,7 +836,7 @@ class SimulationProvider with ChangeNotifier {
   void reset() {
     _currentSimulation = null;
     _currentCandleIndex = 0;
-    _currentBalance = 10000.0;
+    _currentBalance = 1000.0; // Default balance
     _currentTrades = [];
     _completedTrades = [];
     _completedOperations = [];
