@@ -376,64 +376,6 @@ class SimulationProvider with ChangeNotifier {
     return aggregated;
   }
 
-  List<Candle> _reaggregateUpToTime(
-    List<Candle> m1Data,
-    Duration interval,
-    DateTime upToTime,
-  ) {
-    if (m1Data.isEmpty) return [];
-
-    final List<Candle> aggregated = [];
-    final Map<DateTime, List<Candle>> grouped = {};
-
-    // Solo procesar velas hasta el tiempo especificado (inclusive)
-    for (final candle in m1Data) {
-      if (candle.timestamp.isAfter(upToTime)) {
-        break; // No procesar velas posteriores al tiempo actual simulado
-      }
-
-      final intervalStart = DateTime(
-        candle.timestamp.year,
-        candle.timestamp.month,
-        candle.timestamp.day,
-        candle.timestamp.hour,
-        candle.timestamp.minute -
-            (candle.timestamp.minute % interval.inMinutes),
-      );
-
-      grouped.putIfAbsent(intervalStart, () => []).add(candle);
-    }
-
-    // Crear velas agregadas
-    final sortedKeys = grouped.keys.toList()..sort();
-    for (final key in sortedKeys) {
-      final candles = grouped[key]!;
-      if (candles.isEmpty) continue;
-
-      final open = candles.first.open;
-      final close = candles.last.close;
-      final high = candles.map((c) => c.high).reduce((a, b) => a > b ? a : b);
-      final low = candles.map((c) => c.low).reduce((a, b) => a < b ? a : b);
-      final volume = candles.map((c) => c.volume).reduce((a, b) => a + b);
-
-      aggregated.add(
-        Candle(
-          timestamp: key,
-          open: open,
-          high: high,
-          low: low,
-          close: close,
-          volume: volume,
-        ),
-      );
-    }
-
-    debugPrint(
-      '🔥 _reaggregateUpToTime: M1 data up to $upToTime -> ${aggregated.length} ${interval.inMinutes}min candles',
-    );
-    return aggregated;
-  }
-
   List<Candle> _reaggregateAllData(List<Candle> m1Data, Duration interval) {
     if (m1Data.isEmpty) return [];
 
@@ -442,14 +384,34 @@ class SimulationProvider with ChangeNotifier {
 
     // Procesar todas las velas M1
     for (final candle in m1Data) {
-      final intervalStart = DateTime(
-        candle.timestamp.year,
-        candle.timestamp.month,
-        candle.timestamp.day,
-        candle.timestamp.hour,
-        candle.timestamp.minute -
-            (candle.timestamp.minute % interval.inMinutes),
-      );
+      DateTime intervalStart;
+
+      if (interval.inDays > 0) {
+        // Para timeframes diarios (D1)
+        intervalStart = DateTime(
+          candle.timestamp.year,
+          candle.timestamp.month,
+          candle.timestamp.day,
+        );
+      } else if (interval.inHours > 0) {
+        // Para timeframes horarios (H1)
+        intervalStart = DateTime(
+          candle.timestamp.year,
+          candle.timestamp.month,
+          candle.timestamp.day,
+          candle.timestamp.hour,
+        );
+      } else {
+        // Para timeframes de minutos (M1, M5, M15)
+        intervalStart = DateTime(
+          candle.timestamp.year,
+          candle.timestamp.month,
+          candle.timestamp.day,
+          candle.timestamp.hour,
+          candle.timestamp.minute -
+              (candle.timestamp.minute % interval.inMinutes),
+        );
+      }
 
       grouped.putIfAbsent(intervalStart, () => []).add(candle);
     }
@@ -479,7 +441,11 @@ class SimulationProvider with ChangeNotifier {
     }
 
     debugPrint(
-      '🔥 _reaggregateAllData: M1 data -> ${aggregated.length} ${interval.inMinutes}min candles',
+      '🔥 _reaggregateAllData: M1 data -> ${aggregated.length} ${interval.inMinutes > 0
+          ? "${interval.inMinutes}min"
+          : interval.inHours > 0
+          ? "${interval.inHours}h"
+          : "${interval.inDays}d"} candles',
     );
     return aggregated;
   }
@@ -593,8 +559,13 @@ class SimulationProvider with ChangeNotifier {
 
     // 4. Reagregar TODOS los datos M1 al nuevo timeframe
     final m1Data = _allTimeframes[Timeframe.m1]!;
+    final intervalDescription = interval.inDays > 0
+        ? "${interval.inDays} days"
+        : interval.inHours > 0
+        ? "${interval.inHours} hours"
+        : "${interval.inMinutes} minutes";
     debugPrint(
-      '🔥 SimulationProvider: About to reaggregate ALL M1 data with interval: ${interval.inMinutes} minutes',
+      '🔥 SimulationProvider: About to reaggregate ALL M1 data with interval: $intervalDescription',
     );
     final allTimeframeData = _reaggregateAllData(m1Data, interval);
     debugPrint(
