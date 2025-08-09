@@ -1019,7 +1019,7 @@ class SimulationProvider with ChangeNotifier {
       '🔥 SimulationProvider: executeManualTrade - Current tick index: $_currentTickIndex, Total ticks: ${_syntheticTicks.length}',
     );
     debugPrint(
-      '🔥 SimulationProvider: executeManualTrade - Using timestamp: $currentTime (candle ${_currentCandleIndex})',
+      '🔥 SimulationProvider: executeManualTrade - Using timestamp: $currentTime (candle $_currentCandleIndex)',
     );
     if (entryPrice != null) {
       debugPrint(
@@ -1133,7 +1133,7 @@ class SimulationProvider with ChangeNotifier {
             'amount': closeTrade.amount ?? 0.0,
             'leverage': closeTrade.leverage ?? 1,
             'reason': closeTrade.reason ?? '',
-            'pnl': closeTrade.pnl ?? 0.0,
+            'pnl': closeTrade.pnl,
           },
         ],
       };
@@ -1521,8 +1521,7 @@ class SimulationProvider with ChangeNotifier {
 
     if (_currentTickIndex < _syntheticTicks.length) {
       final tick = _syntheticTicks[_currentTickIndex];
-      final currentTickPrice =
-          tick.price; // Capturar precio antes de incrementar
+      // Capturar precio antes de incrementar
       _currentTickIndex++;
       // debugPrint(
       //   '🔥 SimulationProvider: Procesando tick $currentTickPrice a las ${tick.time}',
@@ -1756,13 +1755,13 @@ class SimulationProvider with ChangeNotifier {
           currentPrice <= _calculatedStopLossPrice!) {
         closeReason = 'Stop Loss';
         debugPrint(
-          '🔥 SL/TP: Stop Loss alcanzado - Precio: $currentPrice, SL: ${_calculatedStopLossPrice}',
+          '🔥 SL/TP: Stop Loss alcanzado - Precio: $currentPrice, SL: $_calculatedStopLossPrice}',
         );
       } else if (lastTrade.type == 'sell' &&
           currentPrice >= _calculatedStopLossPrice!) {
         closeReason = 'Stop Loss';
         debugPrint(
-          '🔥 SL/TP: Stop Loss alcanzado - Precio: $currentPrice, SL: ${_calculatedStopLossPrice}',
+          '🔥 SL/TP: Stop Loss alcanzado - Precio: $currentPrice, SL: $_calculatedStopLossPrice}',
         );
       }
     }
@@ -1773,13 +1772,13 @@ class SimulationProvider with ChangeNotifier {
           currentPrice >= _calculatedTakeProfitPrice!) {
         closeReason = 'Take Profit';
         debugPrint(
-          '🔥 SL/TP: Take Profit alcanzado - Precio: $currentPrice, TP: ${_calculatedTakeProfitPrice}',
+          '🔥 SL/TP: Take Profit alcanzado - Precio: $currentPrice, TP: $_calculatedTakeProfitPrice}',
         );
       } else if (lastTrade.type == 'sell' &&
           currentPrice <= _calculatedTakeProfitPrice!) {
         closeReason = 'Take Profit';
         debugPrint(
-          '🔥 SL/TP: Take Profit alcanzado - Precio: $currentPrice, TP: ${_calculatedTakeProfitPrice}',
+          '🔥 SL/TP: Take Profit alcanzado - Precio: $currentPrice, TP: $_calculatedTakeProfitPrice}',
         );
       }
     }
@@ -1860,7 +1859,7 @@ class SimulationProvider with ChangeNotifier {
             'amount': closeTrade.amount ?? 0.0,
             'leverage': closeTrade.leverage ?? 1,
             'reason': closeTrade.reason ?? '',
-            'pnl': closeTrade.pnl ?? 0.0,
+            'pnl': closeTrade.pnl,
           },
         ],
       };
