@@ -306,7 +306,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 SizedBox(
                   width: 100,
-                  child: _buildMetricCard('P/L 7d', '\$2,450', '+12.5%', true),
+                  child: _buildMetricCard('P/L', '\$2,450', '+12.5%', true),
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
