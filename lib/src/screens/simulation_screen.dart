@@ -32,6 +32,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
   double _slRiskPercent = 1.0;
   double _tpRiskPercent = 2.0;
 
+  // NUEVO: Variables para modificar SL/TP para esta entrada
+  bool _modifySlTpForThisEntry = false;
+  double _customSlPercent = 0.1; // 0.1% por defecto
+  double _customTpPercent = 0.2; // 0.2% por defecto
+  Map<String, dynamic>? _defaultSetupValues;
+  Map<String, double>? _defaultCalculatedPrices;
+
   @override
   void initState() {
     super.initState();
@@ -182,6 +189,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
       _showSlTpOnOrderInline = true;
     });
 
+    // Obtener valores por defecto del setup
+    _getDefaultSetupValues(simulationProvider);
+
     // Dibujar líneas en el gráfico al abrir el panel
     if (slSetup != null) simulationProvider.updateManualStopLoss(slSetup);
     if (tpSetup != null) simulationProvider.updateManualTakeProfit(tpSetup);
@@ -198,6 +208,21 @@ class _SimulationScreenState extends State<SimulationScreen> {
     setState(() {
       _showSLTPContainer = true;
     });
+  }
+
+  // NUEVO: Método para obtener valores por defecto del setup
+  void _getDefaultSetupValues(SimulationProvider simulationProvider) {
+    if (_clickPrice != null) {
+      _defaultSetupValues = simulationProvider.getDefaultSetupValues();
+      _defaultCalculatedPrices = simulationProvider.getDefaultCalculatedPrices(
+        _clickPrice!,
+      );
+
+      debugPrint('🔥 Valores por defecto del setup: $_defaultSetupValues');
+      debugPrint(
+        '🔥 Precios calculados por defecto: $_defaultCalculatedPrices',
+      );
+    }
   }
 
   @override
@@ -473,78 +498,259 @@ class _SimulationScreenState extends State<SimulationScreen> {
                           ],
                           if (_showSlTpOnOrderInline) ...[
                             const SizedBox(height: 16),
-                            // Stop Loss % Slider
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_clickPrice != null &&
-                                    simulationProvider.calculatedPositionSize !=
-                                        null &&
-                                    simulationProvider.currentBalance > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 4.0),
+
+                            // NUEVO: Información del setup por defecto y checkbox para modificar
+                            if (_defaultSetupValues != null) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2C2C2C),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey[600]!),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '📋 Valores por defecto del setup:',
+                                      style: TextStyle(
+                                        color: Colors.grey[300],
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Riesgo: ${_defaultSetupValues!['riskPercent'].toStringAsFixed(1)}%',
+                                            style: TextStyle(
+                                              color: Colors.grey[400],
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            'SL: ${_defaultSetupValues!['stopLossDistance'].toStringAsFixed(1)} ${_defaultSetupValues!['stopLossType'].contains('pips') ? 'pips' : 'price'}',
+                                            style: TextStyle(
+                                              color: Colors.grey[400],
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            'TP Ratio: 1:${_defaultSetupValues!['takeProfitRatio'].toStringAsFixed(1)}',
+                                            style: TextStyle(
+                                              color: Colors.grey[400],
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (_defaultCalculatedPrices != null) ...[
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'SL: ${_defaultCalculatedPrices!['stopLoss']?.toStringAsFixed(5) ?? 'N/A'}',
+                                              style: TextStyle(
+                                                color: Colors.red[300],
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Text(
+                                              'TP: ${_defaultCalculatedPrices!['takeProfit']?.toStringAsFixed(5) ?? 'N/A'}',
+                                              style: TextStyle(
+                                                color: Colors.green[300],
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Checkbox para modificar SL/TP para esta entrada
+                              Row(
+                                children: [
+                                  Checkbox(
+                                    value: _modifySlTpForThisEntry,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _modifySlTpForThisEntry =
+                                            value ?? false;
+                                        if (_modifySlTpForThisEntry) {
+                                          // Al activar, usar los valores personalizados
+                                          _slRiskPercent = _customSlPercent;
+                                          _tpRiskPercent = _customTpPercent;
+                                        } else {
+                                          // Al desactivar, volver a los valores por defecto del setup
+                                          _slRiskPercent = 1.0;
+                                          _tpRiskPercent = 2.0;
+                                        }
+                                      });
+                                    },
+                                    activeColor: Colors.blue,
+                                  ),
+                                  Expanded(
                                     child: Text(
-                                      'Stop Loss: ${_slRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)})',
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
+                                      'Modificar SL/TP para esta entrada (Opción A: Porcentaje del precio)',
+                                      style: TextStyle(
+                                        color: Colors.grey[300],
+                                        fontSize: 13,
                                       ),
                                     ),
                                   ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.remove,
-                                        color: Colors.red,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _slRiskPercent =
-                                              (_slRiskPercent - 0.1).clamp(
-                                                0.1,
-                                                100,
-                                              );
-                                        });
-                                        if (simulationProvider
-                                                    .calculatedPositionSize !=
-                                                null &&
-                                            simulationProvider
-                                                    .calculatedPositionSize! >
-                                                0) {
-                                          final riskAmount =
-                                              simulationProvider
-                                                  .currentBalance *
-                                              (_slRiskPercent / 100);
-                                          final priceDistance =
-                                              riskAmount /
-                                              simulationProvider
-                                                  .calculatedPositionSize!;
-                                          final slPrice = _isBuyOrder
-                                              ? _clickPrice! - priceDistance
-                                              : _clickPrice! + priceDistance;
-                                          simulationProvider
-                                              .updateManualStopLoss(slPrice);
-                                        }
-                                      },
+                                ],
+                              ),
+
+                              if (_modifySlTpForThisEntry) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E1E1E),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.blue.withValues(alpha: 0.5),
                                     ),
-                                    Expanded(
-                                      child: Slider(
-                                        value: _slRiskPercent.clamp(0.1, 100),
-                                        min: 0.1,
-                                        max: 100,
-                                        divisions: 999,
-                                        label:
-                                            '${_slRiskPercent.toStringAsFixed(1)}%',
-                                        activeColor: Colors.red,
-                                        inactiveColor: Colors.red.withValues(
-                                          alpha: 0.2,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '⚙️ Configuración personalizada:',
+                                        style: TextStyle(
+                                          color: Colors.blue[300],
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        onChanged: (newPercent) {
-                                          setState(
-                                            () => _slRiskPercent = newPercent,
-                                          );
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'SL: ${_customSlPercent.toStringAsFixed(2)}% del precio',
+                                                  style: TextStyle(
+                                                    color: Colors.red[300],
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                Slider(
+                                                  value: _customSlPercent,
+                                                  min: 0.01,
+                                                  max: 1.0,
+                                                  divisions: 99,
+                                                  label:
+                                                      '${_customSlPercent.toStringAsFixed(2)}%',
+                                                  activeColor: Colors.red,
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      _customSlPercent = value;
+                                                      if (_modifySlTpForThisEntry) {
+                                                        _slRiskPercent = value;
+                                                      }
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'TP: ${_customTpPercent.toStringAsFixed(2)}% del precio',
+                                                  style: TextStyle(
+                                                    color: Colors.green[300],
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                Slider(
+                                                  value: _customTpPercent,
+                                                  min: 0.01,
+                                                  max: 2.0,
+                                                  divisions: 199,
+                                                  label:
+                                                      '${_customTpPercent.toStringAsFixed(2)}%',
+                                                  activeColor: Colors.green,
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      _customTpPercent = value;
+                                                      if (_modifySlTpForThisEntry) {
+                                                        _tpRiskPercent = value;
+                                                      }
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+
+                              // Stop Loss % Slider
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_clickPrice != null &&
+                                      simulationProvider
+                                              .calculatedPositionSize !=
+                                          null &&
+                                      simulationProvider.currentBalance > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 4.0,
+                                      ),
+                                      child: Text(
+                                        'Stop Loss: ${_slRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)})',
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.remove,
+                                          color: Colors.red,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _slRiskPercent =
+                                                (_slRiskPercent - 0.1).clamp(
+                                                  0.1,
+                                                  100,
+                                                );
+                                          });
                                           if (simulationProvider
                                                       .calculatedPositionSize !=
                                                   null &&
@@ -567,119 +773,125 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                           }
                                         },
                                       ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.red,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _slRiskPercent =
-                                              (_slRiskPercent + 0.1).clamp(
-                                                0.1,
-                                                100,
-                                              );
-                                        });
-                                        if (simulationProvider
-                                                    .calculatedPositionSize !=
-                                                null &&
-                                            simulationProvider
-                                                    .calculatedPositionSize! >
-                                                0) {
-                                          final riskAmount =
+                                      Expanded(
+                                        child: Slider(
+                                          value: _slRiskPercent.clamp(0.1, 100),
+                                          min: 0.1,
+                                          max: 100,
+                                          divisions: 999,
+                                          label:
+                                              '${_slRiskPercent.toStringAsFixed(1)}%',
+                                          activeColor: Colors.red,
+                                          inactiveColor: Colors.red.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          onChanged: (newPercent) {
+                                            setState(
+                                              () => _slRiskPercent = newPercent,
+                                            );
+                                            if (simulationProvider
+                                                        .calculatedPositionSize !=
+                                                    null &&
+                                                simulationProvider
+                                                        .calculatedPositionSize! >
+                                                    0) {
+                                              final riskAmount =
+                                                  simulationProvider
+                                                      .currentBalance *
+                                                  (_slRiskPercent / 100);
+                                              final priceDistance =
+                                                  riskAmount /
+                                                  simulationProvider
+                                                      .calculatedPositionSize!;
+                                              final slPrice = _isBuyOrder
+                                                  ? _clickPrice! - priceDistance
+                                                  : _clickPrice! +
+                                                        priceDistance;
                                               simulationProvider
-                                                  .currentBalance *
-                                              (_slRiskPercent / 100);
-                                          final priceDistance =
-                                              riskAmount /
-                                              simulationProvider
-                                                  .calculatedPositionSize!;
-                                          final slPrice = _isBuyOrder
-                                              ? _clickPrice! - priceDistance
-                                              : _clickPrice! + priceDistance;
-                                          simulationProvider
-                                              .updateManualStopLoss(slPrice);
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            // Take Profit % Slider
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_clickPrice != null &&
-                                    simulationProvider.calculatedPositionSize !=
-                                        null &&
-                                    simulationProvider.currentBalance > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 4.0),
-                                    child: Text(
-                                      'Take Profit: ${_tpRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)})',
-                                      style: const TextStyle(
-                                        color: Colors.green,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.remove,
-                                        color: Colors.green,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _tpRiskPercent =
-                                              (_tpRiskPercent - 0.1).clamp(
-                                                0.1,
-                                                100,
-                                              );
-                                        });
-                                        if (simulationProvider
-                                                    .calculatedPositionSize !=
-                                                null &&
-                                            simulationProvider
-                                                    .calculatedPositionSize! >
-                                                0) {
-                                          final potentialAmount =
-                                              simulationProvider
-                                                  .currentBalance *
-                                              (_tpRiskPercent / 100);
-                                          final priceDistance =
-                                              potentialAmount /
-                                              simulationProvider
-                                                  .calculatedPositionSize!;
-                                          final tpPrice = _isBuyOrder
-                                              ? _clickPrice! + priceDistance
-                                              : _clickPrice! - priceDistance;
-                                          simulationProvider
-                                              .updateManualTakeProfit(tpPrice);
-                                        }
-                                      },
-                                    ),
-                                    Expanded(
-                                      child: Slider(
-                                        value: _tpRiskPercent.clamp(0.1, 100),
-                                        min: 0.1,
-                                        max: 100,
-                                        divisions: 999,
-                                        label:
-                                            '+${_tpRiskPercent.toStringAsFixed(1)}%',
-                                        activeColor: Colors.green,
-                                        inactiveColor: Colors.green.withValues(
-                                          alpha: 0.2,
+                                                  .updateManualStopLoss(
+                                                    slPrice,
+                                                  );
+                                            }
+                                          },
                                         ),
-                                        onChanged: (newPercent) {
-                                          setState(
-                                            () => _tpRiskPercent = newPercent,
-                                          );
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: Colors.red,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _slRiskPercent =
+                                                (_slRiskPercent + 0.1).clamp(
+                                                  0.1,
+                                                  100,
+                                                );
+                                          });
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
+                                              simulationProvider
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final riskAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_slRiskPercent / 100);
+                                            final priceDistance =
+                                                riskAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final slPrice = _isBuyOrder
+                                                ? _clickPrice! - priceDistance
+                                                : _clickPrice! + priceDistance;
+                                            simulationProvider
+                                                .updateManualStopLoss(slPrice);
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // Take Profit % Slider
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_clickPrice != null &&
+                                      simulationProvider
+                                              .calculatedPositionSize !=
+                                          null &&
+                                      simulationProvider.currentBalance > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 4.0,
+                                      ),
+                                      child: Text(
+                                        'Take Profit: ${_tpRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)})',
+                                        style: const TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.remove,
+                                          color: Colors.green,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _tpRiskPercent =
+                                                (_tpRiskPercent - 0.1).clamp(
+                                                  0.1,
+                                                  100,
+                                                );
+                                          });
                                           if (simulationProvider
                                                       .calculatedPositionSize !=
                                                   null &&
@@ -704,188 +916,232 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                           }
                                         },
                                       ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.green,
+                                      Expanded(
+                                        child: Slider(
+                                          value: _tpRiskPercent.clamp(0.1, 100),
+                                          min: 0.1,
+                                          max: 100,
+                                          divisions: 999,
+                                          label:
+                                              '+${_tpRiskPercent.toStringAsFixed(1)}%',
+                                          activeColor: Colors.green,
+                                          inactiveColor: Colors.green
+                                              .withValues(alpha: 0.2),
+                                          onChanged: (newPercent) {
+                                            setState(
+                                              () => _tpRiskPercent = newPercent,
+                                            );
+                                            if (simulationProvider
+                                                        .calculatedPositionSize !=
+                                                    null &&
+                                                simulationProvider
+                                                        .calculatedPositionSize! >
+                                                    0) {
+                                              final potentialAmount =
+                                                  simulationProvider
+                                                      .currentBalance *
+                                                  (_tpRiskPercent / 100);
+                                              final priceDistance =
+                                                  potentialAmount /
+                                                  simulationProvider
+                                                      .calculatedPositionSize!;
+                                              final tpPrice = _isBuyOrder
+                                                  ? _clickPrice! + priceDistance
+                                                  : _clickPrice! -
+                                                        priceDistance;
+                                              simulationProvider
+                                                  .updateManualTakeProfit(
+                                                    tpPrice,
+                                                  );
+                                            }
+                                          },
+                                        ),
                                       ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _tpRiskPercent =
-                                              (_tpRiskPercent + 0.1).clamp(
-                                                0.1,
-                                                100,
-                                              );
-                                        });
-                                        if (simulationProvider
-                                                    .calculatedPositionSize !=
-                                                null &&
-                                            simulationProvider
-                                                    .calculatedPositionSize! >
-                                                0) {
-                                          final potentialAmount =
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: Colors.green,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _tpRiskPercent =
+                                                (_tpRiskPercent + 0.1).clamp(
+                                                  0.1,
+                                                  100,
+                                                );
+                                          });
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
                                               simulationProvider
-                                                  .currentBalance *
-                                              (_tpRiskPercent / 100);
-                                          final priceDistance =
-                                              potentialAmount /
-                                              simulationProvider
-                                                  .calculatedPositionSize!;
-                                          final tpPrice = _isBuyOrder
-                                              ? _clickPrice! + priceDistance
-                                              : _clickPrice! - priceDistance;
-                                          simulationProvider
-                                              .updateManualTakeProfit(tpPrice);
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          // Confirm Button
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed:
-                                  simulationProvider.canCalculatePosition() &&
-                                      _clickPrice != null &&
-                                      _slRiskPercent > 0 &&
-                                      _tpRiskPercent > 0
-                                  ? () {
-                                      debugPrint(
-                                        '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = $_slRiskPercent, TP % = $_tpRiskPercent',
-                                      );
-                                      // Calcular precios a partir de los porcentajes de riesgo/potencial
-                                      final riskAmount =
-                                          simulationProvider.currentBalance *
-                                          (_slRiskPercent / 100);
-                                      final tpAmount =
-                                          simulationProvider.currentBalance *
-                                          (_tpRiskPercent / 100);
-                                      final slPrice = _isBuyOrder
-                                          ? _clickPrice! -
-                                                (riskAmount /
-                                                    (simulationProvider
-                                                            .calculatedPositionSize ??
-                                                        1))
-                                          : _clickPrice! +
-                                                (riskAmount /
-                                                    (simulationProvider
-                                                            .calculatedPositionSize ??
-                                                        1));
-                                      final tpPrice = _isBuyOrder
-                                          ? _clickPrice! +
-                                                (tpAmount /
-                                                    (simulationProvider
-                                                            .calculatedPositionSize ??
-                                                        1))
-                                          : _clickPrice! -
-                                                (tpAmount /
-                                                    (simulationProvider
-                                                            .calculatedPositionSize ??
-                                                        1));
-                                      simulationProvider.updateManualStopLoss(
-                                        slPrice,
-                                      );
-                                      simulationProvider.updateManualTakeProfit(
-                                        tpPrice,
-                                      );
-                                      debugPrint(
-                                        '🔥 [CONFIRMAR] Orden ejecutada. SL final = $slPrice, TP final = $tpPrice',
-                                      );
-                                      simulationProvider.executeManualTrade(
-                                        type: _isBuyOrder ? 'buy' : 'sell',
-                                        amount:
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final potentialAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_tpRiskPercent / 100);
+                                            final priceDistance =
+                                                potentialAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final tpPrice = _isBuyOrder
+                                                ? _clickPrice! + priceDistance
+                                                : _clickPrice! - priceDistance;
                                             simulationProvider
-                                                .calculatedPositionSize ??
-                                            0.0,
-                                        leverage:
-                                            simulationProvider
-                                                .calculatedLeverage
-                                                ?.toInt() ??
-                                            1,
-                                        entryPrice: _clickPrice!,
-                                      );
-                                      Future.delayed(
-                                        const Duration(milliseconds: 100),
-                                        () {
-                                          simulationProvider.resumeSimulation();
+                                                .updateManualTakeProfit(
+                                                  tpPrice,
+                                                );
+                                          }
                                         },
-                                      );
-                                      setState(() {
-                                        _showOrderContainerInline = false;
-                                        _showSlTpOnOrderInline = false;
-                                        _clickPrice = null;
-                                      });
-                                    }
-                                  : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _isBuyOrder
-                                    ? const Color(0xFF21CE99)
-                                    : const Color(0xFFFF6B6B),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: Text(
-                                _isBuyOrder ? 'Comprar' : 'Vender',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Position summary - solo mostrar después de ejecutar la orden
-                          if (simulationProvider.inPosition) ...[
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1E1E1E),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey[600]!),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    simulationProvider.getPositionSummaryText(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Stop Loss: ${simulationProvider.manualStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
-                                    style: const TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 12,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                  Text(
-                                    'Take Profit: ${simulationProvider.manualTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
-                                    style: const TextStyle(
-                                      color: Colors.green,
-                                      fontSize: 12,
-                                      fontFamily: 'Inter',
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 16),
+                            ],
+                            // Confirm Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed:
+                                    simulationProvider.canCalculatePosition() &&
+                                        _clickPrice != null &&
+                                        _slRiskPercent > 0 &&
+                                        _tpRiskPercent > 0
+                                    ? () {
+                                        debugPrint(
+                                          '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = $_slRiskPercent, TP % = $_tpRiskPercent',
+                                        );
+                                        // Calcular precios a partir de los porcentajes de riesgo/potencial
+                                        final riskAmount =
+                                            simulationProvider.currentBalance *
+                                            (_slRiskPercent / 100);
+                                        final tpAmount =
+                                            simulationProvider.currentBalance *
+                                            (_tpRiskPercent / 100);
+                                        final slPrice = _isBuyOrder
+                                            ? _clickPrice! -
+                                                  (riskAmount /
+                                                      (simulationProvider
+                                                              .calculatedPositionSize ??
+                                                          1))
+                                            : _clickPrice! +
+                                                  (riskAmount /
+                                                      (simulationProvider
+                                                              .calculatedPositionSize ??
+                                                          1));
+                                        final tpPrice = _isBuyOrder
+                                            ? _clickPrice! +
+                                                  (tpAmount /
+                                                      (simulationProvider
+                                                              .calculatedPositionSize ??
+                                                          1))
+                                            : _clickPrice! -
+                                                  (tpAmount /
+                                                      (simulationProvider
+                                                              .calculatedPositionSize ??
+                                                          1));
+                                        simulationProvider.updateManualStopLoss(
+                                          slPrice,
+                                        );
+                                        simulationProvider
+                                            .updateManualTakeProfit(tpPrice);
+                                        debugPrint(
+                                          '🔥 [CONFIRMAR] Orden ejecutada. SL final = $slPrice, TP final = $tpPrice',
+                                        );
+                                        simulationProvider.executeManualTrade(
+                                          type: _isBuyOrder ? 'buy' : 'sell',
+                                          amount:
+                                              simulationProvider
+                                                  .calculatedPositionSize ??
+                                              0.0,
+                                          leverage:
+                                              simulationProvider
+                                                  .calculatedLeverage
+                                                  ?.toInt() ??
+                                              1,
+                                          entryPrice: _clickPrice!,
+                                        );
+                                        Future.delayed(
+                                          const Duration(milliseconds: 100),
+                                          () {
+                                            simulationProvider
+                                                .resumeSimulation();
+                                          },
+                                        );
+                                        setState(() {
+                                          _showOrderContainerInline = false;
+                                          _showSlTpOnOrderInline = false;
+                                          _clickPrice = null;
+                                        });
+                                      }
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _isBuyOrder
+                                      ? const Color(0xFF21CE99)
+                                      : const Color(0xFFFF6B6B),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  _isBuyOrder ? 'Comprar' : 'Vender',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ),
                             ),
+                            const SizedBox(height: 16),
+                            // Position summary - solo mostrar después de ejecutar la orden
+                            if (simulationProvider.inPosition) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E1E1E),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey[600]!),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      simulationProvider
+                                          .getPositionSummaryText(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Stop Loss: ${simulationProvider.manualStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 12,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    Text(
+                                      'Take Profit: ${simulationProvider.manualTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                      style: const TextStyle(
+                                        color: Colors.green,
+                                        fontSize: 12,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ],
                       ),

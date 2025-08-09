@@ -1919,4 +1919,75 @@ class SimulationProvider with ChangeNotifier {
     // Notificar cambios
     _notifyUIUpdate();
   }
+
+  // --- MÉTODOS PARA CÁLCULO ALTERNATIVO DE SL/TP ---
+
+  /// Calcula SL/TP basado en porcentaje del precio de entrada (Opción A)
+  void calculatePositionParametersByPricePercent(
+    String type,
+    double entryPrice,
+    double slPercent,
+    double tpPercent,
+  ) {
+    if (_currentSetup == null) {
+      _setupParametersCalculated = false;
+      return;
+    }
+
+    // 1. Calculate risk amount based on balance
+    final riskAmount = _currentBalance * (_currentSetup!.riskPercent / 100);
+
+    // 2. Calculate stop loss distance as percentage of entry price
+    final slPriceDistance = entryPrice * (slPercent / 100);
+
+    // 3. Calculate take profit distance as percentage of entry price
+    final tpPriceDistance = entryPrice * (tpPercent / 100);
+
+    // 4. Calculate position size based on SL distance
+    _calculatedPositionSize = riskAmount / slPriceDistance;
+    _calculatedLeverage = 1.0;
+
+    // 5. Calculate stop loss and take profit prices
+    if (type == 'buy') {
+      _calculatedStopLossPrice = entryPrice - slPriceDistance;
+      _calculatedTakeProfitPrice = entryPrice + tpPriceDistance;
+    } else {
+      _calculatedStopLossPrice = entryPrice + slPriceDistance;
+      _calculatedTakeProfitPrice = entryPrice - tpPriceDistance;
+    }
+
+    _setupParametersCalculated = true;
+
+    debugPrint(
+      '🔥 SimulationProvider: Position parameters calculated by price percent - Entry: $entryPrice, SL: $_calculatedStopLossPrice, TP: $_calculatedTakeProfitPrice',
+    );
+  }
+
+  /// Obtiene los valores por defecto del setup actual
+  Map<String, dynamic> getDefaultSetupValues() {
+    if (_currentSetup == null) return {};
+
+    return {
+      'riskPercent': _currentSetup!.riskPercent,
+      'stopLossDistance': _currentSetup!.stopLossDistance,
+      'stopLossType': _currentSetup!.stopLossType.toString(),
+      'takeProfitRatio': _currentSetup!.getEffectiveTakeProfitRatio(),
+    };
+  }
+
+  /// Obtiene los precios calculados por defecto del setup
+  Map<String, double> getDefaultCalculatedPrices(double entryPrice) {
+    if (_currentSetup == null) return {};
+
+    // Usar el método original para obtener los valores por defecto
+    calculatePositionParameters(
+      'buy',
+      entryPrice,
+    ); // Temporal para obtener los valores
+
+    return {
+      'stopLoss': _calculatedStopLossPrice ?? 0.0,
+      'takeProfit': _calculatedTakeProfitPrice ?? 0.0,
+    };
+  }
 }
