@@ -5,11 +5,7 @@ class CustomRuleForm extends StatefulWidget {
   final Rule? ruleToEdit;
   final Function(Rule) onSave;
 
-  const CustomRuleForm({
-    super.key,
-    this.ruleToEdit,
-    required this.onSave,
-  });
+  const CustomRuleForm({super.key, this.ruleToEdit, required this.onSave});
 
   @override
   State<CustomRuleForm> createState() => _CustomRuleFormState();
@@ -43,10 +39,18 @@ class _CustomRuleFormState extends State<CustomRuleForm> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF2A2A2A),
+      backgroundColor: const Color(0xFF1F2937),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Text(
-        widget.ruleToEdit != null ? 'Editar Regla' : 'Nueva Regla Personalizada',
-        style: const TextStyle(color: Colors.white),
+        widget.ruleToEdit != null
+            ? 'Editar Regla'
+            : 'Nueva Regla Personalizada',
+        style: const TextStyle(
+          color: Color(0xFFF8FAFC),
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          fontFamily: 'Inter',
+        ),
       ),
       content: Form(
         key: _formKey,
@@ -57,18 +61,32 @@ class _CustomRuleFormState extends State<CustomRuleForm> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Nombre de la Regla',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFF374151)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF21CE99)),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFF22C55E)),
                   ),
+                  filled: true,
+                  fillColor: const Color(0xFF111827),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa un nombre';
@@ -80,18 +98,32 @@ class _CustomRuleFormState extends State<CustomRuleForm> {
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 3,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Descripción',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFF374151)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF21CE99)),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFF22C55E)),
                   ),
+                  filled: true,
+                  fillColor: const Color(0xFF111827),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa una descripción';
@@ -103,24 +135,35 @@ class _CustomRuleFormState extends State<CustomRuleForm> {
               const Text(
                 'Tipo de Regla',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFFF8FAFC),
                   fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
                 ),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<RuleType>(
                 value: _selectedType,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFF374151)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF21CE99)),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFF22C55E)),
                   ),
+                  filled: true,
+                  fillColor: const Color(0xFF111827),
                 ),
-                dropdownColor: const Color(0xFF2A2A2A),
-                style: const TextStyle(color: Colors.white),
+                dropdownColor: const Color(0xFF1F2937),
+                style: const TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
                 items: RuleType.values.map((type) {
                   return DropdownMenuItem(
                     value: type,
@@ -134,22 +177,37 @@ class _CustomRuleFormState extends State<CustomRuleForm> {
                 },
               ),
               const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text(
-                  'Regla Activa',
-                  style: TextStyle(color: Colors.white),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111827),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF374151), width: 1),
                 ),
-                subtitle: const Text(
-                  'La regla se aplicará en los setups',
-                  style: TextStyle(color: Colors.grey),
+                child: SwitchListTile(
+                  title: const Text(
+                    'Regla Activa',
+                    style: TextStyle(
+                      color: Color(0xFFF8FAFC),
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'La regla se aplicará en los setups',
+                    style: TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  value: _isActive,
+                  onChanged: (value) {
+                    setState(() {
+                      _isActive = value;
+                    });
+                  },
+                  activeColor: const Color(0xFF22C55E),
                 ),
-                value: _isActive,
-                onChanged: (value) {
-                  setState(() {
-                    _isActive = value;
-                  });
-                },
-                activeColor: const Color(0xFF21CE99),
               ),
             ],
           ),
@@ -160,17 +218,32 @@ class _CustomRuleFormState extends State<CustomRuleForm> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text(
             'Cancelar',
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(
+              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+            ),
           ),
         ),
         ElevatedButton(
           onPressed: _saveRule,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF21CE99),
+            backgroundColor: const Color(0xFF22C55E),
             foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
+            elevation: 0,
+            shadowColor: const Color(0xFF22C55E).withValues(alpha: 0.18),
           ),
           child: Text(
             widget.ruleToEdit != null ? 'Actualizar' : 'Crear',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+            ),
           ),
         ),
       ],
@@ -196,7 +269,9 @@ class _CustomRuleFormState extends State<CustomRuleForm> {
     }
 
     final rule = Rule(
-      id: widget.ruleToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id:
+          widget.ruleToEdit?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text,
       description: _descriptionController.text,
       type: _selectedType,
@@ -207,4 +282,4 @@ class _CustomRuleFormState extends State<CustomRuleForm> {
     widget.onSave(rule);
     Navigator.of(context).pop();
   }
-} 
+}
