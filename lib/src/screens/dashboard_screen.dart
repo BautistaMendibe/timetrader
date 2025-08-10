@@ -73,26 +73,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
-          // Logo TT
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Center(
-              child: Text(
-                'TT',
+          // Logo and App Name
+          Row(
+            children: [
+              Image.asset('assets/imgs/icono.png', height: 40, width: 45),
+              const SizedBox(width: 12),
+              const Text(
+                'TimeTrader',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFFF8FAFC),
                   fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  fontSize: 20,
+                  fontFamily: 'Inter',
                 ),
               ),
-            ),
+            ],
           ),
           const Spacer(),
           // Iconos de notificación y ajustes
@@ -177,7 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildWelcomeSubtitle(User? user) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
