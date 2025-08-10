@@ -19,7 +19,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
   String? _selectedAsset;
   DateTime? _selectedDate;
   Setup? _selectedSetup;
-  double _initialBalance = 10000.0; // Default initial balance
+  double _initialBalance = 1000.0; // Default initial balance
   bool _isLoading = false;
   bool _isInitialized = false;
 
@@ -300,7 +300,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                           ),
                         ),
                         subtitle:
-                            'Selecciona cualquier fecha desde 2020 hasta ayer (no fechas futuras)',
+                            'Selecciona cualquier fecha desde 2020 hasta ayer',
                       ),
                       const SizedBox(height: 20),
 
@@ -491,11 +491,18 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                           ),
                           onChanged: (value) {
                             final balance = double.tryParse(value);
-                            if (balance != null && balance > 0) {
+                            if (balance != null && balance > 100) {
                               setState(() {
                                 _initialBalance = balance;
                               });
                             }
+                          },
+                          validator: (value) {
+                            final balance = double.tryParse(value ?? '');
+                            if (balance == null || balance < 100) {
+                              return 'El balance mínimo es \$100';
+                            }
+                            return null;
                           },
                         ),
                         subtitle:
