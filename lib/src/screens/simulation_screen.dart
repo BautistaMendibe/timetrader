@@ -294,7 +294,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         if (mounted) {
                           Navigator.pushReplacementNamed(
                             context,
-                            AppRoutes.dashboard,
+                            AppRoutes.main,
                           );
                         }
                       });

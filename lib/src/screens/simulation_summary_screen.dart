@@ -306,7 +306,7 @@ class SimulationSummaryScreen extends StatelessWidget {
                           simulationProvider.reset();
                           Navigator.pushNamedAndRemoveUntil(
                             context,
-                            AppRoutes.dashboard,
+                            AppRoutes.main,
                             (route) => false,
                           );
                         },
@@ -327,7 +327,7 @@ class SimulationSummaryScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.pushNamedAndRemoveUntil(
                             context,
-                            AppRoutes.dashboard,
+                            AppRoutes.main,
                             (route) => false,
                           );
                         },

@@ -3,9 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'routes.dart';
 import 'screens/login_screen.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/main_navigation.dart';
 import 'services/setup_provider.dart';
 import 'services/simulation_provider.dart';
+import 'services/navigation_provider.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -16,12 +17,13 @@ class App extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => SetupProvider()),
         ChangeNotifierProvider(create: (_) => SimulationProvider()),
+        ChangeNotifierProvider(create: (_) => NavigationProvider()),
       ],
       child: MaterialApp(
         title: 'TimeTrader',
         debugShowCheckedModeBanner: false,
         theme: ThemeData.dark().copyWith(
-          primaryColor: const Color(0xFF21CE99),
+          primaryColor: const Color(0xFF22C55E),
           scaffoldBackgroundColor: const Color(0xFF1E1E1E),
           cardColor: const Color(0xFF2C2C2C),
           appBarTheme: const AppBarTheme(
@@ -34,8 +36,8 @@ class App extends StatelessWidget {
             ),
           ),
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF21CE99),
-            secondary: Color(0xFF21CE99),
+            primary: Color(0xFF22C55E),
+            secondary: Color(0xFF22C55E),
             surface: Color(0xFF2C2C2C),
           ),
         ),
@@ -63,16 +65,16 @@ class AuthWrapper extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
-              child: CircularProgressIndicator(color: Color(0xFF21CE99)),
+              child: CircularProgressIndicator(color: Color(0xFF22C55E)),
             ),
           );
         }
 
         if (snapshot.hasData && snapshot.data != null) {
           debugPrint(
-            'AuthWrapper - User is signed in, navigating to dashboard',
+            'AuthWrapper - User is signed in, navigating to main navigation',
           );
-          return const SetupListenerWrapper(child: DashboardScreen());
+          return const SetupListenerWrapper(child: MainNavigation());
         }
 
         debugPrint('AuthWrapper - User is not signed in, showing login screen');

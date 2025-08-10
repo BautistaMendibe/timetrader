@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
 
         if (mounted) {
-          Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+          Navigator.pushReplacementNamed(context, AppRoutes.main);
         }
       } on FirebaseAuthException catch (e) {
         String errorMessage = 'Ocurrió un error';
@@ -125,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await _auth.signInWithCredential(credential);
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+        Navigator.pushReplacementNamed(context, AppRoutes.main);
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Error al iniciar sesión con Google';

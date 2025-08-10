@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../routes.dart';
+
 import '../services/setup_provider.dart';
+import '../services/app_navigation.dart';
 import '../models/setup.dart';
 import '../widgets/rule_card.dart';
 import '../widgets/top_snack_bar.dart';
@@ -576,7 +577,7 @@ class SetupDetailScreen extends StatelessWidget {
   }
 
   void _editSetup(BuildContext context, Setup setup) {
-    Navigator.pushNamed(context, AppRoutes.setupForm, arguments: setup);
+    AppNavigation.navigateToSetupForm(context, setupToEdit: setup);
   }
 
   String _formatDate(DateTime date) {

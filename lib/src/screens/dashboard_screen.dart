@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../routes.dart';
 import '../services/simulation_provider.dart';
 import '../services/setup_provider.dart';
+import '../services/navigation_provider.dart';
 import '../models/simulation_result.dart';
 import '../models/setup.dart';
 
@@ -15,8 +16,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _currentIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -57,13 +56,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Mis simulaciones
                 if (user != null) _buildMySimulations(),
 
-                const SizedBox(height: 120), // Espacio para bottom nav
+                const SizedBox(
+                  height: 20,
+                ), // Reduced space since bottom nav is handled by MainNavigation
               ],
             ),
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      // Bottom navigation is now handled by MainNavigation
     );
   }
 
@@ -105,15 +106,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
               size: 24,
             ),
           ),
-          IconButton(
-            onPressed: () {
-              // TODO: Implementar ajustes
-            },
+          PopupMenuButton<String>(
             icon: const Icon(
               Icons.settings_outlined,
               color: Color(0xFF94A3B8),
               size: 24,
             ),
+            color: const Color(0xFF1E293B),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.settings_outlined,
+                      color: Color(0xFF94A3B8),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Ajustes',
+                      style: TextStyle(
+                        color: Color(0xFFF8FAFC),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.logout,
+                      color: Color(0xFFEF4444),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Cerrar sesión',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            onSelected: (value) async {
+              if (value == 'settings') {
+                // TODO: Implementar ajustes
+              } else if (value == 'logout') {
+                await _handleLogout();
+              }
+            },
           ),
         ],
       ),
@@ -400,8 +455,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRoutes.simulationSummary),
+                onPressed: () {
+                  // Navigate to simulation tab in main navigation
+                  context.read<NavigationProvider>().goToSimulation();
+                },
                 child: const Text(
                   'Ver todas',
                   style: TextStyle(
@@ -593,8 +650,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRoutes.setupsList),
+                onPressed: () {
+                  // Navigate to setups tab in main navigation
+                  context.read<NavigationProvider>().goToSetups();
+                },
                 child: const Text(
                   'Ver todos',
                   style: TextStyle(
@@ -655,7 +714,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           border: Border.all(color: const Color(0xFF374151), width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               offset: const Offset(0, 6),
               blurRadius: 16,
             ),
@@ -699,7 +758,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E).withOpacity(0.2),
+                    color: const Color(0xFF22C55E).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -722,7 +781,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E).withOpacity(0.1),
+                    color: const Color(0xFF22C55E).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
@@ -751,7 +810,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withOpacity(0.1),
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
@@ -779,7 +838,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withOpacity(0.2),
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -845,37 +904,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
-        border: Border(
-          top: BorderSide(color: const Color(0xFF374151), width: 1),
-        ),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.transparent,
-        selectedItemColor: const Color(0xFF22C55E),
-        unselectedItemColor: const Color(0xFF94A3B8),
-        elevation: 0,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.play_arrow),
-            label: 'Simular',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Setups'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
-        ],
-      ),
-    );
-  }
+  // Bottom navigation is now handled by MainNavigation
 
   Future<bool> _showDeleteConfirmation() async {
     return await showDialog<bool>(
@@ -950,5 +979,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al cerrar sesión'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
   }
 }

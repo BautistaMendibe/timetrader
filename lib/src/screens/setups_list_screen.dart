@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../routes.dart';
 import '../services/setup_provider.dart';
+
 import '../models/setup.dart';
 import '../models/rule.dart';
 import '../widgets/top_snack_bar.dart';
+import '../services/app_navigation.dart';
 
 class SetupsListScreen extends StatefulWidget {
   const SetupsListScreen({super.key});
@@ -179,7 +181,7 @@ class _SetupsListScreenState extends State<SetupsListScreen> {
           ),
           const Spacer(),
           ElevatedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.setupForm),
+            onPressed: () => AppNavigation.navigateToSetupForm(context),
             icon: const Icon(Icons.add, size: 18),
             label: const Text('Nuevo'),
             style: ElevatedButton.styleFrom(
@@ -223,7 +225,7 @@ class _SetupCard extends StatelessWidget {
       child: InkWell(
         onTap: () {
           context.read<SetupProvider>().selectSetup(setup);
-          Navigator.pushNamed(context, AppRoutes.setupDetail);
+          AppNavigation.navigateToSetupDetail(context, setup);
         },
         borderRadius: BorderRadius.circular(20),
         child: Padding(
