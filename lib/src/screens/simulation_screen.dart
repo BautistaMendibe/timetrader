@@ -24,8 +24,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
       GlobalKey<TradingViewChartState>();
 
   Timeframe? _selectedTimeframe; // NUEVO: para opciones avanzadas
-  bool _isAdjustingSpeed =
-      false; // Para controlar pausa durante ajuste de velocidad
   // Flag para mostrar sliders SL/TP en el panel de orden
   bool _showSlTpOnOrderInline = false;
   // NUEVO: Porcentajes de SL y TP
@@ -198,6 +196,244 @@ class _SimulationScreenState extends State<SimulationScreen> {
     setState(() {
       _showSLTPContainer = true;
     });
+  }
+
+  void _showTimeframeSelector(
+    BuildContext context,
+    SimulationProvider simulationProvider,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1F2937), Color(0xFF111827)],
+          ),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Seleccionar Timeframe',
+              style: TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...Timeframe.values.map((tf) {
+              String label;
+              switch (tf) {
+                case Timeframe.d1:
+                  label = '1D - Diario';
+                  break;
+                case Timeframe.h1:
+                  label = '1H - 1 Hora';
+                  break;
+                case Timeframe.m15:
+                  label = '15M - 15 Minutos';
+                  break;
+                case Timeframe.m5:
+                  label = '5M - 5 Minutos';
+                  break;
+                case Timeframe.m1:
+                  label = '1M - 1 Minuto';
+                  break;
+              }
+
+              final isSelected =
+                  (_selectedTimeframe ?? simulationProvider.activeTimeframe) ==
+                  tf;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  onTap: () {
+                    setState(() => _selectedTimeframe = tf);
+                    simulationProvider.setTimeframe(tf);
+                    Navigator.pop(context);
+                  },
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF22C55E).withValues(alpha: 0.2)
+                          : const Color(0xFF374151),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.schedule_rounded,
+                      color: isSelected
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFF94A3B8),
+                      size: 18,
+                    ),
+                  ),
+                  title: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFFF8FAFC),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(
+                          Icons.check_circle_rounded,
+                          color: Color(0xFF22C55E),
+                          size: 20,
+                        )
+                      : null,
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSpeedSelector(
+    BuildContext context,
+    SimulationProvider simulationProvider,
+  ) {
+    final speedOptions = [0.5, 1.0, 2.0, 4.0, 6.0];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1F2937), Color(0xFF111827)],
+          ),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Velocidad de Simulación',
+                style: TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...speedOptions.map((speed) {
+                final isSelected =
+                    simulationProvider.ticksPerSecondFactor == speed;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    onTap: () {
+                      // Pausar temporalmente mientras se ajusta la velocidad
+                      bool wasRunning = simulationProvider.isSimulationRunning;
+                      if (wasRunning) {
+                        simulationProvider.pauseTickSimulation();
+                      }
+
+                      simulationProvider.ticksPerSecondFactor = speed;
+
+                      // Reanudar si estaba corriendo
+                      if (wasRunning &&
+                          simulationProvider.currentSetup != null) {
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          simulationProvider.resumeTickSimulation();
+                        });
+                      }
+
+                      Navigator.pop(context);
+                    },
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF3B82F6).withValues(alpha: 0.2)
+                            : const Color(0xFF374151),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.speed_rounded,
+                        color: isSelected
+                            ? const Color(0xFF3B82F6)
+                            : const Color(0xFF94A3B8),
+                        size: 18,
+                      ),
+                    ),
+                    title: Text(
+                      '${speed.toStringAsFixed(1)}x',
+                      style: TextStyle(
+                        color: isSelected
+                            ? const Color(0xFF3B82F6)
+                            : const Color(0xFFF8FAFC),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    subtitle: Text(
+                      speed == 0.5
+                          ? 'Lenta'
+                          : speed == 1.0
+                          ? 'Normal'
+                          : speed == 2.0
+                          ? 'Rápida'
+                          : speed == 4.0
+                          ? 'Muy rápida'
+                          : 'Ultra rápida',
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFF3B82F6),
+                            size: 20,
+                          )
+                        : null,
+                  ),
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -505,96 +741,305 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF22C55E,
-                            ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.candlestick_chart,
-                            color: Color(0xFF22C55E),
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          simulationProvider.activeSymbol ?? 'BTCUSD',
-                          style: const TextStyle(
-                            color: Color(0xFFF8FAFC),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'Inter',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF22C55E,
-                            ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(
-                                0xFF22C55E,
-                              ).withValues(alpha: 0.3),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              simulationProvider.activeSymbol ?? 'BTCUSD',
+                              style: const TextStyle(
+                                color: Color(0xFFF8FAFC),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'Inter',
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            _selectedTimeframe?.name.toUpperCase() ??
-                                simulationProvider.activeTimeframe.name
-                                    .toUpperCase(),
-                            style: const TextStyle(
-                              color: Color(0xFF22C55E),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Inter',
+                            const SizedBox(height: 5),
+                            // Widget LIVE con tamaño fijo
+                            SizedBox(
+                              width: 55,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: simulationProvider.isSimulationRunning
+                                      ? const Color(
+                                          0xFF22C55E,
+                                        ).withValues(alpha: 0.1)
+                                      : const Color(
+                                          0xFFF59E0B,
+                                        ).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 5,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            simulationProvider
+                                                .isSimulationRunning
+                                            ? const Color(0xFF22C55E)
+                                            : const Color(0xFFF59E0B),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      simulationProvider.isSimulationRunning
+                                          ? 'LIVE'
+                                          : 'PAUSED',
+                                      style: TextStyle(
+                                        color:
+                                            simulationProvider
+                                                .isSimulationRunning
+                                            ? const Color(0xFF22C55E)
+                                            : const Color(0xFFF59E0B),
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                         const Spacer(),
-                        if (simulationProvider.isSimulationRunning)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
+                        // Botón de timeframe
+                        GestureDetector(
+                          onTap: () => _showTimeframeSelector(
+                            context,
+                            simulationProvider,
+                          ),
+                          child: Container(
+                            height: 32,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF22C55E,
-                              ).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFF4B5563),
+                                width: 1,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF22C55E),
-                                    shape: BoxShape.circle,
-                                  ),
+                                const Icon(
+                                  Icons.schedule_rounded,
+                                  color: Color(0xFF94A3B8),
+                                  size: 14,
                                 ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'LIVE',
-                                  style: TextStyle(
-                                    color: Color(0xFF22C55E),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
+                                const SizedBox(width: 4),
+                                Text(
+                                  _selectedTimeframe?.name.toUpperCase() ??
+                                      simulationProvider.activeTimeframe.name
+                                          .toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Color(0xFFF8FAFC),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
                                     fontFamily: 'Inter',
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Botón de control único (pausa/reanudar/iniciar) - Ancho fijo
+                        SizedBox(
+                          width: 48, // Ancho fijo para evitar overflow
+                          child: simulationProvider.isSimulationRunning
+                              ?
+                                // Mostrar botón de pausa cuando está corriendo
+                                Container(
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFFF59E0B),
+                                        Color(0xFFD97706),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFFF59E0B,
+                                        ).withValues(alpha: 0.3),
+                                        offset: const Offset(0, 2),
+                                        blurRadius: 8,
+                                        spreadRadius: -2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: () => simulationProvider
+                                        .pauseTickSimulation(),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      foregroundColor: Colors.white,
+                                      shadowColor: Colors.transparent,
+                                      elevation: 0,
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: const Size(48, 32),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.pause_rounded,
+                                      size: 16,
+                                    ),
+                                  ),
+                                )
+                              : (simulationProvider.currentSetup != null &&
+                                    (simulationProvider.isSimulationPaused ||
+                                        !simulationProvider
+                                            .isSimulationRunning))
+                              ?
+                                // Mostrar botón de reanudar/iniciar cuando está pausado o detenido
+                                Container(
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFF22C55E),
+                                        Color(0xFF16A34A),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF22C55E,
+                                        ).withValues(alpha: 0.3),
+                                        offset: const Offset(0, 2),
+                                        blurRadius: 8,
+                                        spreadRadius: -2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed:
+                                        simulationProvider.isSimulationPaused
+                                        ? () => simulationProvider
+                                              .resumeTickSimulation()
+                                        : () => simulationProvider
+                                              .startTickSimulation(
+                                                simulationProvider
+                                                    .currentSetup!,
+                                                simulationProvider
+                                                    .historicalData
+                                                    .first
+                                                    .timestamp,
+                                                simulationProvider
+                                                    .simulationSpeed,
+                                                simulationProvider
+                                                    .currentBalance,
+                                                simulationProvider
+                                                        .activeSymbol ??
+                                                    'BTCUSD',
+                                              ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      foregroundColor: Colors.white,
+                                      shadowColor: Colors.transparent,
+                                      elevation: 0,
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: const Size(48, 32),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.play_arrow_rounded,
+                                      size: 20,
+                                    ),
+                                  ),
+                                )
+                              :
+                                // Mostrar botón deshabilitado cuando no hay setup
+                                Container(
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF374151),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      foregroundColor: Colors.white,
+                                      shadowColor: Colors.transparent,
+                                      elevation: 0,
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: const Size(48, 32),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.play_arrow_rounded,
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Botón de velocidad
+                        GestureDetector(
+                          onTap: () =>
+                              _showSpeedSelector(context, simulationProvider),
+                          child: Container(
+                            height: 32,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFF4B5563),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.speed_rounded,
+                                  color: Color(0xFF94A3B8),
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                                  style: const TextStyle(
+                                    color: Color(0xFFF8FAFC),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
                       ],
                     ),
                   ),
@@ -2356,6 +2801,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   ],
 
                   // --- Enhanced Simulation Controls ---
+                  // COMENTADO: Los controles de simulación se han movido al header del chart para simplificar la pantalla
+                  /*
                   if (!_showOrderContainerInline) ...[
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -2914,6 +3361,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
+                  */
                   // Setup Details Section (below controls)
                   if (simulationProvider.currentSetup != null &&
                       !_showOrderContainerInline &&
