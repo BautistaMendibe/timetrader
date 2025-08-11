@@ -377,23 +377,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           // Métricas rápidas
           SizedBox(
-            height: 100,
+            height: 130,
             child: ListView(
               scrollDirection: Axis.horizontal,
               shrinkWrap: true,
               children: [
                 SizedBox(
-                  width: 100,
+                  width: 110,
                   child: _buildMetricCard('P/L', '\$2,450', '+12.5%', true),
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
-                  width: 100,
+                  width: 110,
                   child: _buildMetricCard('Win-rate', '68%', '+5.2%', true),
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
-                  width: 100,
+                  width: 110,
                   child: _buildMetricCard('Max DD', '8.3%', '-2.1%', false),
                 ),
               ],
@@ -411,7 +411,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isPositive,
   ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -439,12 +439,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
               color: const Color(0xFF111827).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               border: Border.all(
                 color: const Color(0xFF4B5563).withValues(alpha: 0.3),
                 width: 1,
@@ -454,7 +455,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title,
               style: const TextStyle(
                 color: Color(0xFF94A3B8),
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
                 letterSpacing: 0.5,
@@ -462,21 +463,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             value,
             style: const TextStyle(
               color: Color(0xFFF8FAFC),
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               fontFamily: 'Inter',
               fontFeatures: [FontFeature.tabularFigures()],
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(
               gradient: isPositive
                   ? const LinearGradient(
@@ -485,7 +488,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   : const LinearGradient(
                       colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
                     ),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               boxShadow: [
                 BoxShadow(
                   color: isPositive
@@ -501,7 +504,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               change,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w700,
                 fontFamily: 'Inter',
                 letterSpacing: 0.3,
@@ -769,7 +772,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               }
 
               return SizedBox(
-                height: 150,
+                height: 210,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   shrinkWrap: true,
@@ -869,7 +872,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // Enhanced Risk/Reward ratio with icon
             Container(
@@ -921,7 +924,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
             // Enhanced Stop Loss with icon
             Container(

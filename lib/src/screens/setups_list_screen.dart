@@ -342,6 +342,7 @@ class _SetupCard extends StatelessWidget {
             color: const Color(0xFFF59E0B),
           ),
         ),
+        const SizedBox(width: 12),
         Expanded(
           child: _buildStatItem(
             'Stop Loss',
@@ -350,6 +351,7 @@ class _SetupCard extends StatelessWidget {
             color: const Color(0xFFEF4444),
           ),
         ),
+        const SizedBox(width: 12),
         Expanded(
           child: _buildStatItem(
             'Take Profit',
