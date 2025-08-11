@@ -211,14 +211,19 @@ class _SetupCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF374151), width: 1),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF374151), Color(0xFF1F2937)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF4B5563), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            offset: const Offset(0, 6),
-            blurRadius: 16,
+            color: Colors.black.withValues(alpha: 0.2),
+            offset: const Offset(0, 8),
+            blurRadius: 20,
+            spreadRadius: -4,
           ),
         ],
       ),
@@ -363,94 +368,207 @@ class _SetupCard extends StatelessWidget {
     IconData icon, {
     Color? color,
   }) {
-    return Column(
-      children: [
-        Icon(icon, color: color ?? const Color(0xFF94A3B8), size: 20),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: color ?? const Color(0xFFF8FAFC),
-            fontFamily: 'Inter',
-          ),
+    final itemColor = color ?? const Color(0xFF94A3B8);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF111827).withValues(alpha: 0.8),
+            const Color(0xFF374151).withValues(alpha: 0.4),
+          ],
         ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF94A3B8),
-            fontWeight: FontWeight.w500,
-            fontFamily: 'Inter',
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: itemColor.withValues(alpha: 0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: itemColor.withValues(alpha: 0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
           ),
-        ),
-      ],
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: itemColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: itemColor.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Icon(icon, color: itemColor, size: 20),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: itemColor,
+              fontFamily: 'Inter',
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF94A3B8),
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildRulesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.rule, color: Color(0xFF22C55E), size: 16),
-            const SizedBox(width: 8),
-            Text(
-              'Reglas (${setup.rules.length})',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF22C55E),
-                fontFamily: 'Inter',
-              ),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827).withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+          width: 1.5,
         ),
-        const SizedBox(height: 8),
-        ...setup.rules
-            .take(3)
-            .map(
-              (rule) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    Icon(
-                      _getRuleIcon(rule.type),
-                      size: 12,
-                      color: const Color(0xFF94A3B8),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        rule.name,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF94A3B8),
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'Inter',
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withValues(alpha: 0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                      offset: const Offset(0, 2),
+                      blurRadius: 8,
+                      spreadRadius: -1,
                     ),
                   ],
                 ),
+                child: const Icon(
+                  Icons.rule_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Reglas (${setup.rules.length})',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFF8FAFC),
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...setup.rules
+              .take(3)
+              .map(
+                (rule) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF374151).withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF4B5563).withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFF94A3B8,
+                          ).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(
+                              0xFF94A3B8,
+                            ).withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          _getRuleIcon(rule.type),
+                          size: 14,
+                          color: const Color(0xFF94A3B8),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          rule.name,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFFF8FAFC),
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Inter',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          if (setup.rules.length > 3)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6B7280).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF6B7280).withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                '+${setup.rules.length - 3} reglas más',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                ),
               ),
             ),
-        if (setup.rules.length > 3)
-          Text(
-            '+${setup.rules.length - 3} más',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6B7280),
-              fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 

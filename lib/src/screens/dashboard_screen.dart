@@ -240,16 +240,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildSimulationCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF1F2937)),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1F2937), Color(0xFF111827)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF374151), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            offset: const Offset(0, 16),
-            blurRadius: 32,
+            color: Colors.black.withValues(alpha: 0.2),
+            offset: const Offset(0, 8),
+            blurRadius: 24,
+            spreadRadius: -4,
           ),
         ],
       ),
@@ -259,14 +264,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.timeline, color: Color(0xFF22C55E), size: 20),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                      offset: const Offset(0, 4),
+                      blurRadius: 12,
+                      spreadRadius: -2,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.timeline_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
               const Expanded(
                 child: Text(
                   'Simulación EUR/USD — H1',
                   style: TextStyle(
                     color: Color(0xFFF8FAFC),
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     fontFamily: 'Inter',
                   ),
@@ -383,46 +411,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isPositive,
   ) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF1F2937)),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF374151), Color(0xFF1F2937)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isPositive
+              ? const Color(0xFF10B981).withValues(alpha: 0.3)
+              : const Color(0xFFEF4444).withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isPositive
+                ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                : const Color(0xFFEF4444).withValues(alpha: 0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Color(0xFF94A3B8),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111827).withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF4B5563).withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                letterSpacing: 0.5,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Text(
             value,
             style: const TextStyle(
               color: Color(0xFFF8FAFC),
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
               fontFamily: 'Inter',
               fontFeatures: [FontFeature.tabularFigures()],
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 4),
-          Text(
-            change,
-            style: TextStyle(
-              color: isPositive
-                  ? const Color(0xFF22C55E)
-                  : const Color(0xFFEF4444),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              gradient: isPositive
+                  ? const LinearGradient(
+                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    )
+                  : const LinearGradient(
+                      colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                    ),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: isPositive
+                      ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                      : const Color(0xFFEF4444).withValues(alpha: 0.2),
+                  offset: const Offset(0, 2),
+                  blurRadius: 6,
+                  spreadRadius: -1,
+                ),
+              ],
+            ),
+            child: Text(
+              change,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+                letterSpacing: 0.3,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -538,11 +622,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF1F2937),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF374151), Color(0xFF1F2937)],
+          ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF1F2937)),
+          border: Border.all(color: const Color(0xFF4B5563), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              offset: const Offset(0, 6),
+              blurRadius: 16,
+              spreadRadius: -2,
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -701,17 +797,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
         margin: const EdgeInsets.only(right: 16),
-        padding: const EdgeInsets.all(16),
-        width: 140,
+        padding: const EdgeInsets.all(18),
+        width: 160,
         decoration: BoxDecoration(
-          color: const Color(0xFF1F2937),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF374151), width: 1),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF374151), Color(0xFF1F2937)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF4B5563), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              offset: const Offset(0, 6),
-              blurRadius: 16,
+              color: Colors.black.withValues(alpha: 0.2),
+              offset: const Offset(0, 8),
+              blurRadius: 20,
+              spreadRadius: -4,
             ),
           ],
         ),
@@ -770,61 +871,107 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Risk/Reward ratio with icon
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    Icons.trending_up,
-                    color: const Color(0xFF22C55E),
-                    size: 12,
-                  ),
+            // Enhanced Risk/Reward ratio with icon
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111827).withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                  width: 1,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  setup.getTakeProfitRatioDisplay(),
-                  style: const TextStyle(
-                    color: Color(0xFFF8FAFC),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF10B981), Color(0xFF059669)],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                          offset: const Offset(0, 2),
+                          blurRadius: 6,
+                          spreadRadius: -1,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.trending_up_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      setup.getTakeProfitRatioDisplay(),
+                      style: const TextStyle(
+                        color: Color(0xFFF8FAFC),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
 
-            // Stop Loss with icon
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    Icons.trending_down,
-                    color: const Color(0xFFEF4444),
-                    size: 12,
-                  ),
+            // Enhanced Stop Loss with icon
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111827).withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                  width: 1,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  setup.getStopLossDisplay(),
-                  style: const TextStyle(
-                    color: Color(0xFF94A3B8),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'Inter',
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+                          offset: const Offset(0, 2),
+                          blurRadius: 6,
+                          spreadRadius: -1,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.trending_down_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      setup.getStopLossDisplay(),
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             // Advanced rules indicator

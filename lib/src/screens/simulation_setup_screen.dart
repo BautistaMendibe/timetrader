@@ -311,31 +311,84 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                             title: 'Setup',
                             child: setupProvider.setups.isEmpty
                                 ? Container(
-                                    padding: const EdgeInsets.all(24),
+                                    padding: const EdgeInsets.all(32),
                                     decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: const Color(0xFF374151),
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Color(0xFF111827),
+                                          Color(0xFF374151),
+                                        ],
                                       ),
-                                      borderRadius: BorderRadius.circular(16),
-                                      color: const Color(0xFF111827),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: const Color(0xFF4B5563),
+                                        width: 1.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          offset: const Offset(0, 4),
+                                          blurRadius: 12,
+                                          spreadRadius: -2,
+                                        ),
+                                      ],
                                     ),
                                     child: Column(
                                       children: [
-                                        const Icon(
-                                          Icons.add_chart,
-                                          color: Color(0xFF94A3B8),
-                                          size: 48,
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              colors: [
+                                                Color(0xFF6B7280),
+                                                Color(0xFF4B5563),
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(
+                                                  0xFF6B7280,
+                                                ).withValues(alpha: 0.2),
+                                                offset: const Offset(0, 4),
+                                                blurRadius: 12,
+                                                spreadRadius: -2,
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Icon(
+                                            Icons.add_chart_rounded,
+                                            color: Colors.white,
+                                            size: 48,
+                                          ),
                                         ),
-                                        const SizedBox(height: 12),
-                                        Text(
+                                        const SizedBox(height: 20),
+                                        const Text(
                                           'No hay setups disponibles',
-                                          style: const TextStyle(
-                                            color: Color(0xFF94A3B8),
-                                            fontSize: 16,
+                                          style: TextStyle(
+                                            color: Color(0xFFF8FAFC),
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
                                             fontFamily: 'Inter',
                                           ),
                                         ),
-                                        const SizedBox(height: 16),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Crea tu primer setup para comenzar',
+                                          style: TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            fontFamily: 'Inter',
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
                                         ElevatedButton(
                                           onPressed: () {
                                             Navigator.pushNamed(
@@ -345,23 +398,27 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(
-                                              0xFF22C55E,
+                                              0xFF10B981,
                                             ),
                                             foregroundColor: Colors.white,
                                             padding: const EdgeInsets.symmetric(
-                                              horizontal: 24,
-                                              vertical: 12,
+                                              horizontal: 32,
+                                              vertical: 16,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
-                                                  BorderRadius.circular(12),
+                                                  BorderRadius.circular(16),
                                             ),
+                                            elevation: 0,
+                                            shadowColor: const Color(
+                                              0xFF10B981,
+                                            ).withValues(alpha: 0.3),
                                           ),
                                           child: const Text(
                                             'Crear Setup',
                                             style: TextStyle(
                                               fontSize: 16,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.w700,
                                               fontFamily: 'Inter',
                                             ),
                                           ),
@@ -510,32 +567,85 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Start Simulation Button
-                      ElevatedButton(
-                        onPressed: _isLoading || _selectedSetup == null
-                            ? null
-                            : _startSimulation,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF22C55E),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          disabledBackgroundColor: const Color(0xFF6B7280),
-                        ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text(
-                                'Iniciar Simulación',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'Inter',
+                      // Enhanced Start Simulation Button
+                      Container(
+                        width: double.infinity,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: _isLoading || _selectedSetup == null
+                              ? const LinearGradient(
+                                  colors: [
+                                    Color(0xFF6B7280),
+                                    Color(0xFF4B5563),
+                                  ],
+                                )
+                              : const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF10B981),
+                                    Color(0xFF059669),
+                                  ],
                                 ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            if (!(_isLoading || _selectedSetup == null))
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF10B981,
+                                ).withValues(alpha: 0.3),
+                                offset: const Offset(0, 6),
+                                blurRadius: 20,
+                                spreadRadius: -2,
                               ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isLoading || _selectedSetup == null
+                              ? null
+                              : _startSimulation,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.play_arrow_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Iniciar Simulación',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
                       ),
                     ],
                   ),
@@ -582,32 +692,69 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
     String? subtitle,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF374151)),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF374151), Color(0xFF1F2937)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF4B5563), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+            spreadRadius: -4,
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Color(0xFFF8FAFC),
-              fontWeight: FontWeight.w600,
-              fontSize: 18,
-              fontFamily: 'Inter',
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                        offset: const Offset(0, 4),
+                        blurRadius: 12,
+                        spreadRadius: -2,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.settings_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFFF8FAFC),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           child,
           if (subtitle != null) ...[
             const SizedBox(height: 8),
