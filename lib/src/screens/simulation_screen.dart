@@ -1108,7 +1108,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   if (_showOrderContainerInline) ...[
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
@@ -1157,14 +1157,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         children: [
                           // Enhanced Header
                           Container(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           begin: Alignment.topLeft,
@@ -1179,7 +1179,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                   const Color(0xFFDC2626),
                                                 ],
                                         ),
-                                        borderRadius: BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
                                           BoxShadow(
                                             color: _isBuyOrder
@@ -1221,16 +1221,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                             letterSpacing: 0.5,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Configura tu entrada al mercado',
-                                          style: TextStyle(
-                                            color: const Color(0xFF94A3B8),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            fontFamily: 'Inter',
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   ],
@@ -1265,7 +1255,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                           ),
                           // Enhanced Price Entry Section
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
@@ -1283,17 +1273,17 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.all(8),
+                                      padding: const EdgeInsets.all(6),
                                       decoration: BoxDecoration(
                                         color: const Color(
                                           0xFF22C55E,
                                         ).withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Icon(
                                         Icons.price_change_rounded,
                                         color: Color(0xFF22C55E),
-                                        size: 20,
+                                        size: 16,
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -1318,7 +1308,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                             color: Color(0xFFF8FAFC),
                                             fontFamily: 'Inter',
                                             fontWeight: FontWeight.w700,
-                                            fontSize: 18,
+                                            fontSize: 16,
                                           ),
                                         ),
                                       ],
@@ -1333,13 +1323,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   null &&
                               simulationProvider.calculatedPositionSize! >
                                   0) ...[
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 12),
                             // Enhanced SL/TP Display
                             Row(
                               children: [
                                 Expanded(
                                   child: Container(
-                                    padding: const EdgeInsets.all(16),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       gradient: const LinearGradient(
                                         begin: Alignment.topLeft,
@@ -1372,14 +1362,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                             const Icon(
                                               Icons.stop_circle_rounded,
                                               color: Colors.white,
-                                              size: 18,
+                                              size: 14,
                                             ),
                                             const SizedBox(width: 8),
                                             const Text(
                                               'STOP LOSS',
                                               style: TextStyle(
                                                 color: Colors.white,
-                                                fontSize: 11,
+                                                fontSize: 9,
                                                 fontFamily: 'Inter',
                                                 fontWeight: FontWeight.w700,
                                                 letterSpacing: 0.5,
@@ -1421,7 +1411,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Container(
-                                    padding: const EdgeInsets.all(16),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       gradient: const LinearGradient(
                                         begin: Alignment.topLeft,
@@ -1461,7 +1451,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               'TAKE PROFIT',
                                               style: TextStyle(
                                                 color: Colors.white,
-                                                fontSize: 11,
+                                                fontSize: 9,
                                                 fontFamily: 'Inter',
                                                 fontWeight: FontWeight.w700,
                                                 letterSpacing: 0.5,
@@ -1571,7 +1561,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               null &&
                                           simulationProvider.currentBalance > 0)
                                         Container(
-                                          padding: const EdgeInsets.all(16),
+                                          padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                             gradient: const LinearGradient(
                                               begin: Alignment.centerLeft,
@@ -1582,7 +1572,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               ],
                                             ),
                                             borderRadius: BorderRadius.circular(
-                                              16,
+                                              8,
                                             ),
                                             boxShadow: [
                                               BoxShadow(
@@ -1864,7 +1854,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               null &&
                                           simulationProvider.currentBalance > 0)
                                         Container(
-                                          padding: const EdgeInsets.all(16),
+                                          padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                             gradient: const LinearGradient(
                                               begin: Alignment.centerLeft,
@@ -1875,7 +1865,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               ],
                                             ),
                                             borderRadius: BorderRadius.circular(
-                                              16,
+                                              8,
                                             ),
                                             boxShadow: [
                                               BoxShadow(
