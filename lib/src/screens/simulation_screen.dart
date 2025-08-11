@@ -1039,7 +1039,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             ),
                           ),
                         ),
-                        const Spacer(),
                       ],
                     ),
                   ),
