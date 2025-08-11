@@ -2216,23 +2216,82 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     }
                                   : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _isBuyOrder
-                                    ? const Color(0xFF21CE99)
-                                    : const Color(0xFFFF6B6B),
+                                backgroundColor: Colors.transparent,
                                 foregroundColor: Colors.white,
+                                shadowColor: Colors.transparent,
+                                elevation: 0,
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                                  vertical: 16,
+                                  horizontal: 24,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: Text(
-                                _isBuyOrder ? 'Comprar' : 'Vender',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Inter',
+                              child: Container(
+                                width: double.infinity,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: _isBuyOrder
+                                        ? [
+                                            const Color(0xFF22C55E),
+                                            const Color(0xFF16A34A),
+                                          ]
+                                        : [
+                                            const Color(0xFFFF6B6B),
+                                            const Color(0xFFDC2626),
+                                          ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          (_isBuyOrder
+                                                  ? const Color(0xFF22C55E)
+                                                  : const Color(0xFFFF6B6B))
+                                              .withValues(alpha: 0.4),
+                                      offset: const Offset(0, 4),
+                                      blurRadius: 16,
+                                      spreadRadius: -2,
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Icon(
+                                        _isBuyOrder
+                                            ? Icons.trending_up
+                                            : Icons.trending_down,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      _isBuyOrder
+                                          ? 'CONFIRMAR COMPRA'
+                                          : 'CONFIRMAR VENTA',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        fontFamily: 'Inter',
+                                        letterSpacing: 1.0,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
