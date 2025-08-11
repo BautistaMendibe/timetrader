@@ -3518,61 +3518,132 @@ class _SimulationScreenState extends State<SimulationScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Completed Operations History
+            // Enhanced Completed Operations History
             if (completedOperations.isNotEmpty) ...[
-              Card(
-                color: const Color(0xFF2C2C2C),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF1F2937), Color(0xFF111827)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFF374151),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      offset: const Offset(0, 6),
+                      blurRadius: 20,
+                      spreadRadius: -2,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Enhanced Header
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
                         children: [
-                          Text(
-                            'Historial de Operaciones Completadas',
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Inter',
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFF8B5CF6,
+                                  ).withValues(alpha: 0.3),
+                                  offset: const Offset(0, 4),
+                                  blurRadius: 12,
+                                  spreadRadius: -2,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.history_rounded,
+                              color: Colors.white,
+                              size: 20,
                             ),
                           ),
-                          Text(
-                            '$winningTrades/$totalCompletedOperations ganadores',
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 12,
-                              fontFamily: 'Inter',
-                            ),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Historial de Operaciones',
+                                style: TextStyle(
+                                  color: Color(0xFFF8FAFC),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '$winningTrades/$totalCompletedOperations ganadores',
+                                style: TextStyle(
+                                  color: const Color(0xFF94A3B8),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Operations List
+                    ...completedOperations
+                        .take(10)
+                        .map(
+                          (operation) =>
+                              _buildCompletedOperationItem(operation),
+                        ),
+
+                    if (completedOperations.length > 10) ...[
                       const SizedBox(height: 16),
-
-                      ...completedOperations
-                          .take(10)
-                          .map(
-                            (operation) =>
-                                _buildCompletedOperationItem(operation),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF374151).withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF4B5563),
+                            width: 1,
                           ),
-
-                      if (completedOperations.length > 10) ...[
-                        const SizedBox(height: 8),
-                        Center(
+                        ),
+                        child: Center(
                           child: Text(
                             '... y ${completedOperations.length - 10} operaciones más',
-                            style: TextStyle(
-                              color: Colors.grey[500],
+                            style: const TextStyle(
+                              color: Color(0xFF94A3B8),
                               fontSize: 12,
+                              fontWeight: FontWeight.w500,
                               fontFamily: 'Inter',
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ],
-                  ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -3798,165 +3869,364 @@ class _SimulationScreenState extends State<SimulationScreen> {
   }
 
   Widget _buildCompletedOperationItem(CompletedTrade operation) {
+    final isProfit = operation.totalPnL >= 0;
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: operation.totalPnL >= 0
-              ? Colors.green.withValues(alpha: 0.3)
-              : Colors.red.withValues(alpha: 0.3),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF374151), const Color(0xFF1F2937)],
         ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isProfit
+              ? const Color(0xFF10B981).withValues(alpha: 0.4)
+              : const Color(0xFFEF4444).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isProfit
+                ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                : const Color(0xFFEF4444).withValues(alpha: 0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header con tipo de operación y P&L
+          // Enhanced Header con tipo de operación y P&L
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Icon(
-                    operation.totalPnL >= 0
-                        ? Icons.trending_up
-                        : Icons.trending_down,
-                    color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
-                    size: 16,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isProfit
+                          ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                          : const Color(0xFFEF4444).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isProfit
+                            ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                            : const Color(0xFFEF4444).withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      isProfit
+                          ? Icons.trending_up_rounded
+                          : Icons.trending_down_rounded,
+                      color: isProfit
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFEF4444),
+                      size: 18,
+                    ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Text(
                     operation.operationType.toUpperCase(),
                     style: TextStyle(
-                      color: operation.totalPnL >= 0
-                          ? Colors.green
-                          : Colors.red,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      color: isProfit
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFEF4444),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                       fontFamily: 'Inter',
                     ),
                   ),
                 ],
               ),
-              Text(
-                '\$${operation.totalPnL.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Inter',
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Precios de entrada y salida
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Entrada: \$${operation.entryPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    Text(
-                      operation.entryTime.toString().substring(
-                        11,
-                        16,
-                      ), // Solo hora:minuto
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 10,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
+                decoration: BoxDecoration(
+                  color: isProfit
+                      ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                      : const Color(0xFFEF4444).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isProfit
+                        ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                        : const Color(0xFFEF4444).withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
-              ),
-              const Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Salida: \$${operation.exitPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    Text(
-                      operation.exitTime.toString().substring(
-                        11,
-                        16,
-                      ), // Solo hora:minuto
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 10,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          // Información adicional
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Cantidad: ${operation.quantity.toStringAsFixed(4)}',
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 10,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              if (operation.leverage != null)
-                Text(
-                  'Apalancamiento: ${operation.leverage}x',
+                child: Text(
+                  '\$${operation.totalPnL.toStringAsFixed(2)}',
                   style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 10,
+                    color: isProfit
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFEF4444),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                     fontFamily: 'Inter',
                   ),
                 ),
-              Text(
-                'Duración: ${operation.durationFormatted}',
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 10,
-                  fontFamily: 'Inter',
-                ),
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // Enhanced Precios de entrada y salida
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F2937).withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF4B5563).withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF3B82F6),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'ENTRADA',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '\$${operation.entryPrice.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Color(0xFFF8FAFC),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      Text(
+                        operation.entryTime.toString().substring(11, 16),
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 10,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF374151).withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Color(0xFF9CA3AF),
+                    size: 16,
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'SALIDA',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isProfit
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '\$${operation.exitPrice.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Color(0xFFF8FAFC),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      Text(
+                        operation.exitTime.toString().substring(11, 16),
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 10,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Enhanced Información adicional
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111827).withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFF374151).withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildOperationDetailChip(
+                    'Cantidad',
+                    '${operation.quantity.toStringAsFixed(4)}',
+                    Icons.account_balance_wallet_rounded,
+                  ),
+                ),
+                if (operation.leverage != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildOperationDetailChip(
+                      'Apalancamiento',
+                      '${operation.leverage}x',
+                      Icons.trending_up_rounded,
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildOperationDetailChip(
+                    'Duración',
+                    operation.durationFormatted,
+                    Icons.timer_rounded,
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (operation.reason != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Razón: ${operation.reason}',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 10,
-                fontFamily: 'Inter',
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF374151).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF4B5563).withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: const Color(0xFF94A3B8),
+                    size: 14,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      operation.reason!,
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOperationDetailChip(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF374151).withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFF4B5563).withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: const Color(0xFF9CA3AF), size: 12),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 9,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 1),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFFF8FAFC),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
