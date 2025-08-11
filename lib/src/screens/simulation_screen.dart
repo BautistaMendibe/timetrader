@@ -2292,7 +2292,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Debug Button (temporary)
+                    // Debug Button (temporary) - COMMENTED OUT
+                    /* 
                     if (simulationProvider.setupParametersCalculated) ...[
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -2351,6 +2352,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
+                    */
                   ],
 
                   // --- Enhanced Simulation Controls ---
@@ -2415,36 +2417,42 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Control de Simulación',
-                                      style: TextStyle(
-                                        color: Color(0xFFF8FAFC),
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        fontFamily: 'Inter',
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Control de Simulación',
+                                        style: TextStyle(
+                                          color: Color(0xFFF8FAFC),
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          fontFamily: 'Inter',
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Gestiona la velocidad y marco temporal',
-                                      style: TextStyle(
-                                        color: const Color(0xFF94A3B8),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily: 'Inter',
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Gestiona la velocidad y marco temporal',
+                                        style: TextStyle(
+                                          color: const Color(0xFF94A3B8),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          fontFamily: 'Inter',
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                                const Spacer(),
-                                // Enhanced Timeframe Selector
+                                const SizedBox(width: 12),
+                                // Enhanced Timeframe Selector - Made more compact
                                 Container(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 70,
+                                  ),
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
+                                    horizontal: 10,
+                                    vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
@@ -2453,7 +2461,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                         Color(0xFF1F2937),
                                       ],
                                     ),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
                                       color: const Color(0xFF4B5563),
                                       width: 1.5,
@@ -2474,10 +2482,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                         simulationProvider.activeTimeframe,
                                     dropdownColor: const Color(0xFF1F2937),
                                     underline: Container(),
+                                    isDense: true,
                                     icon: const Icon(
                                       Icons.keyboard_arrow_down_rounded,
                                       color: Color(0xFF94A3B8),
-                                      size: 18,
+                                      size: 16,
                                     ),
                                     items: Timeframe.values.map((tf) {
                                       String label;
@@ -2504,7 +2513,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                           label,
                                           style: const TextStyle(
                                             color: Color(0xFFF8FAFC),
-                                            fontSize: 13,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w600,
                                             fontFamily: 'Inter',
                                           ),
@@ -2911,34 +2920,92 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       !_showSLTPContainer) ...[
                     const SizedBox(height: 16),
                     Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2C2C2C),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[700]!),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF1F2937), Color(0xFF111827)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF374151),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            offset: const Offset(0, 6),
+                            blurRadius: 20,
+                            spreadRadius: -2,
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.settings,
-                                color: const Color(0xFF21CE99),
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Setup: ${simulationProvider.currentSetup!.name}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'Inter',
+                          // Enhanced Header
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFF10B981),
+                                        Color(0xFF059669),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF10B981,
+                                        ).withValues(alpha: 0.3),
+                                        offset: const Offset(0, 4),
+                                        blurRadius: 12,
+                                        spreadRadius: -2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.settings_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 16),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Configuración Activa',
+                                      style: TextStyle(
+                                        color: Color(0xFFF8FAFC),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      simulationProvider.currentSetup!.name,
+                                      style: TextStyle(
+                                        color: const Color(0xFF94A3B8),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 16),
 
@@ -3058,7 +3125,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
         simulationProvider.historicalData.length - 1;
 
     return Container(
-      color: const Color(0xFF1E1E1E),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+        ),
+      ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
