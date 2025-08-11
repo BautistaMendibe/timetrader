@@ -3044,36 +3044,103 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             ],
                           ),
 
-                          // Advanced Rules Section
+                          // Enhanced Advanced Rules Section
                           if (simulationProvider
                               .currentSetup!
                               .rules
                               .isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              'Reglas Avanzadas',
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-
-                            // Scrollable rules list
+                            const SizedBox(height: 20),
                             Container(
-                              constraints: const BoxConstraints(maxHeight: 120),
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  children: simulationProvider
-                                      .currentSetup!
-                                      .rules
-                                      .map(
-                                        (rule) => _buildCompactRuleItem(rule),
-                                      )
-                                      .toList(),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF111827,
+                                ).withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFF374151,
+                                  ).withValues(alpha: 0.5),
+                                  width: 1,
                                 ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    offset: const Offset(0, 4),
+                                    blurRadius: 12,
+                                    spreadRadius: -2,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFFF59E0B),
+                                              Color(0xFFD97706),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFFF59E0B,
+                                              ).withValues(alpha: 0.3),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 8,
+                                              spreadRadius: -1,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.rule_rounded,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        'Reglas Avanzadas',
+                                        style: TextStyle(
+                                          color: Color(0xFFF8FAFC),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Enhanced Scrollable rules list
+                                  Container(
+                                    constraints: const BoxConstraints(
+                                      maxHeight: 200,
+                                    ),
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        children: simulationProvider
+                                            .currentSetup!
+                                            .rules
+                                            .map(
+                                              (rule) =>
+                                                  _buildCompactRuleItem(rule),
+                                            )
+                                            .toList(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -4239,34 +4306,57 @@ class _SimulationScreenState extends State<SimulationScreen> {
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF374151), const Color(0xFF1F2937)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
               color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
               fontFamily: 'Inter',
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          const SizedBox(height: 2),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 9,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
               fontFamily: 'Inter',
             ),
           ),
@@ -4276,26 +4366,44 @@ class _SimulationScreenState extends State<SimulationScreen> {
   }
 
   Widget _buildCompactRuleItem(Rule rule) {
+    final ruleColor = rule.isActive
+        ? const Color(0xFF10B981)
+        : const Color(0xFF6B7280);
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: rule.isActive
-              ? const Color(0xFF21CE99).withValues(alpha: 0.3)
-              : Colors.grey.withValues(alpha: 0.3),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF374151), const Color(0xFF1F2937)],
         ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ruleColor.withValues(alpha: 0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: ruleColor.withValues(alpha: 0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(
-            _getRuleIcon(rule.type),
-            color: rule.isActive ? const Color(0xFF21CE99) : Colors.grey,
-            size: 12,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: ruleColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: ruleColor.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Icon(_getRuleIcon(rule.type), color: ruleColor, size: 16),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -4303,19 +4411,23 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 Text(
                   rule.name,
                   style: TextStyle(
-                    color: rule.isActive ? Colors.white : Colors.grey[400],
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    color: rule.isActive
+                        ? const Color(0xFFF8FAFC)
+                        : const Color(0xFF94A3B8),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                     fontFamily: 'Inter',
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   rule.description,
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 9,
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
                     fontFamily: 'Inter',
                   ),
                   maxLines: 1,
@@ -4324,21 +4436,35 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: rule.isActive
-                  ? const Color(0xFF21CE99).withValues(alpha: 0.2)
-                  : Colors.grey.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
+              gradient: rule.isActive
+                  ? const LinearGradient(
+                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    )
+                  : const LinearGradient(
+                      colors: [Color(0xFF6B7280), Color(0xFF4B5563)],
+                    ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: ruleColor.withValues(alpha: 0.2),
+                  offset: const Offset(0, 2),
+                  blurRadius: 6,
+                  spreadRadius: -1,
+                ),
+              ],
             ),
             child: Text(
               rule.isActive ? 'ON' : 'OFF',
-              style: TextStyle(
-                color: rule.isActive ? const Color(0xFF21CE99) : Colors.grey,
-                fontSize: 8,
-                fontWeight: FontWeight.w600,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
                 fontFamily: 'Inter',
+                letterSpacing: 0.5,
               ),
             ),
           ),
