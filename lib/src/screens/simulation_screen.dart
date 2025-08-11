@@ -692,9 +692,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Chart Section - 50% of screen height
+          // Chart Section -55% of screen height
           SizedBox(
-            height: MediaQuery.of(context).size.height * 0.5,
+            height: MediaQuery.of(context).size.height * 0.55,
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               decoration: BoxDecoration(
@@ -2323,69 +2323,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header with enhanced styling
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFF22C55E),
-                                        Color(0xFF16A34A),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF22C55E,
-                                        ).withValues(alpha: 0.3),
-                                        offset: const Offset(0, 4),
-                                        blurRadius: 12,
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.trending_up,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Controles de Trading',
-                                      style: TextStyle(
-                                        color: Color(0xFFF8FAFC),
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Ejecuta órdenes de compra y venta',
-                                      style: TextStyle(
-                                        color: const Color(0xFF94A3B8),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
                           // Enhanced Trading Buttons Row
                           Row(
                             children: [
