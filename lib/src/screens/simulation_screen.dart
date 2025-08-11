@@ -4189,7 +4189,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 Expanded(
                   child: _buildOperationDetailChip(
                     'Cantidad',
-                    '${operation.quantity.toStringAsFixed(4)}',
+                    '$operation.quantity.toStringAsFixed(4)',
                     Icons.account_balance_wallet_rounded,
                   ),
                 ),
