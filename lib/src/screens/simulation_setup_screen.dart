@@ -690,7 +690,36 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
     required String title,
     required Widget child,
     String? subtitle,
+    IconData? icon,
+    List<Color>? iconGradient,
   }) {
+    // Determine icon and gradient based on title
+    IconData sectionIcon;
+    List<Color> sectionGradient;
+
+    switch (title.toLowerCase()) {
+      case 'activo':
+        sectionIcon = Icons.trending_up_rounded;
+        sectionGradient = [const Color(0xFF10B981), const Color(0xFF059669)];
+        break;
+      case 'fecha de inicio':
+        sectionIcon = Icons.calendar_today_rounded;
+        sectionGradient = [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)];
+        break;
+      case 'setup':
+        sectionIcon = Icons.tune_rounded;
+        sectionGradient = [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)];
+        break;
+      case 'balance inicial':
+        sectionIcon = Icons.account_balance_wallet_rounded;
+        sectionGradient = [const Color(0xFFF59E0B), const Color(0xFFD97706)];
+        break;
+      default:
+        sectionIcon = icon ?? Icons.settings_rounded;
+        sectionGradient =
+            iconGradient ?? [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)];
+    }
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -720,26 +749,22 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                      colors: sectionGradient,
                     ),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                        color: sectionGradient.first.withValues(alpha: 0.3),
                         offset: const Offset(0, 4),
                         blurRadius: 12,
                         spreadRadius: -2,
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.settings_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  child: Icon(sectionIcon, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 16),
                 Text(
