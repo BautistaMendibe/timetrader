@@ -531,44 +531,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ],
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Action Buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Usar el precio actual del último tick visible
-                    final currentPrice =
-                        simulationProvider.lastVisibleTickPrice;
-                    if (currentPrice > 0) {
-                      simulationProvider.closeManualPosition(currentPrice);
-                    }
-                    setState(() {
-                      _showManageSLTPContainer = false;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B6B),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Cerrar Trade',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
