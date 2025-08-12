@@ -18,6 +18,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
   bool _showSLTPContainer = false;
+  bool _showManageSLTPContainer =
+      false; // Para gestionar SL/TP de trades abiertos
   double? _clickPrice; // Precio capturado en el momento del clic
   // GlobalKey para acceder al TradingViewChart
   final GlobalKey<TradingViewChartState> _chartKey =
@@ -189,13 +191,437 @@ class _SimulationScreenState extends State<SimulationScreen> {
     // );
   }
 
-  void _showManageSLTPContainer(
-    BuildContext context,
+  Widget _buildManageSLTPPanel(SimulationProvider simulationProvider) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF374151).withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF4B5563), width: 1),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: Color(0xFF3B82F6),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Gestionar SL / TP',
+                style: TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _showManageSLTPContainer = false;
+                  });
+                },
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: Color(0xFF94A3B8),
+                  size: 24,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Trade Info
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF374151).withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Color(0xFF4B5563)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Column(
+                  children: [
+                    const Text(
+                      'ENTRADA',
+                      style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$${simulationProvider.entryPrice.toStringAsFixed(5)}',
+                      style: const TextStyle(
+                        color: Color(0xFFF8FAFC),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+                Container(width: 1, height: 40, color: const Color(0xFF4B5563)),
+                Column(
+                  children: [
+                    const Text(
+                      'P&L',
+                      style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${simulationProvider.unrealizedPnL >= 0 ? '+' : ''}\$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: simulationProvider.unrealizedPnL >= 0
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFFF6B6B),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+                Container(width: 1, height: 40, color: const Color(0xFF4B5563)),
+                Column(
+                  children: [
+                    const Text(
+                      'TIPO',
+                      style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      simulationProvider.currentTrades.isNotEmpty
+                          ? simulationProvider.currentTrades.first.type
+                                .toUpperCase()
+                          : 'N/A',
+                      style: TextStyle(
+                        color:
+                            simulationProvider.currentTrades.isNotEmpty &&
+                                simulationProvider.currentTrades.first.type ==
+                                    'buy'
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFFF6B6B),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // SL/TP Sliders (reutilizando el diseño simplificado)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF374151), Color(0xFF1F2937)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Color(0xFF4B5563)),
+            ),
+            child: Column(
+              children: [
+                // Stop Loss Row
+                Row(
+                  children: [
+                    // SL Icon & Label
+                    Container(
+                      width: 60,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFFF6B6B,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(
+                              Icons.stop_circle_rounded,
+                              color: Color(0xFFFF6B6B),
+                              size: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'SL',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // SL Slider
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: const Color(0xFFFF6B6B),
+                          inactiveTrackColor: const Color(
+                            0xFFFF6B6B,
+                          ).withValues(alpha: 0.2),
+                          thumbColor: const Color(0xFFFF6B6B),
+                          overlayColor: const Color(
+                            0xFFFF6B6B,
+                          ).withValues(alpha: 0.2),
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 6,
+                          ),
+                          trackHeight: 3,
+                        ),
+                        child: Slider(
+                          value: _slRiskPercent.clamp(0.1, 10),
+                          min: 0.1,
+                          max: 10,
+                          divisions: 99,
+                          onChanged: (newPercent) {
+                            setState(() => _slRiskPercent = newPercent);
+                            _updateActiveTradeSL(
+                              simulationProvider,
+                              newPercent,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // SL Value
+                    Container(
+                      width: 50,
+                      child: Text(
+                        '${_slRiskPercent.toStringAsFixed(1)}%',
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
+                          color: Color(0xFFFF6B6B),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Take Profit Row
+                Row(
+                  children: [
+                    // TP Icon & Label
+                    Container(
+                      width: 60,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF22C55E,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(
+                              Icons.trending_up_rounded,
+                              color: Color(0xFF22C55E),
+                              size: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'TP',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // TP Slider
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: const Color(0xFF22C55E),
+                          inactiveTrackColor: const Color(
+                            0xFF22C55E,
+                          ).withValues(alpha: 0.2),
+                          thumbColor: const Color(0xFF22C55E),
+                          overlayColor: const Color(
+                            0xFF22C55E,
+                          ).withValues(alpha: 0.2),
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 6,
+                          ),
+                          trackHeight: 3,
+                        ),
+                        child: Slider(
+                          value: _tpRiskPercent.clamp(0.1, 20),
+                          min: 0.1,
+                          max: 20,
+                          divisions: 199,
+                          onChanged: (newPercent) {
+                            setState(() => _tpRiskPercent = newPercent);
+                            _updateActiveTradeTP(
+                              simulationProvider,
+                              newPercent,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // TP Value
+                    Container(
+                      width: 50,
+                      child: Text(
+                        '${_tpRiskPercent.toStringAsFixed(1)}%',
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
+                          color: Color(0xFF22C55E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Action Buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Usar el precio actual del último tick visible
+                    final currentPrice =
+                        simulationProvider.lastVisibleTickPrice;
+                    if (currentPrice > 0) {
+                      simulationProvider.closeManualPosition(currentPrice);
+                    }
+                    setState(() {
+                      _showManageSLTPContainer = false;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6B6B),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cerrar Trade',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _updateActiveTradeSL(
     SimulationProvider simulationProvider,
+    double riskPercent,
   ) {
-    setState(() {
-      _showSLTPContainer = true;
-    });
+    if (simulationProvider.inPosition &&
+        simulationProvider.currentTrades.isNotEmpty) {
+      final currentTrade = simulationProvider.currentTrades.first;
+      final entryPrice = simulationProvider.entryPrice;
+      final positionSize = simulationProvider.positionSize;
+
+      if (positionSize > 0) {
+        // Calcular el precio de SL basado en el porcentaje de riesgo
+        final riskAmount =
+            simulationProvider.currentBalance * (riskPercent / 100);
+        final priceDistance = riskAmount / positionSize;
+
+        final slPrice = currentTrade.type == 'buy'
+            ? entryPrice - priceDistance
+            : entryPrice + priceDistance;
+
+        simulationProvider.updateManualStopLoss(slPrice);
+      }
+    }
+  }
+
+  void _updateActiveTradeTP(
+    SimulationProvider simulationProvider,
+    double profitPercent,
+  ) {
+    if (simulationProvider.inPosition &&
+        simulationProvider.currentTrades.isNotEmpty) {
+      final currentTrade = simulationProvider.currentTrades.first;
+      final entryPrice = simulationProvider.entryPrice;
+      final positionSize = simulationProvider.positionSize;
+
+      if (positionSize > 0) {
+        // Calcular el precio de TP basado en el porcentaje de ganancia potencial
+        final profitAmount =
+            simulationProvider.currentBalance * (profitPercent / 100);
+        final priceDistance = profitAmount / positionSize;
+
+        final tpPrice = currentTrade.type == 'buy'
+            ? entryPrice + priceDistance
+            : entryPrice - priceDistance;
+
+        simulationProvider.updateManualTakeProfit(tpPrice);
+      }
+    }
   }
 
   void _showTimeframeSelector(
@@ -688,124 +1114,188 @@ class _SimulationScreenState extends State<SimulationScreen> {
       ...simulationProvider.completedTrades,
       ...simulationProvider.currentTrades,
     ];
+
     return SafeArea(
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // Chart Section -55% of screen height
-          SliverToBoxAdapter(
-            child: _ChartArea(
-              height: MediaQuery.of(context).size.height * 0.55,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1F2937), Color(0xFF111827)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF374151),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      offset: const Offset(0, 8),
-                      blurRadius: 24,
-                      spreadRadius: -4,
+      child: Stack(
+        children: [
+          // Contenido principal
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Chart Section -55% of screen height
+              SliverToBoxAdapter(
+                child: _ChartArea(
+                  height: MediaQuery.of(context).size.height * 0.55,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
                     ),
-                    BoxShadow(
-                      color: const Color(0xFF22C55E).withValues(alpha: 0.1),
-                      offset: const Offset(0, 0),
-                      blurRadius: 1,
-                      spreadRadius: 0,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1F2937), Color(0xFF111827)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF374151),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          offset: const Offset(0, 8),
+                          blurRadius: 24,
+                          spreadRadius: -4,
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFF22C55E).withValues(alpha: 0.1),
+                          offset: const Offset(0, 0),
+                          blurRadius: 1,
+                          spreadRadius: 0,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Chart Header
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      decoration: const BoxDecoration(
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                          colors: [Color(0xFF374151), Color(0xFF1F2937)],
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Column(
+                      children: [
+                        // Chart Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          decoration: const BoxDecoration(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                            ),
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                simulationProvider.activeSymbol ?? 'BTCUSD',
-                                style: const TextStyle(
-                                  color: Color(0xFFF8FAFC),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  fontFamily: 'Inter',
-                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    simulationProvider.activeSymbol ?? 'BTCUSD',
+                                    style: const TextStyle(
+                                      color: Color(0xFFF8FAFC),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  // Widget LIVE con tamaño fijo
+                                  SizedBox(
+                                    width: 55,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            simulationProvider
+                                                .isSimulationRunning
+                                            ? const Color(
+                                                0xFF22C55E,
+                                              ).withValues(alpha: 0.1)
+                                            : const Color(
+                                                0xFFF59E0B,
+                                              ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 5,
+                                            height: 5,
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  simulationProvider
+                                                      .isSimulationRunning
+                                                  ? const Color(0xFF22C55E)
+                                                  : const Color(0xFFF59E0B),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            simulationProvider
+                                                    .isSimulationRunning
+                                                ? 'LIVE'
+                                                : 'PAUSED',
+                                            style: TextStyle(
+                                              color:
+                                                  simulationProvider
+                                                      .isSimulationRunning
+                                                  ? const Color(0xFF22C55E)
+                                                  : const Color(0xFFF59E0B),
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w700,
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 5),
-                              // Widget LIVE con tamaño fijo
-                              SizedBox(
-                                width: 55,
+                              const Spacer(),
+                              // Botón de timeframe
+                              GestureDetector(
+                                onTap: () => _showTimeframeSelector(
+                                  context,
+                                  simulationProvider,
+                                ),
                                 child: Container(
+                                  height: 32,
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 3,
+                                    horizontal: 12,
                                   ),
                                   decoration: BoxDecoration(
-                                    color:
-                                        simulationProvider.isSimulationRunning
-                                        ? const Color(
-                                            0xFF22C55E,
-                                          ).withValues(alpha: 0.1)
-                                        : const Color(
-                                            0xFFF59E0B,
-                                          ).withValues(alpha: 0.1),
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF374151),
+                                        Color(0xFF1F2937),
+                                      ],
+                                    ),
                                     borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFF4B5563),
+                                      width: 1,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Container(
-                                        width: 5,
-                                        height: 5,
-                                        decoration: BoxDecoration(
-                                          color:
-                                              simulationProvider
-                                                  .isSimulationRunning
-                                              ? const Color(0xFF22C55E)
-                                              : const Color(0xFFF59E0B),
-                                          shape: BoxShape.circle,
-                                        ),
+                                      const Icon(
+                                        Icons.schedule_rounded,
+                                        color: Color(0xFF94A3B8),
+                                        size: 14,
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        simulationProvider.isSimulationRunning
-                                            ? 'LIVE'
-                                            : 'PAUSED',
-                                        style: TextStyle(
-                                          color:
-                                              simulationProvider
-                                                  .isSimulationRunning
-                                              ? const Color(0xFF22C55E)
-                                              : const Color(0xFFF59E0B),
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.w700,
+                                        _selectedTimeframe?.name
+                                                .toUpperCase() ??
+                                            simulationProvider
+                                                .activeTimeframe
+                                                .name
+                                                .toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Color(0xFFF8FAFC),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
                                           fontFamily: 'Inter',
                                         ),
                                       ),
@@ -813,1674 +1303,1686 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                          const Spacer(),
-                          // Botón de timeframe
-                          GestureDetector(
-                            onTap: () => _showTimeframeSelector(
-                              context,
-                              simulationProvider,
-                            ),
-                            child: Container(
-                              height: 32,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF374151),
-                                    Color(0xFF1F2937),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: const Color(0xFF4B5563),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.schedule_rounded,
-                                    color: Color(0xFF94A3B8),
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _selectedTimeframe?.name.toUpperCase() ??
-                                        simulationProvider.activeTimeframe.name
-                                            .toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Color(0xFFF8FAFC),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Botón de control único (pausa/reanudar/iniciar) - Ancho fijo
-                          SizedBox(
-                            width: 48, // Ancho fijo para evitar overflow
-                            child: simulationProvider.isSimulationRunning
-                                ?
-                                  // Mostrar botón de pausa cuando está corriendo
-                                  Container(
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFFF59E0B),
-                                          Color(0xFFD97706),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFFF59E0B,
-                                          ).withValues(alpha: 0.3),
-                                          offset: const Offset(0, 2),
-                                          blurRadius: 8,
-                                          spreadRadius: -2,
-                                        ),
-                                      ],
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: () => simulationProvider
-                                          .pauseTickSimulation(),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        foregroundColor: Colors.white,
-                                        shadowColor: Colors.transparent,
-                                        elevation: 0,
-                                        padding: EdgeInsets.zero,
-                                        minimumSize: const Size(48, 32),
-                                        shape: RoundedRectangleBorder(
+                              const SizedBox(width: 8),
+                              // Botón de control único (pausa/reanudar/iniciar) - Ancho fijo
+                              SizedBox(
+                                width: 48, // Ancho fijo para evitar overflow
+                                child: simulationProvider.isSimulationRunning
+                                    ?
+                                      // Mostrar botón de pausa cuando está corriendo
+                                      Container(
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFFF59E0B),
+                                              Color(0xFFD97706),
+                                            ],
+                                          ),
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.pause_rounded,
-                                        size: 16,
-                                      ),
-                                    ),
-                                  )
-                                : (simulationProvider.currentSetup != null &&
-                                      (simulationProvider.isSimulationPaused ||
-                                          !simulationProvider
-                                              .isSimulationRunning))
-                                ?
-                                  // Mostrar botón de reanudar/iniciar cuando está pausado o detenido
-                                  Container(
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFF22C55E),
-                                          Color(0xFF16A34A),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFF22C55E,
-                                          ).withValues(alpha: 0.3),
-                                          offset: const Offset(0, 2),
-                                          blurRadius: 8,
-                                          spreadRadius: -2,
-                                        ),
-                                      ],
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed:
-                                          simulationProvider.isSimulationPaused
-                                          ? () => simulationProvider
-                                                .resumeTickSimulation()
-                                          : () => simulationProvider
-                                                .startTickSimulation(
-                                                  simulationProvider
-                                                      .currentSetup!,
-                                                  simulationProvider
-                                                      .historicalData
-                                                      .first
-                                                      .timestamp,
-                                                  simulationProvider
-                                                      .simulationSpeed,
-                                                  simulationProvider
-                                                      .currentBalance,
-                                                  simulationProvider
-                                                          .activeSymbol ??
-                                                      'BTCUSD',
-                                                ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        foregroundColor: Colors.white,
-                                        shadowColor: Colors.transparent,
-                                        elevation: 0,
-                                        padding: EdgeInsets.zero,
-                                        minimumSize: const Size(48, 32),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.play_arrow_rounded,
-                                        size: 20,
-                                      ),
-                                    ),
-                                  )
-                                :
-                                  // Mostrar botón deshabilitado cuando no hay setup
-                                  Container(
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF374151),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: null,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        foregroundColor: Colors.white,
-                                        shadowColor: Colors.transparent,
-                                        elevation: 0,
-                                        padding: EdgeInsets.zero,
-                                        minimumSize: const Size(48, 32),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.play_arrow_rounded,
-                                        size: 16,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Botón de velocidad
-                          GestureDetector(
-                            onTap: () =>
-                                _showSpeedSelector(context, simulationProvider),
-                            child: Container(
-                              height: 32,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF374151),
-                                    Color(0xFF1F2937),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: const Color(0xFF4B5563),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.speed_rounded,
-                                    color: Color(0xFF94A3B8),
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
-                                    style: const TextStyle(
-                                      color: Color(0xFFF8FAFC),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Chart Content
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(20),
-                          bottomRight: Radius.circular(20),
-                        ),
-                        child:
-                            Selector<
-                              SimulationProvider,
-                              Tuple5<
-                                List<Trade>,
-                                int,
-                                double?,
-                                double?,
-                                double?
-                              >
-                            >(
-                              selector: (context, provider) => Tuple5(
-                                allTrades,
-                                provider.currentCandleIndex,
-                                provider.manualStopLossPrice,
-                                provider.manualTakeProfitPrice,
-                                provider.entryPrice > 0
-                                    ? provider.entryPrice
-                                    : null,
-                              ),
-                              builder: (context, data, child) {
-                                final entryPrice = _clickPrice ?? data.item5;
-                                return TradingViewChart(
-                                  key: _chartKey,
-                                  candles: simulationProvider.historicalData,
-                                  trades: data.item1,
-                                  currentCandleIndex: data.item2,
-                                  stopLoss: data.item3,
-                                  takeProfit: data.item4,
-                                  entryPrice: entryPrice,
-                                  slPercent: -_slRiskPercent,
-                                  slValue:
-                                      -(simulationProvider.currentBalance *
-                                          (_slRiskPercent / 100)),
-                                  tpPercent: _tpRiskPercent,
-                                  tpValue:
-                                      simulationProvider.currentBalance *
-                                      (_tpRiskPercent / 100),
-                                  entryValue: simulationProvider.inPosition
-                                      ? simulationProvider.unrealizedPnL
-                                      : 0.0,
-                                  isRunning:
-                                      simulationProvider.isSimulationRunning,
-                                );
-                              },
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Controls Section - Flexible
-          if (_showOrderContainerInline) ...[
-            SliverToBoxAdapter(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFF1F2937),
-                      const Color(0xFF111827),
-                      _isBuyOrder
-                          ? const Color(0xFF22C55E).withValues(alpha: 0.05)
-                          : const Color(0xFFFF6B6B).withValues(alpha: 0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: _isBuyOrder
-                        ? const Color(0xFF22C55E).withValues(alpha: 0.3)
-                        : const Color(0xFFFF6B6B).withValues(alpha: 0.3),
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      offset: const Offset(0, 8),
-                      blurRadius: 32,
-                      spreadRadius: -4,
-                    ),
-                    BoxShadow(
-                      color: _isBuyOrder
-                          ? const Color(0xFF22C55E).withValues(alpha: 0.2)
-                          : const Color(0xFFFF6B6B).withValues(alpha: 0.2),
-                      offset: const Offset(0, 0),
-                      blurRadius: 2,
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Enhanced Header
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: _isBuyOrder
-                                        ? [
-                                            const Color(0xFF22C55E),
-                                            const Color(0xFF16A34A),
-                                          ]
-                                        : [
-                                            const Color(0xFFFF6B6B),
-                                            const Color(0xFFDC2626),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFFF59E0B,
+                                              ).withValues(alpha: 0.3),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 8,
+                                              spreadRadius: -2,
+                                            ),
                                           ],
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed: () => simulationProvider
+                                              .pauseTickSimulation(),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            padding: EdgeInsets.zero,
+                                            minimumSize: const Size(48, 32),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.pause_rounded,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      )
+                                    : (simulationProvider.currentSetup !=
+                                              null &&
+                                          (simulationProvider
+                                                  .isSimulationPaused ||
+                                              !simulationProvider
+                                                  .isSimulationRunning))
+                                    ?
+                                      // Mostrar botón de reanudar/iniciar cuando está pausado o detenido
+                                      Container(
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFF22C55E),
+                                              Color(0xFF16A34A),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF22C55E,
+                                              ).withValues(alpha: 0.3),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 8,
+                                              spreadRadius: -2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed:
+                                              simulationProvider
+                                                  .isSimulationPaused
+                                              ? () => simulationProvider
+                                                    .resumeTickSimulation()
+                                              : () => simulationProvider
+                                                    .startTickSimulation(
+                                                      simulationProvider
+                                                          .currentSetup!,
+                                                      simulationProvider
+                                                          .historicalData
+                                                          .first
+                                                          .timestamp,
+                                                      simulationProvider
+                                                          .simulationSpeed,
+                                                      simulationProvider
+                                                          .currentBalance,
+                                                      simulationProvider
+                                                              .activeSymbol ??
+                                                          'BTCUSD',
+                                                    ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            padding: EdgeInsets.zero,
+                                            minimumSize: const Size(48, 32),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.play_arrow_rounded,
+                                            size: 20,
+                                          ),
+                                        ),
+                                      )
+                                    :
+                                      // Mostrar botón deshabilitado cuando no hay setup
+                                      Container(
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF374151),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed: null,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            padding: EdgeInsets.zero,
+                                            minimumSize: const Size(48, 32),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.play_arrow_rounded,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Botón de velocidad
+                              GestureDetector(
+                                onTap: () => _showSpeedSelector(
+                                  context,
+                                  simulationProvider,
+                                ),
+                                child: Container(
+                                  height: 32,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
                                   ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _isBuyOrder
-                                          ? const Color(
-                                              0xFF22C55E,
-                                            ).withValues(alpha: 0.4)
-                                          : const Color(
-                                              0xFFFF6B6B,
-                                            ).withValues(alpha: 0.4),
-                                      offset: const Offset(0, 4),
-                                      blurRadius: 16,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF374151),
+                                        Color(0xFF1F2937),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  _isBuyOrder
-                                      ? Icons.trending_up
-                                      : Icons.trending_down,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _isBuyOrder
-                                        ? 'ORDEN DE COMPRA'
-                                        : 'ORDEN DE VENTA',
-                                    style: TextStyle(
-                                      color: _isBuyOrder
-                                          ? const Color(0xFF22C55E)
-                                          : const Color(0xFFFF6B6B),
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      fontFamily: 'Inter',
-                                      letterSpacing: 0.5,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFF4B5563),
+                                      width: 1,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF374151,
-                              ).withValues(alpha: 0.6),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFF4B5563),
-                              ),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.close_rounded,
-                                color: Color(0xFF94A3B8),
-                                size: 22,
-                              ),
-                              onPressed: () {
-                                simulationProvider.cancelOrder();
-                                setState(() {
-                                  _showOrderContainerInline = false;
-                                  _showSlTpOnOrderInline = false;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Enhanced Price Entry Section
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF374151), Color(0xFF1F2937)],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: const Color(0xFF4B5563),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF22C55E,
-                                  ).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Icons.price_change_rounded,
-                                  color: Color(0xFF22C55E),
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'PRECIO DE ENTRADA',
-                                    style: TextStyle(
-                                      color: Color(0xFF94A3B8),
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 11,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '\$${_clickPrice?.toStringAsFixed(5) ?? "--"}',
-                                    style: const TextStyle(
-                                      color: Color(0xFFF8FAFC),
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_clickPrice != null &&
-                        simulationProvider.calculatedPositionSize != null &&
-                        simulationProvider.calculatedPositionSize! > 0) ...[
-                      const SizedBox(height: 12),
-                      // Enhanced SL/TP Display
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFFFF6B6B),
-                                    Color(0xFFDC2626),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFFFF6B6B,
-                                    ).withValues(alpha: 0.3),
-                                    offset: const Offset(0, 4),
-                                    blurRadius: 12,
-                                    spreadRadius: -2,
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       const Icon(
-                                        Icons.stop_circle_rounded,
-                                        color: Colors.white,
+                                        Icons.speed_rounded,
+                                        color: Color(0xFF94A3B8),
                                         size: 14,
                                       ),
-                                      const SizedBox(width: 8),
-                                      const Text(
-                                        'STOP LOSS',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9,
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '\$${(() {
-                                      final riskAmount = simulationProvider.currentBalance * (_slRiskPercent / 100);
-                                      final priceDistance = riskAmount / simulationProvider.calculatedPositionSize!;
-                                      final slPrice = _isBuyOrder ? _clickPrice! - priceDistance : _clickPrice! + priceDistance;
-                                      return slPrice.toStringAsFixed(5);
-                                    })()}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '-${_slRiskPercent.toStringAsFixed(1)}%',
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                      fontSize: 10,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFF22C55E),
-                                    Color(0xFF16A34A),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF22C55E,
-                                    ).withValues(alpha: 0.3),
-                                    offset: const Offset(0, 4),
-                                    blurRadius: 12,
-                                    spreadRadius: -2,
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.trending_up_rounded,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      const Text(
-                                        'TAKE PROFIT',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9,
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '\$${(() {
-                                      final potentialAmount = simulationProvider.currentBalance * (_tpRiskPercent / 100);
-                                      final priceDistance = potentialAmount / simulationProvider.calculatedPositionSize!;
-                                      final tpPrice = _isBuyOrder ? _clickPrice! + priceDistance : _clickPrice! - priceDistance;
-                                      return tpPrice.toStringAsFixed(5);
-                                    })()}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '+${_tpRiskPercent.toStringAsFixed(1)}%',
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                      fontSize: 10,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (_showSlTpOnOrderInline) ...[
-                      const SizedBox(height: 24),
-                      // Enhanced SL/TP Slider Section
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFF374151), Color(0xFF1F2937)],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFF4B5563),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // SL/TP Configuration - Simplified
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFF374151),
-                                    Color(0xFF1F2937),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Color(0xFF4B5563)),
-                              ),
-                              child: Column(
-                                children: [
-                                  // Header
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: const Color(
-                                            0xFF3B82F6,
-                                          ).withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.tune_rounded,
-                                          color: Color(0xFF3B82F6),
-                                          size: 16,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      const Text(
-                                        'SL / TP',
-                                        style: TextStyle(
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                                        style: const TextStyle(
                                           color: Color(0xFFF8FAFC),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
                                           fontFamily: 'Inter',
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 16),
-
-                                  // Stop Loss Row
-                                  Row(
-                                    children: [
-                                      // SL Icon & Label
-                                      Container(
-                                        width: 60,
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: const Color(
-                                                  0xFFFF6B6B,
-                                                ).withValues(alpha: 0.1),
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                              ),
-                                              child: const Icon(
-                                                Icons.stop_circle_rounded,
-                                                color: Color(0xFFFF6B6B),
-                                                size: 12,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            const Text(
-                                              'SL',
-                                              style: TextStyle(
-                                                color: Color(0xFF94A3B8),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                fontFamily: 'Inter',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-
-                                      // SL Slider
-                                      Expanded(
-                                        child: SliderTheme(
-                                          data: SliderTheme.of(context)
-                                              .copyWith(
-                                                activeTrackColor: const Color(
-                                                  0xFFFF6B6B,
-                                                ),
-                                                inactiveTrackColor: const Color(
-                                                  0xFFFF6B6B,
-                                                ).withValues(alpha: 0.2),
-                                                thumbColor: const Color(
-                                                  0xFFFF6B6B,
-                                                ),
-                                                overlayColor: const Color(
-                                                  0xFFFF6B6B,
-                                                ).withValues(alpha: 0.2),
-                                                thumbShape:
-                                                    const RoundSliderThumbShape(
-                                                      enabledThumbRadius: 6,
-                                                    ),
-                                                trackHeight: 3,
-                                              ),
-                                          child: Slider(
-                                            value: _slRiskPercent.clamp(
-                                              0.1,
-                                              10,
-                                            ),
-                                            min: 0.1,
-                                            max: 10,
-                                            divisions: 99,
-                                            onChanged: (newPercent) {
-                                              setState(
-                                                () =>
-                                                    _slRiskPercent = newPercent,
-                                              );
-                                              if (simulationProvider
-                                                          .calculatedPositionSize !=
-                                                      null &&
-                                                  simulationProvider
-                                                          .calculatedPositionSize! >
-                                                      0) {
-                                                final riskAmount =
-                                                    simulationProvider
-                                                        .currentBalance *
-                                                    (_slRiskPercent / 100);
-                                                final priceDistance =
-                                                    riskAmount /
-                                                    simulationProvider
-                                                        .calculatedPositionSize!;
-                                                final slPrice = _isBuyOrder
-                                                    ? _clickPrice! -
-                                                          priceDistance
-                                                    : _clickPrice! +
-                                                          priceDistance;
-                                                simulationProvider
-                                                    .updateManualStopLoss(
-                                                      slPrice,
-                                                    );
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ),
-
-                                      // SL Value
-                                      Container(
-                                        width: 50,
-                                        child: Text(
-                                          '${_slRiskPercent.toStringAsFixed(1)}%',
-                                          textAlign: TextAlign.end,
-                                          style: const TextStyle(
-                                            color: Color(0xFFFF6B6B),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            fontFamily: 'Inter',
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 12),
-
-                                  // Take Profit Row
-                                  Row(
-                                    children: [
-                                      // TP Icon & Label
-                                      Container(
-                                        width: 60,
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: const Color(
-                                                  0xFF22C55E,
-                                                ).withValues(alpha: 0.1),
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                              ),
-                                              child: const Icon(
-                                                Icons.trending_up_rounded,
-                                                color: Color(0xFF22C55E),
-                                                size: 12,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            const Text(
-                                              'TP',
-                                              style: TextStyle(
-                                                color: Color(0xFF94A3B8),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                fontFamily: 'Inter',
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-
-                                      // TP Slider
-                                      Expanded(
-                                        child: SliderTheme(
-                                          data: SliderTheme.of(context)
-                                              .copyWith(
-                                                activeTrackColor: const Color(
-                                                  0xFF22C55E,
-                                                ),
-                                                inactiveTrackColor: const Color(
-                                                  0xFF22C55E,
-                                                ).withValues(alpha: 0.2),
-                                                thumbColor: const Color(
-                                                  0xFF22C55E,
-                                                ),
-                                                overlayColor: const Color(
-                                                  0xFF22C55E,
-                                                ).withValues(alpha: 0.2),
-                                                thumbShape:
-                                                    const RoundSliderThumbShape(
-                                                      enabledThumbRadius: 6,
-                                                    ),
-                                                trackHeight: 3,
-                                              ),
-                                          child: Slider(
-                                            value: _tpRiskPercent.clamp(
-                                              0.1,
-                                              20,
-                                            ),
-                                            min: 0.1,
-                                            max: 20,
-                                            divisions: 199,
-                                            onChanged: (newPercent) {
-                                              setState(
-                                                () =>
-                                                    _tpRiskPercent = newPercent,
-                                              );
-                                              if (simulationProvider
-                                                          .calculatedPositionSize !=
-                                                      null &&
-                                                  simulationProvider
-                                                          .calculatedPositionSize! >
-                                                      0) {
-                                                final potentialAmount =
-                                                    simulationProvider
-                                                        .currentBalance *
-                                                    (_tpRiskPercent / 100);
-                                                final priceDistance =
-                                                    potentialAmount /
-                                                    simulationProvider
-                                                        .calculatedPositionSize!;
-                                                final tpPrice = _isBuyOrder
-                                                    ? _clickPrice! +
-                                                          priceDistance
-                                                    : _clickPrice! -
-                                                          priceDistance;
-                                                simulationProvider
-                                                    .updateManualTakeProfit(
-                                                      tpPrice,
-                                                    );
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ),
-
-                                      // TP Value
-                                      Container(
-                                        width: 50,
-                                        child: Text(
-                                          '${_tpRiskPercent.toStringAsFixed(1)}%',
-                                          textAlign: TextAlign.end,
-                                          style: const TextStyle(
-                                            color: Color(0xFF22C55E),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            fontFamily: 'Inter',
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 12),
-
-                                  // Risk/Reward Summary
-                                  if (_clickPrice != null &&
-                                      simulationProvider
-                                              .calculatedPositionSize !=
-                                          null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF1F2937),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Color(0xFF374151),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          Column(
-                                            children: [
-                                              const Text(
-                                                'RIESGO',
-                                                style: TextStyle(
-                                                  color: Color(0xFF94A3B8),
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontFamily: 'Inter',
-                                                ),
-                                              ),
-                                              Text(
-                                                '\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)}',
-                                                style: const TextStyle(
-                                                  color: Color(0xFFFF6B6B),
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w700,
-                                                  fontFamily: 'Inter',
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Container(
-                                            width: 1,
-                                            height: 30,
-                                            color: const Color(0xFF374151),
-                                          ),
-                                          Column(
-                                            children: [
-                                              const Text(
-                                                'GANANCIA',
-                                                style: TextStyle(
-                                                  color: Color(0xFF94A3B8),
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontFamily: 'Inter',
-                                                ),
-                                              ),
-                                              Text(
-                                                '\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)}',
-                                                style: const TextStyle(
-                                                  color: Color(0xFF22C55E),
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w700,
-                                                  fontFamily: 'Inter',
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Container(
-                                            width: 1,
-                                            height: 30,
-                                            color: const Color(0xFF374151),
-                                          ),
-                                          Column(
-                                            children: [
-                                              const Text(
-                                                'R:R',
-                                                style: TextStyle(
-                                                  color: Color(0xFF94A3B8),
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontFamily: 'Inter',
-                                                ),
-                                              ),
-                                              Text(
-                                                '1:${(_tpRiskPercent / _slRiskPercent).toStringAsFixed(1)}',
-                                                style: const TextStyle(
-                                                  color: Color(0xFF3B82F6),
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w700,
-                                                  fontFamily: 'Inter',
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                    // Confirm Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed:
-                            simulationProvider.canCalculatePosition() &&
-                                _clickPrice != null &&
-                                _slRiskPercent > 0 &&
-                                _tpRiskPercent > 0
-                            ? () {
-                                // debugPrint(
-                                //   '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = $_slRiskPercent, TP % = $_tpRiskPercent',
-                                // );
-                                // Calcular precios a partir de los porcentajes de riesgo/potencial
-                                final riskAmount =
-                                    simulationProvider.currentBalance *
-                                    (_slRiskPercent / 100);
-                                final tpAmount =
-                                    simulationProvider.currentBalance *
-                                    (_tpRiskPercent / 100);
-                                final slPrice = _isBuyOrder
-                                    ? _clickPrice! -
-                                          (riskAmount /
-                                              (simulationProvider
-                                                      .calculatedPositionSize ??
-                                                  1))
-                                    : _clickPrice! +
-                                          (riskAmount /
-                                              (simulationProvider
-                                                      .calculatedPositionSize ??
-                                                  1));
-                                final tpPrice = _isBuyOrder
-                                    ? _clickPrice! +
-                                          (tpAmount /
-                                              (simulationProvider
-                                                      .calculatedPositionSize ??
-                                                  1))
-                                    : _clickPrice! -
-                                          (tpAmount /
-                                              (simulationProvider
-                                                      .calculatedPositionSize ??
-                                                  1));
-                                simulationProvider.updateManualStopLoss(
-                                  slPrice,
-                                );
-                                simulationProvider.updateManualTakeProfit(
-                                  tpPrice,
-                                );
-                                // debugPrint(
-                                //   '🔥 [CONFIRMAR] Orden ejecutada. SL final = $slPrice, TP final = $tpPrice',
-                                // );
-                                simulationProvider.executeManualTrade(
-                                  type: _isBuyOrder ? 'buy' : 'sell',
-                                  amount:
-                                      simulationProvider
-                                          .calculatedPositionSize ??
-                                      0.0,
-                                  leverage:
-                                      simulationProvider.calculatedLeverage
-                                          ?.toInt() ??
-                                      1,
-                                  entryPrice: _clickPrice!,
-                                );
-                                Future.delayed(
-                                  const Duration(milliseconds: 100),
-                                  () {
-                                    simulationProvider.resumeSimulation();
+                        // Chart Content
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(20),
+                              bottomRight: Radius.circular(20),
+                            ),
+                            child:
+                                Selector<
+                                  SimulationProvider,
+                                  Tuple5<
+                                    List<Trade>,
+                                    int,
+                                    double?,
+                                    double?,
+                                    double?
+                                  >
+                                >(
+                                  selector: (context, provider) => Tuple5(
+                                    allTrades,
+                                    provider.currentCandleIndex,
+                                    provider.manualStopLossPrice,
+                                    provider.manualTakeProfitPrice,
+                                    provider.entryPrice > 0
+                                        ? provider.entryPrice
+                                        : null,
+                                  ),
+                                  builder: (context, data, child) {
+                                    final entryPrice =
+                                        _clickPrice ?? data.item5;
+                                    return TradingViewChart(
+                                      key: _chartKey,
+                                      candles:
+                                          simulationProvider.historicalData,
+                                      trades: data.item1,
+                                      currentCandleIndex: data.item2,
+                                      stopLoss: data.item3,
+                                      takeProfit: data.item4,
+                                      entryPrice: entryPrice,
+                                      slPercent: -_slRiskPercent,
+                                      slValue:
+                                          -(simulationProvider.currentBalance *
+                                              (_slRiskPercent / 100)),
+                                      tpPercent: _tpRiskPercent,
+                                      tpValue:
+                                          simulationProvider.currentBalance *
+                                          (_tpRiskPercent / 100),
+                                      entryValue: simulationProvider.inPosition
+                                          ? simulationProvider.unrealizedPnL
+                                          : 0.0,
+                                      isRunning: simulationProvider
+                                          .isSimulationRunning,
+                                    );
                                   },
-                                );
-                                setState(() {
-                                  _showOrderContainerInline = false;
-                                  _showSlTpOnOrderInline = false;
-                                  _clickPrice = null;
-                                });
-                              }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: Colors.white,
-                          shadowColor: Colors.transparent,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 16,
-                            horizontal: 24,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                                ),
                           ),
                         ),
-                        child: Container(
-                          width: double.infinity,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: _isBuyOrder
-                                  ? [
-                                      const Color(0xFF22C55E),
-                                      const Color(0xFF16A34A),
-                                    ]
-                                  : [
-                                      const Color(0xFFFF6B6B),
-                                      const Color(0xFFDC2626),
-                                    ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    (_isBuyOrder
-                                            ? const Color(0xFF22C55E)
-                                            : const Color(0xFFFF6B6B))
-                                        .withValues(alpha: 0.4),
-                                offset: const Offset(0, 4),
-                                blurRadius: 16,
-                                spreadRadius: -2,
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Icon(
-                                  _isBuyOrder
-                                      ? Icons.trending_up
-                                      : Icons.trending_down,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                _isBuyOrder
-                                    ? 'CONFIRMAR COMPRA'
-                                    : 'CONFIRMAR VENTA',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  fontFamily: 'Inter',
-                                  letterSpacing: 1.0,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    // Position summary - solo mostrar después de ejecutar la orden
-                    if (simulationProvider.inPosition) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[600]!),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              simulationProvider.getPositionSummaryText(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Stop Loss: ${simulationProvider.manualStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            Text(
-                              'Take Profit: ${simulationProvider.manualTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
-                              style: const TextStyle(
-                                color: Colors.green,
-                                fontSize: 12,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(child: const SizedBox(height: 16)),
-          ],
 
-          // --- Controles de compra/venta en la sección media ---
-          if (!_showOrderContainerInline) ...[
-            SliverToBoxAdapter(child: const SizedBox(height: 16)),
-            SliverToBoxAdapter(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1F2937), Color(0xFF111827)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF374151),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      offset: const Offset(0, 6),
-                      blurRadius: 20,
-                      spreadRadius: -2,
+              // Controls Section - Flexible
+              if (_showOrderContainerInline) ...[
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF1F2937),
+                          const Color(0xFF111827),
+                          _isBuyOrder
+                              ? const Color(0xFF22C55E).withValues(alpha: 0.05)
+                              : const Color(0xFFFF6B6B).withValues(alpha: 0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _isBuyOrder
+                            ? const Color(0xFF22C55E).withValues(alpha: 0.3)
+                            : const Color(0xFFFF6B6B).withValues(alpha: 0.3),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          offset: const Offset(0, 8),
+                          blurRadius: 32,
+                          spreadRadius: -4,
+                        ),
+                        BoxShadow(
+                          color: _isBuyOrder
+                              ? const Color(0xFF22C55E).withValues(alpha: 0.2)
+                              : const Color(0xFFFF6B6B).withValues(alpha: 0.2),
+                          offset: const Offset(0, 0),
+                          blurRadius: 2,
+                          spreadRadius: 0,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Enhanced Trading Buttons Row
-                    Row(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              gradient:
-                                  (!simulationProvider.inPosition &&
-                                      simulationProvider.canCalculatePosition())
-                                  ? const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFF22C55E),
-                                        Color(0xFF16A34A),
-                                      ],
-                                    )
-                                  : null,
-                              color:
-                                  (!simulationProvider.inPosition &&
-                                      simulationProvider.canCalculatePosition())
-                                  ? null
-                                  : const Color(0xFF374151),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow:
-                                  (!simulationProvider.inPosition &&
-                                      simulationProvider.canCalculatePosition())
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF22C55E,
-                                        ).withValues(alpha: 0.3),
-                                        offset: const Offset(0, 4),
-                                        blurRadius: 16,
-                                        spreadRadius: -2,
+                        // Enhanced Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: _isBuyOrder
+                                            ? [
+                                                const Color(0xFF22C55E),
+                                                const Color(0xFF16A34A),
+                                              ]
+                                            : [
+                                                const Color(0xFFFF6B6B),
+                                                const Color(0xFFDC2626),
+                                              ],
                                       ),
-                                    ]
-                                  : null,
-                            ),
-                            child: ElevatedButton.icon(
-                              onPressed:
-                                  (!simulationProvider.inPosition &&
-                                      simulationProvider.canCalculatePosition())
-                                  ? () => _showOrderContainer(
-                                      context,
-                                      simulationProvider,
-                                      true,
-                                    )
-                                  : null,
-                              icon: const Icon(Icons.trending_up, size: 22),
-                              label: const Text(
-                                'COMPRAR',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  letterSpacing: 0.5,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _isBuyOrder
+                                              ? const Color(
+                                                  0xFF22C55E,
+                                                ).withValues(alpha: 0.4)
+                                              : const Color(
+                                                  0xFFFF6B6B,
+                                                ).withValues(alpha: 0.4),
+                                          offset: const Offset(0, 4),
+                                          blurRadius: 16,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      _isBuyOrder
+                                          ? Icons.trending_up
+                                          : Icons.trending_down,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _isBuyOrder
+                                            ? 'ORDEN DE COMPRA'
+                                            : 'ORDEN DE VENTA',
+                                        style: TextStyle(
+                                          color: _isBuyOrder
+                                              ? const Color(0xFF22C55E)
+                                              : const Color(0xFFFF6B6B),
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                          fontFamily: 'Inter',
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF374151,
+                                  ).withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFF4B5563),
+                                  ),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.close_rounded,
+                                    color: Color(0xFF94A3B8),
+                                    size: 22,
+                                  ),
+                                  onPressed: () {
+                                    simulationProvider.cancelOrder();
+                                    setState(() {
+                                      _showOrderContainerInline = false;
+                                      _showSlTpOnOrderInline = false;
+                                    });
+                                  },
                                 ),
                               ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                foregroundColor: Colors.white,
-                                shadowColor: Colors.transparent,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 20,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                            ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              gradient:
-                                  (!simulationProvider.inPosition &&
-                                      simulationProvider.canCalculatePosition())
-                                  ? const LinearGradient(
+                        // Enhanced Price Entry Section
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF4B5563),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFF22C55E,
+                                      ).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.price_change_rounded,
+                                      color: Color(0xFF22C55E),
+                                      size: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'PRECIO DE ENTRADA',
+                                        style: TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 11,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '\$${_clickPrice?.toStringAsFixed(5) ?? "--"}',
+                                        style: const TextStyle(
+                                          color: Color(0xFFF8FAFC),
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_clickPrice != null &&
+                            simulationProvider.calculatedPositionSize != null &&
+                            simulationProvider.calculatedPositionSize! > 0) ...[
+                          const SizedBox(height: 12),
+                          // Enhanced SL/TP Display
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
                                         Color(0xFFFF6B6B),
                                         Color(0xFFDC2626),
                                       ],
-                                    )
-                                  : null,
-                              color:
-                                  (!simulationProvider.inPosition &&
-                                      simulationProvider.canCalculatePosition())
-                                  ? null
-                                  : const Color(0xFF374151),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow:
-                                  (!simulationProvider.inPosition &&
-                                      simulationProvider.canCalculatePosition())
-                                  ? [
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
                                       BoxShadow(
                                         color: const Color(
                                           0xFFFF6B6B,
                                         ).withValues(alpha: 0.3),
                                         offset: const Offset(0, 4),
-                                        blurRadius: 16,
+                                        blurRadius: 12,
                                         spreadRadius: -2,
                                       ),
-                                    ]
-                                  : null,
-                            ),
-                            child: ElevatedButton.icon(
-                              onPressed:
-                                  (!simulationProvider.inPosition &&
-                                      simulationProvider.canCalculatePosition())
-                                  ? () => _showOrderContainer(
-                                      context,
-                                      simulationProvider,
-                                      false,
-                                    )
-                                  : null,
-                              icon: const Icon(Icons.trending_down, size: 22),
-                              label: const Text(
-                                'VENDER',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  letterSpacing: 0.5,
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.stop_circle_rounded,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            'STOP LOSS',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '\$${(() {
+                                          final riskAmount = simulationProvider.currentBalance * (_slRiskPercent / 100);
+                                          final priceDistance = riskAmount / simulationProvider.calculatedPositionSize!;
+                                          final slPrice = _isBuyOrder ? _clickPrice! - priceDistance : _clickPrice! + priceDistance;
+                                          return slPrice.toStringAsFixed(5);
+                                        })()}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '-${_slRiskPercent.toStringAsFixed(1)}%',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          fontSize: 10,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                foregroundColor: Colors.white,
-                                shadowColor: Colors.transparent,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 20,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Close Position Button (only show if position is open)
-                    if (simulationProvider.inPosition) ...[
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF374151).withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF4B5563),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(6),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFFF59E0B,
-                                    ).withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFF22C55E),
+                                        Color(0xFF16A34A),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF22C55E,
+                                        ).withValues(alpha: 0.3),
+                                        offset: const Offset(0, 4),
+                                        blurRadius: 12,
+                                        spreadRadius: -2,
+                                      ),
+                                    ],
                                   ),
-                                  child: const Icon(
-                                    Icons.account_balance_wallet,
-                                    color: Color(0xFFF59E0B),
-                                    size: 16,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.trending_up_rounded,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            'TAKE PROFIT',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '\$${(() {
+                                          final potentialAmount = simulationProvider.currentBalance * (_tpRiskPercent / 100);
+                                          final priceDistance = potentialAmount / simulationProvider.calculatedPositionSize!;
+                                          final tpPrice = _isBuyOrder ? _clickPrice! + priceDistance : _clickPrice! - priceDistance;
+                                          return tpPrice.toStringAsFixed(5);
+                                        })()}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '+${_tpRiskPercent.toStringAsFixed(1)}%',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          fontSize: 10,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Posición Activa',
-                                  style: TextStyle(
-                                    color: Color(0xFFF8FAFC),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (_showSlTpOnOrderInline) ...[
+                          const SizedBox(height: 24),
+                          // Enhanced SL/TP Slider Section
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(0xFF4B5563),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // SL/TP Configuration - Simplified
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFF374151),
+                                        Color(0xFF1F2937),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Color(0xFF4B5563),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      // Header
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF3B82F6,
+                                              ).withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.tune_rounded,
+                                              color: Color(0xFF3B82F6),
+                                              size: 16,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            'SL / TP',
+                                            style: TextStyle(
+                                              color: Color(0xFFF8FAFC),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+
+                                      // Stop Loss Row
+                                      Row(
+                                        children: [
+                                          // SL Icon & Label
+                                          Container(
+                                            width: 60,
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFFFF6B6B,
+                                                    ).withValues(alpha: 0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          6,
+                                                        ),
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.stop_circle_rounded,
+                                                    color: Color(0xFFFF6B6B),
+                                                    size: 12,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                const Text(
+                                                  'SL',
+                                                  style: TextStyle(
+                                                    color: Color(0xFF94A3B8),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontFamily: 'Inter',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // SL Slider
+                                          Expanded(
+                                            child: SliderTheme(
+                                              data: SliderTheme.of(context)
+                                                  .copyWith(
+                                                    activeTrackColor:
+                                                        const Color(0xFFFF6B6B),
+                                                    inactiveTrackColor:
+                                                        const Color(
+                                                          0xFFFF6B6B,
+                                                        ).withValues(
+                                                          alpha: 0.2,
+                                                        ),
+                                                    thumbColor: const Color(
+                                                      0xFFFF6B6B,
+                                                    ),
+                                                    overlayColor: const Color(
+                                                      0xFFFF6B6B,
+                                                    ).withValues(alpha: 0.2),
+                                                    thumbShape:
+                                                        const RoundSliderThumbShape(
+                                                          enabledThumbRadius: 6,
+                                                        ),
+                                                    trackHeight: 3,
+                                                  ),
+                                              child: Slider(
+                                                value: _slRiskPercent.clamp(
+                                                  0.1,
+                                                  10,
+                                                ),
+                                                min: 0.1,
+                                                max: 10,
+                                                divisions: 99,
+                                                onChanged: (newPercent) {
+                                                  setState(
+                                                    () => _slRiskPercent =
+                                                        newPercent,
+                                                  );
+                                                  if (simulationProvider
+                                                              .calculatedPositionSize !=
+                                                          null &&
+                                                      simulationProvider
+                                                              .calculatedPositionSize! >
+                                                          0) {
+                                                    final riskAmount =
+                                                        simulationProvider
+                                                            .currentBalance *
+                                                        (_slRiskPercent / 100);
+                                                    final priceDistance =
+                                                        riskAmount /
+                                                        simulationProvider
+                                                            .calculatedPositionSize!;
+                                                    final slPrice = _isBuyOrder
+                                                        ? _clickPrice! -
+                                                              priceDistance
+                                                        : _clickPrice! +
+                                                              priceDistance;
+                                                    simulationProvider
+                                                        .updateManualStopLoss(
+                                                          slPrice,
+                                                        );
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          ),
+
+                                          // SL Value
+                                          Container(
+                                            width: 50,
+                                            child: Text(
+                                              '${_slRiskPercent.toStringAsFixed(1)}%',
+                                              textAlign: TextAlign.end,
+                                              style: const TextStyle(
+                                                color: Color(0xFFFF6B6B),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 12),
+
+                                      // Take Profit Row
+                                      Row(
+                                        children: [
+                                          // TP Icon & Label
+                                          Container(
+                                            width: 60,
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFF22C55E,
+                                                    ).withValues(alpha: 0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          6,
+                                                        ),
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.trending_up_rounded,
+                                                    color: Color(0xFF22C55E),
+                                                    size: 12,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                const Text(
+                                                  'TP',
+                                                  style: TextStyle(
+                                                    color: Color(0xFF94A3B8),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontFamily: 'Inter',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // TP Slider
+                                          Expanded(
+                                            child: SliderTheme(
+                                              data: SliderTheme.of(context)
+                                                  .copyWith(
+                                                    activeTrackColor:
+                                                        const Color(0xFF22C55E),
+                                                    inactiveTrackColor:
+                                                        const Color(
+                                                          0xFF22C55E,
+                                                        ).withValues(
+                                                          alpha: 0.2,
+                                                        ),
+                                                    thumbColor: const Color(
+                                                      0xFF22C55E,
+                                                    ),
+                                                    overlayColor: const Color(
+                                                      0xFF22C55E,
+                                                    ).withValues(alpha: 0.2),
+                                                    thumbShape:
+                                                        const RoundSliderThumbShape(
+                                                          enabledThumbRadius: 6,
+                                                        ),
+                                                    trackHeight: 3,
+                                                  ),
+                                              child: Slider(
+                                                value: _tpRiskPercent.clamp(
+                                                  0.1,
+                                                  20,
+                                                ),
+                                                min: 0.1,
+                                                max: 20,
+                                                divisions: 199,
+                                                onChanged: (newPercent) {
+                                                  setState(
+                                                    () => _tpRiskPercent =
+                                                        newPercent,
+                                                  );
+                                                  if (simulationProvider
+                                                              .calculatedPositionSize !=
+                                                          null &&
+                                                      simulationProvider
+                                                              .calculatedPositionSize! >
+                                                          0) {
+                                                    final potentialAmount =
+                                                        simulationProvider
+                                                            .currentBalance *
+                                                        (_tpRiskPercent / 100);
+                                                    final priceDistance =
+                                                        potentialAmount /
+                                                        simulationProvider
+                                                            .calculatedPositionSize!;
+                                                    final tpPrice = _isBuyOrder
+                                                        ? _clickPrice! +
+                                                              priceDistance
+                                                        : _clickPrice! -
+                                                              priceDistance;
+                                                    simulationProvider
+                                                        .updateManualTakeProfit(
+                                                          tpPrice,
+                                                        );
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          ),
+
+                                          // TP Value
+                                          Container(
+                                            width: 50,
+                                            child: Text(
+                                              '${_tpRiskPercent.toStringAsFixed(1)}%',
+                                              textAlign: TextAlign.end,
+                                              style: const TextStyle(
+                                                color: Color(0xFF22C55E),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 12),
+
+                                      // Risk/Reward Summary
+                                      if (_clickPrice != null &&
+                                          simulationProvider
+                                                  .calculatedPositionSize !=
+                                              null)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF1F2937),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: Color(0xFF374151),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceEvenly,
+                                            children: [
+                                              Column(
+                                                children: [
+                                                  const Text(
+                                                    'RIESGO',
+                                                    style: TextStyle(
+                                                      color: Color(0xFF94A3B8),
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontFamily: 'Inter',
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)}',
+                                                    style: const TextStyle(
+                                                      color: Color(0xFFFF6B6B),
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontFamily: 'Inter',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Container(
+                                                width: 1,
+                                                height: 30,
+                                                color: const Color(0xFF374151),
+                                              ),
+                                              Column(
+                                                children: [
+                                                  const Text(
+                                                    'GANANCIA',
+                                                    style: TextStyle(
+                                                      color: Color(0xFF94A3B8),
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontFamily: 'Inter',
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)}',
+                                                    style: const TextStyle(
+                                                      color: Color(0xFF22C55E),
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontFamily: 'Inter',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Container(
+                                                width: 1,
+                                                height: 30,
+                                                color: const Color(0xFF374151),
+                                              ),
+                                              Column(
+                                                children: [
+                                                  const Text(
+                                                    'R:R',
+                                                    style: TextStyle(
+                                                      color: Color(0xFF94A3B8),
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontFamily: 'Inter',
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '1:${(_tpRiskPercent / _slRiskPercent).toStringAsFixed(1)}',
+                                                    style: const TextStyle(
+                                                      color: Color(0xFF3B82F6),
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontFamily: 'Inter',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                        // Confirm Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed:
+                                simulationProvider.canCalculatePosition() &&
+                                    _clickPrice != null &&
+                                    _slRiskPercent > 0 &&
+                                    _tpRiskPercent > 0
+                                ? () {
+                                    // debugPrint(
+                                    //   '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = $_slRiskPercent, TP % = $_tpRiskPercent',
+                                    // );
+                                    // Calcular precios a partir de los porcentajes de riesgo/potencial
+                                    final riskAmount =
+                                        simulationProvider.currentBalance *
+                                        (_slRiskPercent / 100);
+                                    final tpAmount =
+                                        simulationProvider.currentBalance *
+                                        (_tpRiskPercent / 100);
+                                    final slPrice = _isBuyOrder
+                                        ? _clickPrice! -
+                                              (riskAmount /
+                                                  (simulationProvider
+                                                          .calculatedPositionSize ??
+                                                      1))
+                                        : _clickPrice! +
+                                              (riskAmount /
+                                                  (simulationProvider
+                                                          .calculatedPositionSize ??
+                                                      1));
+                                    final tpPrice = _isBuyOrder
+                                        ? _clickPrice! +
+                                              (tpAmount /
+                                                  (simulationProvider
+                                                          .calculatedPositionSize ??
+                                                      1))
+                                        : _clickPrice! -
+                                              (tpAmount /
+                                                  (simulationProvider
+                                                          .calculatedPositionSize ??
+                                                      1));
+                                    simulationProvider.updateManualStopLoss(
+                                      slPrice,
+                                    );
+                                    simulationProvider.updateManualTakeProfit(
+                                      tpPrice,
+                                    );
+                                    // debugPrint(
+                                    //   '🔥 [CONFIRMAR] Orden ejecutada. SL final = $slPrice, TP final = $tpPrice',
+                                    // );
+                                    simulationProvider.executeManualTrade(
+                                      type: _isBuyOrder ? 'buy' : 'sell',
+                                      amount:
+                                          simulationProvider
+                                              .calculatedPositionSize ??
+                                          0.0,
+                                      leverage:
+                                          simulationProvider.calculatedLeverage
+                                              ?.toInt() ??
+                                          1,
+                                      entryPrice: _clickPrice!,
+                                    );
+                                    Future.delayed(
+                                      const Duration(milliseconds: 100),
+                                      () {
+                                        simulationProvider.resumeSimulation();
+                                      },
+                                    );
+                                    setState(() {
+                                      _showOrderContainerInline = false;
+                                      _showSlTpOnOrderInline = false;
+                                      _clickPrice = null;
+                                    });
+                                  }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shadowColor: Colors.transparent,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 24,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Container(
+                              width: double.infinity,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: _isBuyOrder
+                                      ? [
+                                          const Color(0xFF22C55E),
+                                          const Color(0xFF16A34A),
+                                        ]
+                                      : [
+                                          const Color(0xFFFF6B6B),
+                                          const Color(0xFFDC2626),
+                                        ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        (_isBuyOrder
+                                                ? const Color(0xFF22C55E)
+                                                : const Color(0xFFFF6B6B))
+                                            .withValues(alpha: 0.4),
+                                    offset: const Offset(0, 4),
+                                    blurRadius: 16,
+                                    spreadRadius: -2,
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Icon(
+                                      _isBuyOrder
+                                          ? Icons.trending_up
+                                          : Icons.trending_down,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _isBuyOrder
+                                        ? 'CONFIRMAR COMPRA'
+                                        : 'CONFIRMAR VENTA',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      fontFamily: 'Inter',
+                                      letterSpacing: 1.0,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Position summary - solo mostrar después de ejecutar la orden
+                        if (simulationProvider.inPosition) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[600]!),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  simulationProvider.getPositionSummaryText(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
                                     fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Stop Loss: ${simulationProvider.manualStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 12,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                                Text(
+                                  'Take Profit: ${simulationProvider.manualTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 12,
                                     fontFamily: 'Inter',
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFFFF6B6B),
-                                          Color(0xFFDC2626),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFFFF6B6B,
-                                          ).withValues(alpha: 0.3),
-                                          offset: const Offset(0, 4),
-                                          blurRadius: 12,
-                                          spreadRadius: -2,
-                                        ),
-                                      ],
-                                    ),
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        simulationProvider.closeManualPosition(
-                                          simulationProvider.currentTickPrice,
-                                        );
-                                      },
-                                      icon: const Icon(
-                                        Icons.close_rounded,
-                                        size: 18,
-                                      ),
-                                      label: const Text(
-                                        'CERRAR',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        foregroundColor: Colors.white,
-                                        shadowColor: Colors.transparent,
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(child: const SizedBox(height: 16)),
+              ],
+
+              // --- Controles de compra/venta en la sección media ---
+              if (!_showOrderContainerInline) ...[
+                SliverToBoxAdapter(child: const SizedBox(height: 16)),
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1F2937), Color(0xFF111827)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF374151),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          offset: const Offset(0, 6),
+                          blurRadius: 20,
+                          spreadRadius: -2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Enhanced Trading Buttons Row
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  gradient:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Color(0xFF22C55E),
+                                            Color(0xFF16A34A),
+                                          ],
+                                        )
+                                      : null,
+                                  color:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? null
+                                      : const Color(0xFF374151),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFF22C55E,
+                                            ).withValues(alpha: 0.3),
+                                            offset: const Offset(0, 4),
+                                            blurRadius: 16,
+                                            spreadRadius: -2,
                                           ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                        ]
+                                      : null,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Container(
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFF3B82F6),
-                                          Color(0xFF1D4ED8),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFF3B82F6,
-                                          ).withValues(alpha: 0.3),
-                                          offset: const Offset(0, 4),
-                                          blurRadius: 12,
-                                          spreadRadius: -2,
-                                        ),
-                                      ],
-                                    ),
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        _showManageSLTPContainer(
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? () => _showOrderContainer(
                                           context,
                                           simulationProvider,
-                                        );
-                                      },
-                                      icon: const Icon(
-                                        Icons.tune_rounded,
-                                        size: 18,
-                                      ),
-                                      label: const Text(
-                                        'SL/TP',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        foregroundColor: Colors.white,
-                                        shadowColor: Colors.transparent,
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                      ),
+                                          true,
+                                        )
+                                      : null,
+                                  icon: const Icon(Icons.trending_up, size: 22),
+                                  label: const Text(
+                                    'COMPRAR',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    foregroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                      horizontal: 20,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
                                 ),
-                              ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Container(
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  gradient:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Color(0xFFFF6B6B),
+                                            Color(0xFFDC2626),
+                                          ],
+                                        )
+                                      : null,
+                                  color:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? null
+                                      : const Color(0xFF374151),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFFFF6B6B,
+                                            ).withValues(alpha: 0.3),
+                                            offset: const Offset(0, 4),
+                                            blurRadius: 16,
+                                            spreadRadius: -2,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? () => _showOrderContainer(
+                                          context,
+                                          simulationProvider,
+                                          false,
+                                        )
+                                      : null,
+                                  icon: const Icon(
+                                    Icons.trending_down,
+                                    size: 22,
+                                  ),
+                                  label: const Text(
+                                    'VENDER',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    foregroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                      horizontal: 20,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
 
-              // Debug Button (temporary) - COMMENTED OUT
-              /* 
+                        // Close Position Button (only show if position is open)
+                        if (simulationProvider.inPosition) ...[
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF374151,
+                              ).withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF4B5563),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFF59E0B,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.account_balance_wallet,
+                                        color: Color(0xFFF59E0B),
+                                        size: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Posición Activa',
+                                      style: TextStyle(
+                                        color: Color(0xFFF8FAFC),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFFFF6B6B),
+                                              Color(0xFFDC2626),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFFFF6B6B,
+                                              ).withValues(alpha: 0.3),
+                                              offset: const Offset(0, 4),
+                                              blurRadius: 12,
+                                              spreadRadius: -2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            simulationProvider
+                                                .closeManualPosition(
+                                                  simulationProvider
+                                                      .currentTickPrice,
+                                                );
+                                          },
+                                          icon: const Icon(
+                                            Icons.close_rounded,
+                                            size: 18,
+                                          ),
+                                          label: const Text(
+                                            'CERRAR',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Container(
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFF3B82F6),
+                                              Color(0xFF1D4ED8),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF3B82F6,
+                                              ).withValues(alpha: 0.3),
+                                              offset: const Offset(0, 4),
+                                              blurRadius: 12,
+                                              spreadRadius: -2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            setState(() {
+                                              _showManageSLTPContainer =
+                                                  !_showManageSLTPContainer;
+                                            });
+                                          },
+                                          icon: const Icon(
+                                            Icons.tune_rounded,
+                                            size: 18,
+                                          ),
+                                          label: const Text(
+                                            'SL/TP',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        // Panel de gestión de SL/TP para trades abiertos
+                        if (_showManageSLTPContainer &&
+                            simulationProvider.inPosition) ...[
+                          const SizedBox(height: 20),
+                          _buildManageSLTPPanel(simulationProvider),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // Debug Button (temporary) - COMMENTED OUT
+                  /* 
             if (simulationProvider.setupParametersCalculated) ...[
               Container(
                 padding: const EdgeInsets.all(16),
@@ -2541,9 +3043,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
             ],
             */
 
-              // --- Enhanced Simulation Controls ---
-              // COMENTADO: Los controles de simulación se han movido al header del chart para simplificar la pantalla
-              /*
+                  // --- Enhanced Simulation Controls ---
+                  // COMENTADO: Los controles de simulación se han movido al header del chart para simplificar la pantalla
+                  /*
           if (!_showOrderContainerInline) ...[
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -3103,232 +3605,245 @@ class _SimulationScreenState extends State<SimulationScreen> {
             const SizedBox(height: 16),
           ],
           */
-            ),
-          ],
-
-          // Setup Details Section (below controls)
-          if (simulationProvider.currentSetup != null &&
-              !_showOrderContainerInline &&
-              !_showSLTPContainer) ...[
-            SliverToBoxAdapter(child: const SizedBox(height: 16)),
-            SliverToBoxAdapter(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1F2937), Color(0xFF111827)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFF374151),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      offset: const Offset(0, 6),
-                      blurRadius: 20,
-                      spreadRadius: -2,
-                    ),
-                  ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Enhanced Header
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFF10B981), Color(0xFF059669)],
+              ],
+
+              // Setup Details Section (below controls)
+              if (simulationProvider.currentSetup != null &&
+                  !_showOrderContainerInline &&
+                  !_showSLTPContainer) ...[
+                SliverToBoxAdapter(child: const SizedBox(height: 16)),
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1F2937), Color(0xFF111827)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF374151),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          offset: const Offset(0, 6),
+                          blurRadius: 20,
+                          spreadRadius: -2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Enhanced Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF10B981),
+                                      Color(0xFF059669),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF10B981,
+                                      ).withValues(alpha: 0.3),
+                                      offset: const Offset(0, 4),
+                                      blurRadius: 12,
+                                      spreadRadius: -2,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.settings_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(12),
+                              const SizedBox(width: 16),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Configuración Activa',
+                                    style: TextStyle(
+                                      color: Color(0xFFF8FAFC),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    simulationProvider.currentSetup!.name,
+                                    style: TextStyle(
+                                      color: const Color(0xFF94A3B8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Setup details in compact format
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildCompactSetupDetail(
+                                'Riesgo',
+                                simulationProvider.currentSetup!
+                                    .getRiskPercentDisplay(),
+                                Icons.security,
+                                Colors.orange,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildCompactSetupDetail(
+                                'SL',
+                                simulationProvider.currentSetup!
+                                    .getStopLossDisplay(),
+                                Icons.trending_down,
+                                Colors.red,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildCompactSetupDetail(
+                                'TP',
+                                simulationProvider.currentSetup!
+                                    .getTakeProfitRatioDisplay(),
+                                Icons.trending_up,
+                                Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Enhanced Advanced Rules Section
+                        if (simulationProvider
+                            .currentSetup!
+                            .rules
+                            .isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF111827,
+                              ).withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFF374151,
+                                ).withValues(alpha: 0.5),
+                                width: 1,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(
-                                    0xFF10B981,
-                                  ).withValues(alpha: 0.3),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   offset: const Offset(0, 4),
                                   blurRadius: 12,
                                   spreadRadius: -2,
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              Icons.settings_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Configuración Activa',
-                                style: TextStyle(
-                                  color: Color(0xFFF8FAFC),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                simulationProvider.currentSetup!.name,
-                                style: TextStyle(
-                                  color: const Color(0xFF94A3B8),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Setup details in compact format
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildCompactSetupDetail(
-                            'Riesgo',
-                            simulationProvider.currentSetup!
-                                .getRiskPercentDisplay(),
-                            Icons.security,
-                            Colors.orange,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildCompactSetupDetail(
-                            'SL',
-                            simulationProvider.currentSetup!
-                                .getStopLossDisplay(),
-                            Icons.trending_down,
-                            Colors.red,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildCompactSetupDetail(
-                            'TP',
-                            simulationProvider.currentSetup!
-                                .getTakeProfitRatioDisplay(),
-                            Icons.trending_up,
-                            Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Enhanced Advanced Rules Section
-                    if (simulationProvider.currentSetup!.rules.isNotEmpty) ...[
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF111827).withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(
-                              0xFF374151,
-                            ).withValues(alpha: 0.5),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              offset: const Offset(0, 4),
-                              blurRadius: 12,
-                              spreadRadius: -2,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFFF59E0B),
-                                        Color(0xFFD97706),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFFF59E0B,
-                                        ).withValues(alpha: 0.3),
-                                        offset: const Offset(0, 2),
-                                        blurRadius: 8,
-                                        spreadRadius: -1,
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Color(0xFFF59E0B),
+                                            Color(0xFFD97706),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFFF59E0B,
+                                            ).withValues(alpha: 0.3),
+                                            offset: const Offset(0, 2),
+                                            blurRadius: 8,
+                                            spreadRadius: -1,
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.rule_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
+                                      child: const Icon(
+                                        Icons.rule_rounded,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Reglas Avanzadas',
+                                      style: TextStyle(
+                                        color: Color(0xFFF8FAFC),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Reglas Avanzadas',
-                                  style: TextStyle(
-                                    color: Color(0xFFF8FAFC),
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily: 'Inter',
+                                const SizedBox(height: 16),
+
+                                // Enhanced Scrollable rules list
+                                Container(
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 200,
+                                  ),
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      children: simulationProvider
+                                          .currentSetup!
+                                          .rules
+                                          .map(
+                                            (rule) =>
+                                                _buildCompactRuleItem(rule),
+                                          )
+                                          .toList(),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
-
-                            // Enhanced Scrollable rules list
-                            Container(
-                              constraints: const BoxConstraints(maxHeight: 200),
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  children: simulationProvider
-                                      .currentSetup!
-                                      .rules
-                                      .map(
-                                        (rule) => _buildCompactRuleItem(rule),
-                                      )
-                                      .toList(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            ],
+          ),
         ],
       ),
     );
