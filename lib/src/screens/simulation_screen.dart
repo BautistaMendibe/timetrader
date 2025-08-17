@@ -1923,14 +1923,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
                           const SizedBox(height: 24),
                           // Enhanced SL/TP Slider Section
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [Color(0xFF374151), Color(0xFF1F2937)],
                               ),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: const Color(0xFF4B5563),
                                 width: 1.5,
@@ -1941,7 +1941,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                               children: [
                                 // SL/TP Configuration - Simplified
                                 Container(
-                                  padding: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       begin: Alignment.topLeft,
@@ -1951,7 +1951,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                         Color(0xFF1F2937),
                                       ],
                                     ),
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: Color(0xFF4B5563),
                                     ),
@@ -1962,45 +1962,45 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                       Row(
                                         children: [
                                           Container(
-                                            padding: const EdgeInsets.all(6),
+                                            padding: const EdgeInsets.all(4),
                                             decoration: BoxDecoration(
                                               color: const Color(
                                                 0xFF3B82F6,
                                               ).withValues(alpha: 0.1),
                                               borderRadius:
-                                                  BorderRadius.circular(8),
+                                                  BorderRadius.circular(6),
                                             ),
                                             child: const Icon(
                                               Icons.tune_rounded,
                                               color: Color(0xFF3B82F6),
-                                              size: 16,
+                                              size: 14,
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 6),
                                           const Text(
                                             'SL / TP',
                                             style: TextStyle(
                                               color: Color(0xFFF8FAFC),
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               fontWeight: FontWeight.w700,
                                               fontFamily: 'Inter',
                                             ),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 16),
+                                      const SizedBox(height: 12),
 
                                       // Stop Loss Row
                                       Row(
                                         children: [
                                           // SL Icon & Label
                                           Container(
-                                            width: 60,
+                                            width: 50,
                                             child: Row(
                                               children: [
                                                 Container(
                                                   padding: const EdgeInsets.all(
-                                                    4,
+                                                    3,
                                                   ),
                                                   decoration: BoxDecoration(
                                                     color: const Color(
@@ -2008,21 +2008,21 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     ).withValues(alpha: 0.1),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                          6,
+                                                          4,
                                                         ),
                                                   ),
                                                   child: const Icon(
                                                     Icons.stop_circle_rounded,
                                                     color: Color(0xFFFF6B6B),
-                                                    size: 12,
+                                                    size: 10,
                                                   ),
                                                 ),
-                                                const SizedBox(width: 6),
+                                                const SizedBox(width: 4),
                                                 const Text(
                                                   'SL',
                                                   style: TextStyle(
                                                     color: Color(0xFF94A3B8),
-                                                    fontSize: 12,
+                                                    fontSize: 10,
                                                     fontWeight: FontWeight.w600,
                                                     fontFamily: 'Inter',
                                                   ),
@@ -2030,6 +2030,70 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               ],
                                             ),
                                           ),
+
+                                          // SL Decrease Button
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFFFF6B6B,
+                                              ).withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              border: Border.all(
+                                                color: const Color(
+                                                  0xFFFF6B6B,
+                                                ).withValues(alpha: 0.3),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: IconButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  _slRiskPercent =
+                                                      (_slRiskPercent - 0.1)
+                                                          .clamp(0.1, 10);
+                                                });
+                                                if (simulationProvider
+                                                            .calculatedPositionSize !=
+                                                        null &&
+                                                    simulationProvider
+                                                            .calculatedPositionSize! >
+                                                        0) {
+                                                  final riskAmount =
+                                                      simulationProvider
+                                                          .currentBalance *
+                                                      (_slRiskPercent / 100);
+                                                  final priceDistance =
+                                                      riskAmount /
+                                                      simulationProvider
+                                                          .calculatedPositionSize!;
+                                                  final slPrice = _isBuyOrder
+                                                      ? _clickPrice! -
+                                                            priceDistance
+                                                      : _clickPrice! +
+                                                            priceDistance;
+                                                  simulationProvider
+                                                      .updateManualStopLoss(
+                                                        slPrice,
+                                                      );
+                                                }
+                                              },
+                                              icon: const Icon(
+                                                Icons.remove,
+                                                color: Color(0xFFFF6B6B),
+                                                size: 12,
+                                              ),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(
+                                                minWidth: 24,
+                                                minHeight: 24,
+                                              ),
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 4),
 
                                           // SL Slider
                                           Expanded(
@@ -2052,9 +2116,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     ).withValues(alpha: 0.2),
                                                     thumbShape:
                                                         const RoundSliderThumbShape(
-                                                          enabledThumbRadius: 6,
+                                                          enabledThumbRadius: 5,
                                                         ),
-                                                    trackHeight: 3,
+                                                    trackHeight: 2,
                                                   ),
                                               child: Slider(
                                                 value: _slRiskPercent.clamp(
@@ -2098,15 +2162,79 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                             ),
                                           ),
 
+                                          const SizedBox(width: 4),
+
+                                          // SL Increase Button
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFFFF6B6B,
+                                              ).withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              border: Border.all(
+                                                color: const Color(
+                                                  0xFFFF6B6B,
+                                                ).withValues(alpha: 0.3),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: IconButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  _slRiskPercent =
+                                                      (_slRiskPercent + 0.1)
+                                                          .clamp(0.1, 10);
+                                                });
+                                                if (simulationProvider
+                                                            .calculatedPositionSize !=
+                                                        null &&
+                                                    simulationProvider
+                                                            .calculatedPositionSize! >
+                                                        0) {
+                                                  final riskAmount =
+                                                      simulationProvider
+                                                          .currentBalance *
+                                                      (_slRiskPercent / 100);
+                                                  final priceDistance =
+                                                      riskAmount /
+                                                      simulationProvider
+                                                          .calculatedPositionSize!;
+                                                  final slPrice = _isBuyOrder
+                                                      ? _clickPrice! -
+                                                            priceDistance
+                                                      : _clickPrice! +
+                                                            priceDistance;
+                                                  simulationProvider
+                                                      .updateManualStopLoss(
+                                                        slPrice,
+                                                      );
+                                                }
+                                              },
+                                              icon: const Icon(
+                                                Icons.add,
+                                                color: Color(0xFFFF6B6B),
+                                                size: 12,
+                                              ),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(
+                                                minWidth: 24,
+                                                minHeight: 24,
+                                              ),
+                                            ),
+                                          ),
+
                                           // SL Value
                                           Container(
-                                            width: 50,
+                                            width: 45,
                                             child: Text(
                                               '${_slRiskPercent.toStringAsFixed(1)}%',
                                               textAlign: TextAlign.end,
                                               style: const TextStyle(
                                                 color: Color(0xFFFF6B6B),
-                                                fontSize: 12,
+                                                fontSize: 11,
                                                 fontWeight: FontWeight.w600,
                                                 fontFamily: 'Inter',
                                               ),
@@ -2115,19 +2243,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                         ],
                                       ),
 
-                                      const SizedBox(height: 12),
+                                      const SizedBox(height: 8),
 
                                       // Take Profit Row
                                       Row(
                                         children: [
                                           // TP Icon & Label
                                           Container(
-                                            width: 60,
+                                            width: 50,
                                             child: Row(
                                               children: [
                                                 Container(
                                                   padding: const EdgeInsets.all(
-                                                    4,
+                                                    3,
                                                   ),
                                                   decoration: BoxDecoration(
                                                     color: const Color(
@@ -2135,21 +2263,21 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     ).withValues(alpha: 0.1),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                          6,
+                                                          4,
                                                         ),
                                                   ),
                                                   child: const Icon(
                                                     Icons.trending_up_rounded,
                                                     color: Color(0xFF22C55E),
-                                                    size: 12,
+                                                    size: 10,
                                                   ),
                                                 ),
-                                                const SizedBox(width: 6),
+                                                const SizedBox(width: 4),
                                                 const Text(
                                                   'TP',
                                                   style: TextStyle(
                                                     color: Color(0xFF94A3B8),
-                                                    fontSize: 12,
+                                                    fontSize: 10,
                                                     fontWeight: FontWeight.w600,
                                                     fontFamily: 'Inter',
                                                   ),
@@ -2157,6 +2285,70 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               ],
                                             ),
                                           ),
+
+                                          // TP Decrease Button
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF22C55E,
+                                              ).withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              border: Border.all(
+                                                color: const Color(
+                                                  0xFF22C55E,
+                                                ).withValues(alpha: 0.3),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: IconButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  _tpRiskPercent =
+                                                      (_tpRiskPercent - 0.1)
+                                                          .clamp(0.1, 20);
+                                                });
+                                                if (simulationProvider
+                                                            .calculatedPositionSize !=
+                                                        null &&
+                                                    simulationProvider
+                                                            .calculatedPositionSize! >
+                                                        0) {
+                                                  final potentialAmount =
+                                                      simulationProvider
+                                                          .currentBalance *
+                                                      (_tpRiskPercent / 100);
+                                                  final priceDistance =
+                                                      potentialAmount /
+                                                      simulationProvider
+                                                          .calculatedPositionSize!;
+                                                  final tpPrice = _isBuyOrder
+                                                      ? _clickPrice! +
+                                                            priceDistance
+                                                      : _clickPrice! -
+                                                            priceDistance;
+                                                  simulationProvider
+                                                      .updateManualTakeProfit(
+                                                        tpPrice,
+                                                      );
+                                                }
+                                              },
+                                              icon: const Icon(
+                                                Icons.remove,
+                                                color: Color(0xFF22C55E),
+                                                size: 12,
+                                              ),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(
+                                                minWidth: 24,
+                                                minHeight: 24,
+                                              ),
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 4),
 
                                           // TP Slider
                                           Expanded(
@@ -2179,9 +2371,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     ).withValues(alpha: 0.2),
                                                     thumbShape:
                                                         const RoundSliderThumbShape(
-                                                          enabledThumbRadius: 6,
+                                                          enabledThumbRadius: 5,
                                                         ),
-                                                    trackHeight: 3,
+                                                    trackHeight: 2,
                                                   ),
                                               child: Slider(
                                                 value: _tpRiskPercent.clamp(
@@ -2225,15 +2417,79 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                             ),
                                           ),
 
+                                          const SizedBox(width: 4),
+
+                                          // TP Increase Button
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF22C55E,
+                                              ).withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              border: Border.all(
+                                                color: const Color(
+                                                  0xFF22C55E,
+                                                ).withValues(alpha: 0.3),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: IconButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  _tpRiskPercent =
+                                                      (_tpRiskPercent + 0.1)
+                                                          .clamp(0.1, 20);
+                                                });
+                                                if (simulationProvider
+                                                            .calculatedPositionSize !=
+                                                        null &&
+                                                    simulationProvider
+                                                            .calculatedPositionSize! >
+                                                        0) {
+                                                  final potentialAmount =
+                                                      simulationProvider
+                                                          .currentBalance *
+                                                      (_tpRiskPercent / 100);
+                                                  final priceDistance =
+                                                      potentialAmount /
+                                                      simulationProvider
+                                                          .calculatedPositionSize!;
+                                                  final tpPrice = _isBuyOrder
+                                                      ? _clickPrice! +
+                                                            priceDistance
+                                                      : _clickPrice! -
+                                                            priceDistance;
+                                                  simulationProvider
+                                                      .updateManualTakeProfit(
+                                                        tpPrice,
+                                                      );
+                                                }
+                                              },
+                                              icon: const Icon(
+                                                Icons.add,
+                                                color: Color(0xFF22C55E),
+                                                size: 12,
+                                              ),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(
+                                                minWidth: 24,
+                                                minHeight: 24,
+                                              ),
+                                            ),
+                                          ),
+
                                           // TP Value
                                           Container(
-                                            width: 50,
+                                            width: 45,
                                             child: Text(
                                               '${_tpRiskPercent.toStringAsFixed(1)}%',
                                               textAlign: TextAlign.end,
                                               style: const TextStyle(
                                                 color: Color(0xFF22C55E),
-                                                fontSize: 12,
+                                                fontSize: 11,
                                                 fontWeight: FontWeight.w600,
                                                 fontFamily: 'Inter',
                                               ),
@@ -2242,7 +2498,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                         ],
                                       ),
 
-                                      const SizedBox(height: 12),
+                                      const SizedBox(height: 8),
 
                                       // Risk/Reward Summary
                                       if (_clickPrice != null &&
@@ -2251,13 +2507,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               null)
                                         Container(
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 8,
+                                            horizontal: 10,
+                                            vertical: 6,
                                           ),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFF1F2937),
                                             borderRadius: BorderRadius.circular(
-                                              8,
+                                              6,
                                             ),
                                             border: Border.all(
                                               color: Color(0xFF374151),
@@ -2273,7 +2529,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     'RIESGO',
                                                     style: TextStyle(
                                                       color: Color(0xFF94A3B8),
-                                                      fontSize: 10,
+                                                      fontSize: 8,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                       fontFamily: 'Inter',
@@ -2283,7 +2539,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     '\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)}',
                                                     style: const TextStyle(
                                                       color: Color(0xFFFF6B6B),
-                                                      fontSize: 12,
+                                                      fontSize: 10,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontFamily: 'Inter',
@@ -2293,7 +2549,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               ),
                                               Container(
                                                 width: 1,
-                                                height: 30,
+                                                height: 24,
                                                 color: const Color(0xFF374151),
                                               ),
                                               Column(
@@ -2302,7 +2558,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     'GANANCIA',
                                                     style: TextStyle(
                                                       color: Color(0xFF94A3B8),
-                                                      fontSize: 10,
+                                                      fontSize: 8,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                       fontFamily: 'Inter',
@@ -2312,7 +2568,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     '\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)}',
                                                     style: const TextStyle(
                                                       color: Color(0xFF22C55E),
-                                                      fontSize: 12,
+                                                      fontSize: 10,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontFamily: 'Inter',
@@ -2322,7 +2578,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                               ),
                                               Container(
                                                 width: 1,
-                                                height: 30,
+                                                height: 24,
                                                 color: const Color(0xFF374151),
                                               ),
                                               Column(
@@ -2331,7 +2587,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     'R:R',
                                                     style: TextStyle(
                                                       color: Color(0xFF94A3B8),
-                                                      fontSize: 10,
+                                                      fontSize: 8,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                       fontFamily: 'Inter',
@@ -2341,7 +2597,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                     '1:${(_tpRiskPercent / _slRiskPercent).toStringAsFixed(1)}',
                                                     style: const TextStyle(
                                                       color: Color(0xFF3B82F6),
-                                                      fontSize: 12,
+                                                      fontSize: 10,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontFamily: 'Inter',
