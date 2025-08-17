@@ -1921,7 +1921,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         ],
                         if (_showSlTpOnOrderInline) ...[
                           const SizedBox(height: 24),
-                          // Enhanced SL/TP Slider Section
+                          // Enhanced SL/TP Slider Section - Single Container
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -1939,678 +1939,610 @@ class _SimulationScreenState extends State<SimulationScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // SL/TP Configuration - Simplified
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFF374151),
-                                        Color(0xFF1F2937),
-                                      ],
+                                // Header
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF3B82F6,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(
+                                        Icons.tune_rounded,
+                                        color: Color(0xFF3B82F6),
+                                        size: 14,
+                                      ),
                                     ),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Color(0xFF4B5563),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'SL / TP',
+                                      style: TextStyle(
+                                        color: Color(0xFFF8FAFC),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter',
+                                      ),
                                     ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      // Header
-                                      Row(
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Stop Loss Row
+                                Row(
+                                  children: [
+                                    // SL Icon & Label
+                                    Container(
+                                      width: 50,
+                                      child: Row(
                                         children: [
                                           Container(
-                                            padding: const EdgeInsets.all(4),
+                                            padding: const EdgeInsets.all(3),
                                             decoration: BoxDecoration(
                                               color: const Color(
-                                                0xFF3B82F6,
+                                                0xFFFF6B6B,
                                               ).withValues(alpha: 0.1),
                                               borderRadius:
-                                                  BorderRadius.circular(6),
+                                                  BorderRadius.circular(4),
                                             ),
                                             child: const Icon(
-                                              Icons.tune_rounded,
-                                              color: Color(0xFF3B82F6),
-                                              size: 14,
+                                              Icons.stop_circle_rounded,
+                                              color: Color(0xFFFF6B6B),
+                                              size: 10,
                                             ),
                                           ),
-                                          const SizedBox(width: 6),
+                                          const SizedBox(width: 4),
                                           const Text(
-                                            'SL / TP',
+                                            'SL',
                                             style: TextStyle(
-                                              color: Color(0xFFF8FAFC),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF94A3B8),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
                                               fontFamily: 'Inter',
                                             ),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 12),
+                                    ),
 
-                                      // Stop Loss Row
-                                      Row(
-                                        children: [
-                                          // SL Icon & Label
-                                          Container(
-                                            width: 50,
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  padding: const EdgeInsets.all(
-                                                    3,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(
-                                                      0xFFFF6B6B,
-                                                    ).withValues(alpha: 0.1),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          4,
-                                                        ),
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.stop_circle_rounded,
-                                                    color: Color(0xFFFF6B6B),
-                                                    size: 10,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                const Text(
-                                                  'SL',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF94A3B8),
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontFamily: 'Inter',
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-
-                                          // SL Decrease Button
-                                          Container(
-                                            width: 24,
-                                            height: 24,
-                                            decoration: BoxDecoration(
-                                              color: const Color(
-                                                0xFFFF6B6B,
-                                              ).withValues(alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              border: Border.all(
-                                                color: const Color(
-                                                  0xFFFF6B6B,
-                                                ).withValues(alpha: 0.3),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: IconButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  _slRiskPercent =
-                                                      (_slRiskPercent - 0.1)
-                                                          .clamp(0.1, 10);
-                                                });
-                                                if (simulationProvider
-                                                            .calculatedPositionSize !=
-                                                        null &&
-                                                    simulationProvider
-                                                            .calculatedPositionSize! >
-                                                        0) {
-                                                  final riskAmount =
-                                                      simulationProvider
-                                                          .currentBalance *
-                                                      (_slRiskPercent / 100);
-                                                  final priceDistance =
-                                                      riskAmount /
-                                                      simulationProvider
-                                                          .calculatedPositionSize!;
-                                                  final slPrice = _isBuyOrder
-                                                      ? _clickPrice! -
-                                                            priceDistance
-                                                      : _clickPrice! +
-                                                            priceDistance;
-                                                  simulationProvider
-                                                      .updateManualStopLoss(
-                                                        slPrice,
-                                                      );
-                                                }
-                                              },
-                                              icon: const Icon(
-                                                Icons.remove,
-                                                color: Color(0xFFFF6B6B),
-                                                size: 12,
-                                              ),
-                                              padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(
-                                                minWidth: 24,
-                                                minHeight: 24,
-                                              ),
-                                            ),
-                                          ),
-
-                                          const SizedBox(width: 4),
-
-                                          // SL Slider
-                                          Expanded(
-                                            child: SliderTheme(
-                                              data: SliderTheme.of(context)
-                                                  .copyWith(
-                                                    activeTrackColor:
-                                                        const Color(0xFFFF6B6B),
-                                                    inactiveTrackColor:
-                                                        const Color(
-                                                          0xFFFF6B6B,
-                                                        ).withValues(
-                                                          alpha: 0.2,
-                                                        ),
-                                                    thumbColor: const Color(
-                                                      0xFFFF6B6B,
-                                                    ),
-                                                    overlayColor: const Color(
-                                                      0xFFFF6B6B,
-                                                    ).withValues(alpha: 0.2),
-                                                    thumbShape:
-                                                        const RoundSliderThumbShape(
-                                                          enabledThumbRadius: 5,
-                                                        ),
-                                                    trackHeight: 2,
-                                                  ),
-                                              child: Slider(
-                                                value: _slRiskPercent.clamp(
+                                    // SL Decrease Button
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFFF6B6B,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFFFF6B6B,
+                                          ).withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _slRiskPercent =
+                                                (_slRiskPercent - 0.1).clamp(
                                                   0.1,
                                                   10,
-                                                ),
-                                                min: 0.1,
-                                                max: 10,
-                                                divisions: 99,
-                                                onChanged: (newPercent) {
-                                                  setState(
-                                                    () => _slRiskPercent =
-                                                        newPercent,
-                                                  );
-                                                  if (simulationProvider
-                                                              .calculatedPositionSize !=
-                                                          null &&
-                                                      simulationProvider
-                                                              .calculatedPositionSize! >
-                                                          0) {
-                                                    final riskAmount =
-                                                        simulationProvider
-                                                            .currentBalance *
-                                                        (_slRiskPercent / 100);
-                                                    final priceDistance =
-                                                        riskAmount /
-                                                        simulationProvider
-                                                            .calculatedPositionSize!;
-                                                    final slPrice = _isBuyOrder
-                                                        ? _clickPrice! -
-                                                              priceDistance
-                                                        : _clickPrice! +
-                                                              priceDistance;
-                                                    simulationProvider
-                                                        .updateManualStopLoss(
-                                                          slPrice,
-                                                        );
-                                                  }
-                                                },
-                                              ),
-                                            ),
-                                          ),
-
-                                          const SizedBox(width: 4),
-
-                                          // SL Increase Button
-                                          Container(
-                                            width: 24,
-                                            height: 24,
-                                            decoration: BoxDecoration(
-                                              color: const Color(
-                                                0xFFFF6B6B,
-                                              ).withValues(alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              border: Border.all(
-                                                color: const Color(
-                                                  0xFFFF6B6B,
-                                                ).withValues(alpha: 0.3),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: IconButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  _slRiskPercent =
-                                                      (_slRiskPercent + 0.1)
-                                                          .clamp(0.1, 10);
-                                                });
-                                                if (simulationProvider
-                                                            .calculatedPositionSize !=
-                                                        null &&
-                                                    simulationProvider
-                                                            .calculatedPositionSize! >
-                                                        0) {
-                                                  final riskAmount =
-                                                      simulationProvider
-                                                          .currentBalance *
-                                                      (_slRiskPercent / 100);
-                                                  final priceDistance =
-                                                      riskAmount /
-                                                      simulationProvider
-                                                          .calculatedPositionSize!;
-                                                  final slPrice = _isBuyOrder
-                                                      ? _clickPrice! -
-                                                            priceDistance
-                                                      : _clickPrice! +
-                                                            priceDistance;
-                                                  simulationProvider
-                                                      .updateManualStopLoss(
-                                                        slPrice,
-                                                      );
-                                                }
-                                              },
-                                              icon: const Icon(
-                                                Icons.add,
-                                                color: Color(0xFFFF6B6B),
-                                                size: 12,
-                                              ),
-                                              padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(
-                                                minWidth: 24,
-                                                minHeight: 24,
-                                              ),
-                                            ),
-                                          ),
-
-                                          // SL Value
-                                          Container(
-                                            width: 45,
-                                            child: Text(
-                                              '${_slRiskPercent.toStringAsFixed(1)}%',
-                                              textAlign: TextAlign.end,
-                                              style: const TextStyle(
-                                                color: Color(0xFFFF6B6B),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                fontFamily: 'Inter',
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+                                                );
+                                          });
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
+                                              simulationProvider
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final riskAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_slRiskPercent / 100);
+                                            final priceDistance =
+                                                riskAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final slPrice = _isBuyOrder
+                                                ? _clickPrice! - priceDistance
+                                                : _clickPrice! + priceDistance;
+                                            simulationProvider
+                                                .updateManualStopLoss(slPrice);
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          Icons.remove,
+                                          color: Color(0xFFFF6B6B),
+                                          size: 12,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
                                       ),
+                                    ),
 
-                                      const SizedBox(height: 8),
+                                    const SizedBox(width: 4),
 
-                                      // Take Profit Row
-                                      Row(
-                                        children: [
-                                          // TP Icon & Label
-                                          Container(
-                                            width: 50,
-                                            child: Row(
-                                              children: [
-                                                Container(
-                                                  padding: const EdgeInsets.all(
-                                                    3,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(
-                                                      0xFF22C55E,
-                                                    ).withValues(alpha: 0.1),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          4,
-                                                        ),
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.trending_up_rounded,
-                                                    color: Color(0xFF22C55E),
-                                                    size: 10,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                const Text(
-                                                  'TP',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF94A3B8),
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontFamily: 'Inter',
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                    // SL Slider
+                                    Expanded(
+                                      child: SliderTheme(
+                                        data: SliderTheme.of(context).copyWith(
+                                          activeTrackColor: const Color(
+                                            0xFFFF6B6B,
                                           ),
+                                          inactiveTrackColor: const Color(
+                                            0xFFFF6B6B,
+                                          ).withValues(alpha: 0.2),
+                                          thumbColor: const Color(0xFFFF6B6B),
+                                          overlayColor: const Color(
+                                            0xFFFF6B6B,
+                                          ).withValues(alpha: 0.2),
+                                          thumbShape:
+                                              const RoundSliderThumbShape(
+                                                enabledThumbRadius: 5,
+                                              ),
+                                          trackHeight: 2,
+                                        ),
+                                        child: Slider(
+                                          value: _slRiskPercent.clamp(0.1, 10),
+                                          min: 0.1,
+                                          max: 10,
+                                          divisions: 99,
+                                          onChanged: (newPercent) {
+                                            setState(
+                                              () => _slRiskPercent = newPercent,
+                                            );
+                                            if (simulationProvider
+                                                        .calculatedPositionSize !=
+                                                    null &&
+                                                simulationProvider
+                                                        .calculatedPositionSize! >
+                                                    0) {
+                                              final riskAmount =
+                                                  simulationProvider
+                                                      .currentBalance *
+                                                  (_slRiskPercent / 100);
+                                              final priceDistance =
+                                                  riskAmount /
+                                                  simulationProvider
+                                                      .calculatedPositionSize!;
+                                              final slPrice = _isBuyOrder
+                                                  ? _clickPrice! - priceDistance
+                                                  : _clickPrice! +
+                                                        priceDistance;
+                                              simulationProvider
+                                                  .updateManualStopLoss(
+                                                    slPrice,
+                                                  );
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
 
-                                          // TP Decrease Button
+                                    const SizedBox(width: 4),
+
+                                    // SL Increase Button
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFFF6B6B,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFFFF6B6B,
+                                          ).withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _slRiskPercent =
+                                                (_slRiskPercent + 0.1).clamp(
+                                                  0.1,
+                                                  10,
+                                                );
+                                          });
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
+                                              simulationProvider
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final riskAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_slRiskPercent / 100);
+                                            final priceDistance =
+                                                riskAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final slPrice = _isBuyOrder
+                                                ? _clickPrice! - priceDistance
+                                                : _clickPrice! + priceDistance;
+                                            simulationProvider
+                                                .updateManualStopLoss(slPrice);
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: Color(0xFFFF6B6B),
+                                          size: 12,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
+                                      ),
+                                    ),
+
+                                    // SL Value
+                                    Container(
+                                      width: 45,
+                                      child: Text(
+                                        '${_slRiskPercent.toStringAsFixed(1)}%',
+                                        textAlign: TextAlign.end,
+                                        style: const TextStyle(
+                                          color: Color(0xFFFF6B6B),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Take Profit Row
+                                Row(
+                                  children: [
+                                    // TP Icon & Label
+                                    Container(
+                                      width: 50,
+                                      child: Row(
+                                        children: [
                                           Container(
-                                            width: 24,
-                                            height: 24,
+                                            padding: const EdgeInsets.all(3),
                                             decoration: BoxDecoration(
                                               color: const Color(
                                                 0xFF22C55E,
                                               ).withValues(alpha: 0.1),
                                               borderRadius:
                                                   BorderRadius.circular(4),
-                                              border: Border.all(
-                                                color: const Color(
-                                                  0xFF22C55E,
-                                                ).withValues(alpha: 0.3),
-                                                width: 1,
-                                              ),
                                             ),
-                                            child: IconButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  _tpRiskPercent =
-                                                      (_tpRiskPercent - 0.1)
-                                                          .clamp(0.1, 20);
-                                                });
-                                                if (simulationProvider
-                                                            .calculatedPositionSize !=
-                                                        null &&
-                                                    simulationProvider
-                                                            .calculatedPositionSize! >
-                                                        0) {
-                                                  final potentialAmount =
-                                                      simulationProvider
-                                                          .currentBalance *
-                                                      (_tpRiskPercent / 100);
-                                                  final priceDistance =
-                                                      potentialAmount /
-                                                      simulationProvider
-                                                          .calculatedPositionSize!;
-                                                  final tpPrice = _isBuyOrder
-                                                      ? _clickPrice! +
-                                                            priceDistance
-                                                      : _clickPrice! -
-                                                            priceDistance;
-                                                  simulationProvider
-                                                      .updateManualTakeProfit(
-                                                        tpPrice,
-                                                      );
-                                                }
-                                              },
-                                              icon: const Icon(
-                                                Icons.remove,
-                                                color: Color(0xFF22C55E),
-                                                size: 12,
-                                              ),
-                                              padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(
-                                                minWidth: 24,
-                                                minHeight: 24,
-                                              ),
+                                            child: const Icon(
+                                              Icons.trending_up_rounded,
+                                              color: Color(0xFF22C55E),
+                                              size: 10,
                                             ),
                                           ),
-
                                           const SizedBox(width: 4),
+                                          const Text(
+                                            'TP',
+                                            style: TextStyle(
+                                              color: Color(0xFF94A3B8),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
 
-                                          // TP Slider
-                                          Expanded(
-                                            child: SliderTheme(
-                                              data: SliderTheme.of(context)
-                                                  .copyWith(
-                                                    activeTrackColor:
-                                                        const Color(0xFF22C55E),
-                                                    inactiveTrackColor:
-                                                        const Color(
-                                                          0xFF22C55E,
-                                                        ).withValues(
-                                                          alpha: 0.2,
-                                                        ),
-                                                    thumbColor: const Color(
-                                                      0xFF22C55E,
-                                                    ),
-                                                    overlayColor: const Color(
-                                                      0xFF22C55E,
-                                                    ).withValues(alpha: 0.2),
-                                                    thumbShape:
-                                                        const RoundSliderThumbShape(
-                                                          enabledThumbRadius: 5,
-                                                        ),
-                                                    trackHeight: 2,
-                                                  ),
-                                              child: Slider(
-                                                value: _tpRiskPercent.clamp(
+                                    // TP Decrease Button
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF22C55E,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFF22C55E,
+                                          ).withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _tpRiskPercent =
+                                                (_tpRiskPercent - 0.1).clamp(
                                                   0.1,
                                                   20,
-                                                ),
-                                                min: 0.1,
-                                                max: 20,
-                                                divisions: 199,
-                                                onChanged: (newPercent) {
-                                                  setState(
-                                                    () => _tpRiskPercent =
-                                                        newPercent,
-                                                  );
-                                                  if (simulationProvider
-                                                              .calculatedPositionSize !=
-                                                          null &&
-                                                      simulationProvider
-                                                              .calculatedPositionSize! >
-                                                          0) {
-                                                    final potentialAmount =
-                                                        simulationProvider
-                                                            .currentBalance *
-                                                        (_tpRiskPercent / 100);
-                                                    final priceDistance =
-                                                        potentialAmount /
-                                                        simulationProvider
-                                                            .calculatedPositionSize!;
-                                                    final tpPrice = _isBuyOrder
-                                                        ? _clickPrice! +
-                                                              priceDistance
-                                                        : _clickPrice! -
-                                                              priceDistance;
-                                                    simulationProvider
-                                                        .updateManualTakeProfit(
-                                                          tpPrice,
-                                                        );
-                                                  }
-                                                },
-                                              ),
-                                            ),
+                                                );
+                                          });
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
+                                              simulationProvider
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final potentialAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_tpRiskPercent / 100);
+                                            final priceDistance =
+                                                potentialAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final tpPrice = _isBuyOrder
+                                                ? _clickPrice! + priceDistance
+                                                : _clickPrice! - priceDistance;
+                                            simulationProvider
+                                                .updateManualTakeProfit(
+                                                  tpPrice,
+                                                );
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          Icons.remove,
+                                          color: Color(0xFF22C55E),
+                                          size: 12,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: 4),
+
+                                    // TP Slider
+                                    Expanded(
+                                      child: SliderTheme(
+                                        data: SliderTheme.of(context).copyWith(
+                                          activeTrackColor: const Color(
+                                            0xFF22C55E,
                                           ),
-
-                                          const SizedBox(width: 4),
-
-                                          // TP Increase Button
-                                          Container(
-                                            width: 24,
-                                            height: 24,
-                                            decoration: BoxDecoration(
-                                              color: const Color(
-                                                0xFF22C55E,
-                                              ).withValues(alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              border: Border.all(
-                                                color: const Color(
-                                                  0xFF22C55E,
-                                                ).withValues(alpha: 0.3),
-                                                width: 1,
+                                          inactiveTrackColor: const Color(
+                                            0xFF22C55E,
+                                          ).withValues(alpha: 0.2),
+                                          thumbColor: const Color(0xFF22C55E),
+                                          overlayColor: const Color(
+                                            0xFF22C55E,
+                                          ).withValues(alpha: 0.2),
+                                          thumbShape:
+                                              const RoundSliderThumbShape(
+                                                enabledThumbRadius: 5,
                                               ),
-                                            ),
-                                            child: IconButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  _tpRiskPercent =
-                                                      (_tpRiskPercent + 0.1)
-                                                          .clamp(0.1, 20);
-                                                });
-                                                if (simulationProvider
-                                                            .calculatedPositionSize !=
-                                                        null &&
-                                                    simulationProvider
-                                                            .calculatedPositionSize! >
-                                                        0) {
-                                                  final potentialAmount =
-                                                      simulationProvider
-                                                          .currentBalance *
-                                                      (_tpRiskPercent / 100);
-                                                  final priceDistance =
-                                                      potentialAmount /
-                                                      simulationProvider
-                                                          .calculatedPositionSize!;
-                                                  final tpPrice = _isBuyOrder
-                                                      ? _clickPrice! +
-                                                            priceDistance
-                                                      : _clickPrice! -
-                                                            priceDistance;
+                                          trackHeight: 2,
+                                        ),
+                                        child: Slider(
+                                          value: _tpRiskPercent.clamp(0.1, 20),
+                                          min: 0.1,
+                                          max: 20,
+                                          divisions: 199,
+                                          onChanged: (newPercent) {
+                                            setState(
+                                              () => _tpRiskPercent = newPercent,
+                                            );
+                                            if (simulationProvider
+                                                        .calculatedPositionSize !=
+                                                    null &&
+                                                simulationProvider
+                                                        .calculatedPositionSize! >
+                                                    0) {
+                                              final potentialAmount =
                                                   simulationProvider
-                                                      .updateManualTakeProfit(
-                                                        tpPrice,
-                                                      );
-                                                }
-                                              },
-                                              icon: const Icon(
-                                                Icons.add,
-                                                color: Color(0xFF22C55E),
-                                                size: 12,
-                                              ),
-                                              padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(
-                                                minWidth: 24,
-                                                minHeight: 24,
-                                              ),
-                                            ),
-                                          ),
+                                                      .currentBalance *
+                                                  (_tpRiskPercent / 100);
+                                              final priceDistance =
+                                                  potentialAmount /
+                                                  simulationProvider
+                                                      .calculatedPositionSize!;
+                                              final tpPrice = _isBuyOrder
+                                                  ? _clickPrice! + priceDistance
+                                                  : _clickPrice! -
+                                                        priceDistance;
+                                              simulationProvider
+                                                  .updateManualTakeProfit(
+                                                    tpPrice,
+                                                  );
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
 
-                                          // TP Value
-                                          Container(
-                                            width: 45,
-                                            child: Text(
-                                              '${_tpRiskPercent.toStringAsFixed(1)}%',
-                                              textAlign: TextAlign.end,
-                                              style: const TextStyle(
-                                                color: Color(0xFF22C55E),
-                                                fontSize: 11,
+                                    const SizedBox(width: 4),
+
+                                    // TP Increase Button
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF22C55E,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFF22C55E,
+                                          ).withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _tpRiskPercent =
+                                                (_tpRiskPercent + 0.1).clamp(
+                                                  0.1,
+                                                  20,
+                                                );
+                                          });
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
+                                              simulationProvider
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final potentialAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_tpRiskPercent / 100);
+                                            final priceDistance =
+                                                potentialAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final tpPrice = _isBuyOrder
+                                                ? _clickPrice! + priceDistance
+                                                : _clickPrice! - priceDistance;
+                                            simulationProvider
+                                                .updateManualTakeProfit(
+                                                  tpPrice,
+                                                );
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: Color(0xFF22C55E),
+                                          size: 12,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
+                                      ),
+                                    ),
+
+                                    // TP Value
+                                    Container(
+                                      width: 45,
+                                      child: Text(
+                                        '${_tpRiskPercent.toStringAsFixed(1)}%',
+                                        textAlign: TextAlign.end,
+                                        style: const TextStyle(
+                                          color: Color(0xFF22C55E),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Risk/Reward Summary
+                                if (_clickPrice != null &&
+                                    simulationProvider.calculatedPositionSize !=
+                                        null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1F2937),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: Color(0xFF374151),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        Column(
+                                          children: [
+                                            const Text(
+                                              'RIESGO',
+                                              style: TextStyle(
+                                                color: Color(0xFF94A3B8),
+                                                fontSize: 8,
                                                 fontWeight: FontWeight.w600,
                                                 fontFamily: 'Inter',
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-
-                                      const SizedBox(height: 8),
-
-                                      // Risk/Reward Summary
-                                      if (_clickPrice != null &&
-                                          simulationProvider
-                                                  .calculatedPositionSize !=
-                                              null)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF1F2937),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
+                                            Text(
+                                              '\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)}',
+                                              style: const TextStyle(
+                                                color: Color(0xFFFF6B6B),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'Inter',
+                                              ),
                                             ),
-                                            border: Border.all(
-                                              color: Color(0xFF374151),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceEvenly,
-                                            children: [
-                                              Column(
-                                                children: [
-                                                  const Text(
-                                                    'RIESGO',
-                                                    style: TextStyle(
-                                                      color: Color(0xFF94A3B8),
-                                                      fontSize: 8,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontFamily: 'Inter',
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)}',
-                                                    style: const TextStyle(
-                                                      color: Color(0xFFFF6B6B),
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      fontFamily: 'Inter',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              Container(
-                                                width: 1,
-                                                height: 24,
-                                                color: const Color(0xFF374151),
-                                              ),
-                                              Column(
-                                                children: [
-                                                  const Text(
-                                                    'GANANCIA',
-                                                    style: TextStyle(
-                                                      color: Color(0xFF94A3B8),
-                                                      fontSize: 8,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontFamily: 'Inter',
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)}',
-                                                    style: const TextStyle(
-                                                      color: Color(0xFF22C55E),
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      fontFamily: 'Inter',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              Container(
-                                                width: 1,
-                                                height: 24,
-                                                color: const Color(0xFF374151),
-                                              ),
-                                              Column(
-                                                children: [
-                                                  const Text(
-                                                    'R:R',
-                                                    style: TextStyle(
-                                                      color: Color(0xFF94A3B8),
-                                                      fontSize: 8,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontFamily: 'Inter',
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '1:${(_tpRiskPercent / _slRiskPercent).toStringAsFixed(1)}',
-                                                    style: const TextStyle(
-                                                      color: Color(0xFF3B82F6),
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      fontFamily: 'Inter',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
+                                          ],
                                         ),
-                                    ],
+                                        Container(
+                                          width: 1,
+                                          height: 24,
+                                          color: const Color(0xFF374151),
+                                        ),
+                                        Column(
+                                          children: [
+                                            const Text(
+                                              'GANANCIA',
+                                              style: TextStyle(
+                                                color: Color(0xFF94A3B8),
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                            Text(
+                                              '\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)}',
+                                              style: const TextStyle(
+                                                color: Color(0xFF22C55E),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Container(
+                                          width: 1,
+                                          height: 24,
+                                          color: const Color(0xFF374151),
+                                        ),
+                                        Column(
+                                          children: [
+                                            const Text(
+                                              'R:R',
+                                              style: TextStyle(
+                                                color: Color(0xFF94A3B8),
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                            Text(
+                                              '1:${(_tpRiskPercent / _slRiskPercent).toStringAsFixed(1)}',
+                                              style: const TextStyle(
+                                                color: Color(0xFF3B82F6),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),
