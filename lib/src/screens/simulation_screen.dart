@@ -1089,9 +1089,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 child: _ChartArea(
                   height: MediaQuery.of(context).size.height * 0.55,
                   child: Container(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 8,
+                    margin: const EdgeInsets.only(
+                      left: 10,
+                      right: 10,
+                      top: 15,
+                      bottom: 5,
                     ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
