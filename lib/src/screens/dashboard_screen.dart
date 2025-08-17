@@ -728,7 +728,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
@@ -831,9 +831,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   width: 4,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: setup.isExample
-                        ? const Color(0xFFF59E0B)
-                        : const Color(0xFF22C55E),
+                    color: const Color(0xFF22C55E),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),

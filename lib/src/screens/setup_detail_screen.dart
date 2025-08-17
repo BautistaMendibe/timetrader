@@ -115,16 +115,15 @@ class SetupDetailScreen extends StatelessWidget {
             ),
             tooltip: 'Editar setup',
           ),
-          if (!setup.isExample)
-            IconButton(
-              onPressed: () => _showDeleteDialog(context, setup),
-              icon: const Icon(
-                Icons.delete_outline,
-                color: Color(0xFFEF4444),
-                size: 20,
-              ),
-              tooltip: 'Eliminar setup',
+          IconButton(
+            onPressed: () => _showDeleteDialog(context, setup),
+            icon: const Icon(
+              Icons.delete_outline,
+              color: Color(0xFFEF4444),
+              size: 20,
             ),
+            tooltip: 'Eliminar setup',
+          ),
         ],
       ),
     );
@@ -179,27 +178,6 @@ class SetupDetailScreen extends StatelessWidget {
                 ),
                 Column(
                   children: [
-                    if (setup.isExample)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Ejemplo',
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Inter',
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
