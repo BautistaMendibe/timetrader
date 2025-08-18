@@ -24,9 +24,6 @@ class FirebaseSetupService {
         .collection(_collectionName);
   }
 
-  // No example setups - only user setups
-  static const List<Map<String, dynamic>> _exampleSetups = [];
-
   // Get all setups (user setups only)
   Future<List<Setup>> getAllSetups() async {
     try {

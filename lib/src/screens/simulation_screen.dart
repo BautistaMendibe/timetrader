@@ -359,7 +359,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 Row(
                   children: [
                     // SL Icon & Label
-                    Container(
+                    SizedBox(
                       width: 60,
                       child: Row(
                         children: [
@@ -425,7 +425,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     ),
 
                     // SL Value
-                    Container(
+                    SizedBox(
                       width: 50,
                       child: Text(
                         '${_slRiskPercent.toStringAsFixed(1)}%',
@@ -447,7 +447,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 Row(
                   children: [
                     // TP Icon & Label
-                    Container(
+                    SizedBox(
                       width: 60,
                       child: Row(
                         children: [
@@ -513,7 +513,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     ),
 
                     // TP Value
-                    Container(
+                    SizedBox(
                       width: 50,
                       child: Text(
                         '${_tpRiskPercent.toStringAsFixed(1)}%',
@@ -1974,7 +1974,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 Row(
                                   children: [
                                     // SL Icon & Label
-                                    Container(
+                                    SizedBox(
                                       width: 50,
                                       child: Row(
                                         children: [
@@ -2187,7 +2187,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     ),
 
                                     // SL Value
-                                    Container(
+                                    SizedBox(
                                       width: 45,
                                       child: Text(
                                         '${_slRiskPercent.toStringAsFixed(1)}%',
@@ -2209,7 +2209,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                 Row(
                                   children: [
                                     // TP Icon & Label
-                                    Container(
+                                    SizedBox(
                                       width: 50,
                                       child: Row(
                                         children: [
@@ -2426,7 +2426,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                     ),
 
                                     // TP Value
-                                    Container(
+                                    SizedBox(
                                       width: 45,
                                       child: Text(
                                         '${_tpRiskPercent.toStringAsFixed(1)}%',
