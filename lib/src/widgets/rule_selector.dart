@@ -48,8 +48,9 @@ class _RuleSelectorState extends State<RuleSelector>
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.grey[850],
-              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF111827),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF374151), width: 1),
             ),
             child: TabBarView(
               controller: _tabController,
@@ -60,7 +61,7 @@ class _RuleSelectorState extends State<RuleSelector>
             ),
           ),
         ),
-        const SizedBox(height: 32), // Más espacio al final para facilitar el scroll
+        const SizedBox(height: 32),
       ],
     );
   }
@@ -68,20 +69,28 @@ class _RuleSelectorState extends State<RuleSelector>
   Widget _buildTypeTabs() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[800],
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF374151), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+          ),
+        ],
       ),
       child: TabBar(
         controller: _tabController,
         indicator: ShapeDecoration(
-          color: const Color(0xFF21CE99),
+          color: const Color(0xFF22C55E),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.grey[400],
+        labelColor: const Color(0xFFF8FAFC),
+        unselectedLabelColor: const Color(0xFF94A3B8),
         isScrollable: true,
         labelPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         tabs: [
@@ -106,7 +115,8 @@ class _RuleSelectorState extends State<RuleSelector>
             text,
             style: const TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
             ),
           ),
         ],
@@ -122,33 +132,33 @@ class _RuleSelectorState extends State<RuleSelector>
       return Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.grey[800],
-          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFF1F2937),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF374151), width: 1),
         ),
         child: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.rule_outlined,
-                size: 48,
-                color: Colors.grey,
-              ),
+              Icon(Icons.rule_outlined, size: 48, color: Color(0xFF6B7280)),
               SizedBox(height: 12),
               Text(
                 'No hay reglas disponibles',
                 style: TextStyle(
-                  color: Colors.grey,
+                  color: Color(0xFF94A3B8),
                   fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
                 ),
               ),
               SizedBox(height: 6),
               Text(
                 'Para este tipo de regla',
                 style: TextStyle(
-                  color: Colors.grey,
+                  color: Color(0xFF6B7280),
                   fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
                 ),
               ),
             ],
@@ -163,8 +173,9 @@ class _RuleSelectorState extends State<RuleSelector>
         itemCount: rulesOfType.length,
         itemBuilder: (context, index) {
           final rule = rulesOfType[index];
-          final isSelected = widget.selectedRules
-              .any((selectedRule) => selectedRule.id == rule.id);
+          final isSelected = widget.selectedRules.any(
+            (selectedRule) => selectedRule.id == rule.id,
+          );
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 6),
@@ -197,29 +208,35 @@ class _RuleSelectorState extends State<RuleSelector>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(Icons.rule, color: Color(0xFF21CE99), size: 20),
+              const Icon(Icons.rule, color: Color(0xFF22C55E), size: 20),
               const SizedBox(width: 8),
               const Text(
                 'Mis Reglas: ',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFFF8FAFC),
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
+                  fontFamily: 'Inter',
                 ),
               ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.grey[800],
+                  color: const Color(0xFF22C55E).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF22C55E).withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
                 child: Text(
                   '${customRules.length}',
                   style: const TextStyle(
-                    color: Color(0xFF21CE99),
+                    color: Color(0xFF22C55E),
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Inter',
                   ),
                 ),
               ),
@@ -229,15 +246,24 @@ class _RuleSelectorState extends State<RuleSelector>
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Nueva'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF21CE99),
+                  backgroundColor: const Color(0xFF22C55E),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                  ),
                   minimumSize: const Size(0, 36),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  elevation: 0,
+                  shadowColor: const Color(0xFF22C55E).withValues(alpha: 0.18),
                 ),
               ),
             ],
@@ -252,8 +278,12 @@ class _RuleSelectorState extends State<RuleSelector>
                   ? Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.grey[800],
-                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFF1F2937),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFF374151),
+                          width: 1,
+                        ),
                       ),
                       child: const Center(
                         child: Column(
@@ -262,15 +292,16 @@ class _RuleSelectorState extends State<RuleSelector>
                             Icon(
                               Icons.rule_outlined,
                               size: 48,
-                              color: Colors.grey,
+                              color: Color(0xFF6B7280),
                             ),
                             SizedBox(height: 12),
                             Text(
                               'No tienes reglas personalizadas',
                               style: TextStyle(
-                                color: Colors.grey,
+                                color: Color(0xFF94A3B8),
                                 fontSize: 16,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Inter',
                               ),
                             ),
                             SizedBox(height: 6),
@@ -278,8 +309,10 @@ class _RuleSelectorState extends State<RuleSelector>
                               'Crea tu primera regla personalizada\ntocando el botón "Nueva"',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.grey,
+                                color: Color(0xFF6B7280),
                                 fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'Inter',
                               ),
                             ),
                           ],
@@ -290,8 +323,9 @@ class _RuleSelectorState extends State<RuleSelector>
                       itemCount: customRules.length,
                       itemBuilder: (context, index) {
                         final rule = customRules[index];
-                        final isSelected = widget.selectedRules
-                            .any((selectedRule) => selectedRule.id == rule.id);
+                        final isSelected = widget.selectedRules.any(
+                          (selectedRule) => selectedRule.id == rule.id,
+                        );
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 6),
@@ -306,7 +340,8 @@ class _RuleSelectorState extends State<RuleSelector>
                                 widget.onRuleSelected(rule);
                               }
                             },
-                            onDelete: () => _showDeleteCustomRuleDialog(context, rule),
+                            onDelete: () =>
+                                _showDeleteCustomRuleDialog(context, rule),
                           ),
                         );
                       },
@@ -339,21 +374,33 @@ class _RuleSelectorState extends State<RuleSelector>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A2A),
+        backgroundColor: const Color(0xFF1F2937),
         title: const Text(
           'Eliminar Regla',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: Color(0xFFF8FAFC),
+            fontWeight: FontWeight.w700,
+            fontFamily: 'Inter',
+          ),
         ),
         content: Text(
           '¿Estás seguro de que quieres eliminar la regla "${rule.name}"?',
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(
+            color: Color(0xFF94A3B8),
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Inter',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text(
               'Cancelar',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+              ),
             ),
           ),
           TextButton(
@@ -364,11 +411,15 @@ class _RuleSelectorState extends State<RuleSelector>
             },
             child: const Text(
               'Eliminar',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(
+                color: Color(0xFFEF4444),
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+              ),
             ),
           ),
         ],
       ),
     );
   }
-} 
+}

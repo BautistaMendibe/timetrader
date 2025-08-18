@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart' show Factory;
 import 'package:webview_flutter/webview_flutter.dart';
 import 'dart:convert';
 import '../models/candle.dart';
@@ -293,7 +295,21 @@ class TradingViewChartState extends State<TradingViewChart> {
         borderRadius: BorderRadius.circular(8),
         child: Stack(
           children: [
-            WebViewWidget(controller: _controller),
+            WebViewWidget(
+              controller: _controller,
+              // Clave: el WebView se adueña del drag/scale y NO deja scrollear al padre
+              gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                // Opción 1: que consuma TODO (súper seguro para charts)
+                Factory<OneSequenceGestureRecognizer>(
+                  () => EagerGestureRecognizer(),
+                ),
+
+                // Opción 2 (más fina): solo lo que necesita el chart
+                // Factory<VerticalDragGestureRecognizer>(() => VerticalDragGestureRecognizer()),
+                // Factory<HorizontalDragGestureRecognizer>(() => HorizontalDragGestureRecognizer()),
+                // Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
+              },
+            ),
             if (!_isWebViewReady || _status != 'Gráfico listo')
               Container(
                 color: const Color(0xFF1E1E1E),

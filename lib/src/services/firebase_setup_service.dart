@@ -24,92 +24,18 @@ class FirebaseSetupService {
         .collection(_collectionName);
   }
 
-  // Example setups that are always available
-  static const List<Map<String, dynamic>> _exampleSetups = [
-    {
-      'id': 'example_1',
-      'name': 'Scalping BTC',
-      'asset': 'BTC/USD',
-      'riskPercent': 1.0,
-      'stopLossDistance': 50.0,
-      'stopLossType': 'StopLossType.pips',
-      'takeProfitRatio': 'TakeProfitRatio.oneToTwo',
-      'useAdvancedRules': true,
-      'rules': [
-        {
-          'id': 'ema_cross',
-          'name': 'EMA 10 cruza EMA 5',
-          'description':
-              'Cuando la EMA de 10 períodos cruza por encima de la EMA de 5 períodos',
-          'type': 'RuleType.technicalIndicator',
-          'parameters': {'ema1': 10, 'ema2': 5, 'direction': 'bullish'},
-          'isActive': true,
-        },
-        {
-          'id': 'morning_session',
-          'name': 'Sesión de Mañana',
-          'description': 'Operar solo entre 10:00 AM y 1:00 PM',
-          'type': 'RuleType.timeFrame',
-          'parameters': {
-            'start_time': '10:00',
-            'end_time': '13:00',
-            'timezone': 'local',
-          },
-          'isActive': true,
-        },
-      ],
-      'isExample': true,
-    },
-    {
-      'id': 'example_2',
-      'name': 'Swing Trading EUR/USD',
-      'asset': 'EUR/USD',
-      'riskPercent': 2.0,
-      'stopLossDistance': 100.0,
-      'stopLossType': 'StopLossType.pips',
-      'takeProfitRatio': 'TakeProfitRatio.oneToThree',
-      'useAdvancedRules': true,
-      'rules': [
-        {
-          'id': 'rsi_oversold',
-          'name': 'RSI en sobreventa',
-          'description': 'Cuando el RSI está por debajo de 30',
-          'type': 'RuleType.technicalIndicator',
-          'parameters': {
-            'rsi_period': 14,
-            'threshold': 30,
-            'condition': 'below',
-          },
-          'isActive': true,
-        },
-        {
-          'id': 'hammer_pattern',
-          'name': 'Patrón Martillo',
-          'description': 'Formación de vela Martillo (reversión alcista)',
-          'type': 'RuleType.candlestickPattern',
-          'parameters': {'pattern': 'hammer', 'body_ratio': 0.3},
-          'isActive': true,
-        },
-      ],
-      'isExample': true,
-    },
-  ];
-
-  // Get all setups (examples + user setups)
+  // Get all setups (user setups only)
   Future<List<Setup>> getAllSetups() async {
     try {
       // Check if Firebase is initialized
       try {
         _firestore.app;
       } catch (e) {
-        return _exampleSetups
-            .map((exampleData) => Setup.fromJson(exampleData))
-            .toList();
+        return [];
       }
 
       // Get user setups from Firestore (only current user's setups)
       final QuerySnapshot userSetupsSnapshot = await _userSetupsCollection
-          .where('isExample', isEqualTo: false)
           .get();
 
       // Convert user setups
@@ -127,27 +53,18 @@ class FirebaseSetupService {
       // Ordenar localmente
       userSetups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      // Convert example setups
-      final List<Setup> exampleSetups = _exampleSetups
-          .map((exampleData) => Setup.fromJson(exampleData))
-          .toList();
-
-      // Combine and return (examples first, then user setups)
-      return [...exampleSetups, ...userSetups];
+      // Return only user setups (no examples)
+      return userSetups;
     } catch (e) {
-      // Return only example setups if there's an error
-      return _exampleSetups
-          .map((exampleData) => Setup.fromJson(exampleData))
-          .toList();
+      // Return empty list if there's an error
+      return [];
     }
   }
 
-  // Get only user setups (excluding examples)
+  // Get only user setups
   Future<List<Setup>> getUserSetups() async {
     try {
-      final QuerySnapshot snapshot = await _userSetupsCollection
-          .where('isExample', isEqualTo: false)
-          .get();
+      final QuerySnapshot snapshot = await _userSetupsCollection.get();
 
       final setups = snapshot.docs
           .where((doc) {
@@ -186,8 +103,18 @@ class FirebaseSetupService {
         throw Exception('Firebase no está inicializado');
       }
 
-      final setupData = setup.toJson();
-      setupData['isExample'] = false; // Mark as user setup
+      final Map<String, dynamic> setupData = {
+        'name': setup.name,
+        'riskPercent': setup.riskPercent,
+        'stopLossDistance': setup.stopLossDistance,
+        'stopLossType': setup.stopLossType.toString(),
+        'takeProfitRatio': setup.takeProfitRatio.toString(),
+        'customTakeProfitRatio': setup.customTakeProfitRatio,
+        'useAdvancedRules': setup.useAdvancedRules,
+        'rules': setup.rules.map((rule) => rule.toJson()).toList(),
+        'createdAt': setup.createdAt.toIso8601String(),
+        'userId': _currentUserId,
+      };
 
       debugPrint(
         'DEBUG: FirebaseSetupService.addSetup - Datos preparados, guardando en Firestore...',
@@ -219,7 +146,6 @@ class FirebaseSetupService {
   Future<void> updateSetup(Setup setup) async {
     try {
       final setupData = setup.toJson();
-      setupData['isExample'] = false; // Mark as user setup
 
       await _userSetupsCollection.doc(setup.id).update(setupData);
     } catch (e) {
@@ -233,15 +159,6 @@ class FirebaseSetupService {
       debugPrint(
         'DEBUG: FirebaseSetupService.deleteSetup - Iniciando eliminación: $setupId',
       );
-
-      // Check if it's an example setup
-      final isExample = _exampleSetups.any((setup) => setup['id'] == setupId);
-      if (isExample) {
-        debugPrint(
-          'DEBUG: FirebaseSetupService.deleteSetup - Intento de eliminar setup de ejemplo',
-        );
-        throw Exception('Cannot delete example setups');
-      }
 
       debugPrint(
         'DEBUG: FirebaseSetupService.deleteSetup - Eliminando de Firestore...',
@@ -259,17 +176,7 @@ class FirebaseSetupService {
   // Get a setup by ID
   Future<Setup?> getSetupById(String setupId) async {
     try {
-      // Check if it's an example setup first
-      final exampleSetup = _exampleSetups.firstWhere(
-        (setup) => setup['id'] == setupId,
-        orElse: () => <String, dynamic>{},
-      );
-
-      if (exampleSetup.isNotEmpty) {
-        return Setup.fromJson(exampleSetup);
-      }
-
-      // If not an example, get from Firestore
+      // Get from Firestore
       final DocumentSnapshot doc = await _userSetupsCollection
           .doc(setupId)
           .get();
@@ -288,54 +195,32 @@ class FirebaseSetupService {
     }
   }
 
-  // Check if a setup is an example
-  bool isExampleSetup(String setupId) {
-    return _exampleSetups.any((setup) => setup['id'] == setupId);
-  }
-
-  // Get example setups
-  List<Setup> getExampleSetups() {
-    return _exampleSetups
-        .map((exampleData) => Setup.fromJson(exampleData))
-        .toList();
-  }
-
   // Listen to user setups changes
   Stream<List<Setup>> listenToUserSetups() {
-    return _userSetupsCollection
-        .where('isExample', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) {
-          final setups = snapshot.docs.map((doc) {
-            final data = doc.data();
-            return Setup.fromJson({...data, 'id': doc.id});
-          }).toList();
+    return _userSetupsCollection.snapshots().map((snapshot) {
+      final setups = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Setup.fromJson({...data, 'id': doc.id});
+      }).toList();
 
-          // Ordenar localmente
-          setups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return setups;
-        });
+      // Ordenar localmente
+      setups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return setups;
+    });
   }
 
-  // Listen to all setups changes (examples + user setups)
+  // Listen to all setups changes (user setups only)
   Stream<List<Setup>> listenToAllSetups() {
-    return _userSetupsCollection
-        .where('isExample', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) {
-          final userSetups = snapshot.docs.map((doc) {
-            final data = doc.data();
-            return Setup.fromJson({...data, 'id': doc.id});
-          }).toList();
+    return _userSetupsCollection.snapshots().map((snapshot) {
+      final userSetups = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Setup.fromJson({...data, 'id': doc.id});
+      }).toList();
 
-          // Ordenar localmente en lugar de en la consulta
-          userSetups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // Ordenar localmente en lugar de en la consulta
+      userSetups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-          final exampleSetups = _exampleSetups
-              .map((exampleData) => Setup.fromJson(exampleData))
-              .toList();
-
-          return [...exampleSetups, ...userSetups];
-        });
+      return userSetups;
+    });
   }
 }

@@ -18,14 +18,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
   bool _showOrderContainerInline = false;
   bool _isBuyOrder = true;
   bool _showSLTPContainer = false;
+  bool _showManageSLTPContainer =
+      false; // Para gestionar SL/TP de trades abiertos
   double? _clickPrice; // Precio capturado en el momento del clic
   // GlobalKey para acceder al TradingViewChart
   final GlobalKey<TradingViewChartState> _chartKey =
       GlobalKey<TradingViewChartState>();
 
   Timeframe? _selectedTimeframe; // NUEVO: para opciones avanzadas
-  bool _isAdjustingSpeed =
-      false; // Para controlar pausa durante ajuste de velocidad
   // Flag para mostrar sliders SL/TP en el panel de orden
   bool _showSlTpOnOrderInline = false;
   // NUEVO: Porcentajes de SL y TP
@@ -49,30 +49,30 @@ class _SimulationScreenState extends State<SimulationScreen> {
           // Verificar si es una señal de control (pausa/restauración)
           if (tickData.containsKey('pause') ||
               tickData.containsKey('restore')) {
-            debugPrint(
-              '🔥 CALLBACK: Enviando señal de control al WebView: $tickData',
-            );
+            // debugPrint(
+            //   '🔥 CALLBACK: Enviando señal de control al WebView: $tickData',
+            // );
             _chartKey.currentState!.sendMessageToWebView(tickData);
           } else if (tickData.containsKey('closeOrder') ||
               tickData.containsKey('clearLines')) {
             // Es una señal de limpieza - enviar directamente
-            debugPrint(
-              '🔥 CALLBACK: Enviando señal de limpieza al WebView: $tickData',
-            );
+            // debugPrint(
+            //   '🔥 CALLBACK: Enviando señal de limpieza al WebView: $tickData',
+            // );
             _chartKey.currentState!.sendMessageToWebView(tickData);
           } else if (tickData.containsKey('resetChart')) {
             // Es una señal de reset del chart - enviar directamente
-            debugPrint(
-              '🔥🔥🔥 CALLBACK: Enviando señal de RESET al WebView: $tickData',
-            );
+            // debugPrint(
+            //   '🔥🔥🔥 CALLBACK: Enviando señal de RESET al WebView: $tickData',
+            // );
             _chartKey.currentState!.sendMessageToWebView(tickData);
           } else if (tickData.containsKey('trades') &&
               !tickData.containsKey('candle') &&
               !tickData.containsKey('tick')) {
             // Es solo un mensaje de trades (cierre de posición) - enviar directamente
-            debugPrint(
-              '🔥 CALLBACK: Enviando trades de cierre al WebView: $tickData',
-            );
+            // debugPrint(
+            //   '🔥 CALLBACK: Enviando trades de cierre al WebView: $tickData',
+            // );
             _chartKey.currentState!.sendMessageToWebView(tickData);
           } else {
             // Es un tick normal con vela
@@ -85,9 +85,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
             final takeProfit = tickData['takeProfit'];
 
             // Enviar al WebView
-            debugPrint(
-              '🔥 Enviando al WebView: SL%=${-_slRiskPercent}, SLValue=${-(simulationProvider.currentBalance * (_slRiskPercent / 100))}, TP%=$_tpRiskPercent, TPValue=${simulationProvider.currentBalance * (_tpRiskPercent / 100)}',
-            );
+            // debugPrint(
+            //   '🔥 Enviando al WebView: SL%=${-_slRiskPercent}, SLValue=${-(simulationProvider.currentBalance * (_slRiskPercent / 100))}, TP%=$_tpRiskPercent, TPValue=${simulationProvider.currentBalance * (_tpRiskPercent / 100)}',
+            // );
 
             // Verificar que los valores no sean NaN antes de enviar
             final slPercent = _slRiskPercent.isFinite ? -_slRiskPercent : 0.0;
@@ -131,12 +131,12 @@ class _SimulationScreenState extends State<SimulationScreen> {
         _showSLTPContainer = false;
         _isBuyOrder = true;
         _selectedTimeframe = simulationProvider.activeTimeframe; // NUEVO
-        debugPrint(
-          '🔥🔥🔥 UI: Initialized _selectedTimeframe = ${_selectedTimeframe?.name}',
-        );
-        debugPrint(
-          '🔥🔥🔥 UI: Provider activeTimeframe = ${simulationProvider.activeTimeframe.name}',
-        );
+        // debugPrint(
+        //   '🔥🔥🔥 UI: Initialized _selectedTimeframe = ${_selectedTimeframe?.name}',
+        // );
+        // debugPrint(
+        //   '🔥🔥🔥 UI: Provider activeTimeframe = ${simulationProvider.activeTimeframe.name}',
+        // );
       });
     });
   }
@@ -186,18 +186,642 @@ class _SimulationScreenState extends State<SimulationScreen> {
     if (slSetup != null) simulationProvider.updateManualStopLoss(slSetup);
     if (tpSetup != null) simulationProvider.updateManualTakeProfit(tpSetup);
 
-    debugPrint(
-      '🔥 SimulationScreen: Simulación pausada y precio capturado: $_clickPrice',
+    // debugPrint(
+    //   '🔥 SimulationScreen: Simulación pausada y precio capturado: $_clickPrice',
+    // );
+  }
+
+  Widget _buildManageSLTPPanel(SimulationProvider simulationProvider) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF374151).withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF4B5563), width: 1),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: Color(0xFF3B82F6),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Gestionar SL / TP',
+                style: TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _showManageSLTPContainer = false;
+                  });
+                },
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: Color(0xFF94A3B8),
+                  size: 24,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Trade Info
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF374151).withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Color(0xFF4B5563)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Column(
+                  children: [
+                    const Text(
+                      'ENTRADA',
+                      style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$${simulationProvider.entryPrice.toStringAsFixed(5)}',
+                      style: const TextStyle(
+                        color: Color(0xFFF8FAFC),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+                Container(width: 1, height: 40, color: const Color(0xFF4B5563)),
+                Column(
+                  children: [
+                    const Text(
+                      'P&L',
+                      style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${simulationProvider.unrealizedPnL >= 0 ? '+' : ''}\$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: simulationProvider.unrealizedPnL >= 0
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFFF6B6B),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+                Container(width: 1, height: 40, color: const Color(0xFF4B5563)),
+                Column(
+                  children: [
+                    const Text(
+                      'TIPO',
+                      style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      simulationProvider.currentTrades.isNotEmpty
+                          ? simulationProvider.currentTrades.first.type
+                                .toUpperCase()
+                          : 'N/A',
+                      style: TextStyle(
+                        color:
+                            simulationProvider.currentTrades.isNotEmpty &&
+                                simulationProvider.currentTrades.first.type ==
+                                    'buy'
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFFF6B6B),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // SL/TP Sliders (reutilizando el diseño simplificado)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF374151), Color(0xFF1F2937)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Color(0xFF4B5563)),
+            ),
+            child: Column(
+              children: [
+                // Stop Loss Row
+                Row(
+                  children: [
+                    // SL Icon & Label
+                    SizedBox(
+                      width: 60,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFFF6B6B,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(
+                              Icons.stop_circle_rounded,
+                              color: Color(0xFFFF6B6B),
+                              size: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'SL',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // SL Slider
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: const Color(0xFFFF6B6B),
+                          inactiveTrackColor: const Color(
+                            0xFFFF6B6B,
+                          ).withValues(alpha: 0.2),
+                          thumbColor: const Color(0xFFFF6B6B),
+                          overlayColor: const Color(
+                            0xFFFF6B6B,
+                          ).withValues(alpha: 0.2),
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 6,
+                          ),
+                          trackHeight: 3,
+                        ),
+                        child: Slider(
+                          value: _slRiskPercent.clamp(0.1, 10),
+                          min: 0.1,
+                          max: 10,
+                          divisions: 99,
+                          onChanged: (newPercent) {
+                            setState(() => _slRiskPercent = newPercent);
+                            _updateActiveTradeSL(
+                              simulationProvider,
+                              newPercent,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // SL Value
+                    SizedBox(
+                      width: 50,
+                      child: Text(
+                        '${_slRiskPercent.toStringAsFixed(1)}%',
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
+                          color: Color(0xFFFF6B6B),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Take Profit Row
+                Row(
+                  children: [
+                    // TP Icon & Label
+                    SizedBox(
+                      width: 60,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF22C55E,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(
+                              Icons.trending_up_rounded,
+                              color: Color(0xFF22C55E),
+                              size: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'TP',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // TP Slider
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: const Color(0xFF22C55E),
+                          inactiveTrackColor: const Color(
+                            0xFF22C55E,
+                          ).withValues(alpha: 0.2),
+                          thumbColor: const Color(0xFF22C55E),
+                          overlayColor: const Color(
+                            0xFF22C55E,
+                          ).withValues(alpha: 0.2),
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 6,
+                          ),
+                          trackHeight: 3,
+                        ),
+                        child: Slider(
+                          value: _tpRiskPercent.clamp(0.1, 20),
+                          min: 0.1,
+                          max: 20,
+                          divisions: 199,
+                          onChanged: (newPercent) {
+                            setState(() => _tpRiskPercent = newPercent);
+                            _updateActiveTradeTP(
+                              simulationProvider,
+                              newPercent,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // TP Value
+                    SizedBox(
+                      width: 50,
+                      child: Text(
+                        '${_tpRiskPercent.toStringAsFixed(1)}%',
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
+                          color: Color(0xFF22C55E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  void _showManageSLTPContainer(
+  void _updateActiveTradeSL(
+    SimulationProvider simulationProvider,
+    double riskPercent,
+  ) {
+    if (simulationProvider.inPosition &&
+        simulationProvider.currentTrades.isNotEmpty) {
+      final currentTrade = simulationProvider.currentTrades.first;
+      final entryPrice = simulationProvider.entryPrice;
+      final positionSize = simulationProvider.positionSize;
+
+      if (positionSize > 0) {
+        // Calcular el precio de SL basado en el porcentaje de riesgo
+        final riskAmount =
+            simulationProvider.currentBalance * (riskPercent / 100);
+        final priceDistance = riskAmount / positionSize;
+
+        final slPrice = currentTrade.type == 'buy'
+            ? entryPrice - priceDistance
+            : entryPrice + priceDistance;
+
+        simulationProvider.updateManualStopLoss(slPrice);
+      }
+    }
+  }
+
+  void _updateActiveTradeTP(
+    SimulationProvider simulationProvider,
+    double profitPercent,
+  ) {
+    if (simulationProvider.inPosition &&
+        simulationProvider.currentTrades.isNotEmpty) {
+      final currentTrade = simulationProvider.currentTrades.first;
+      final entryPrice = simulationProvider.entryPrice;
+      final positionSize = simulationProvider.positionSize;
+
+      if (positionSize > 0) {
+        // Calcular el precio de TP basado en el porcentaje de ganancia potencial
+        final profitAmount =
+            simulationProvider.currentBalance * (profitPercent / 100);
+        final priceDistance = profitAmount / positionSize;
+
+        final tpPrice = currentTrade.type == 'buy'
+            ? entryPrice + priceDistance
+            : entryPrice - priceDistance;
+
+        simulationProvider.updateManualTakeProfit(tpPrice);
+      }
+    }
+  }
+
+  void _showTimeframeSelector(
     BuildContext context,
     SimulationProvider simulationProvider,
   ) {
-    setState(() {
-      _showSLTPContainer = true;
-    });
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1F2937), Color(0xFF111827)],
+          ),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Seleccionar Timeframe',
+              style: TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...Timeframe.values.map((tf) {
+              String label;
+              switch (tf) {
+                case Timeframe.d1:
+                  label = '1D - Diario';
+                  break;
+                case Timeframe.h1:
+                  label = '1H - 1 Hora';
+                  break;
+                case Timeframe.m15:
+                  label = '15M - 15 Minutos';
+                  break;
+                case Timeframe.m5:
+                  label = '5M - 5 Minutos';
+                  break;
+                case Timeframe.m1:
+                  label = '1M - 1 Minuto';
+                  break;
+              }
+
+              final isSelected =
+                  (_selectedTimeframe ?? simulationProvider.activeTimeframe) ==
+                  tf;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  onTap: () {
+                    setState(() => _selectedTimeframe = tf);
+                    simulationProvider.setTimeframe(tf);
+                    Navigator.pop(context);
+                  },
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF22C55E).withValues(alpha: 0.2)
+                          : const Color(0xFF374151),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.schedule_rounded,
+                      color: isSelected
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFF94A3B8),
+                      size: 18,
+                    ),
+                  ),
+                  title: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFFF8FAFC),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(
+                          Icons.check_circle_rounded,
+                          color: Color(0xFF22C55E),
+                          size: 20,
+                        )
+                      : null,
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSpeedSelector(
+    BuildContext context,
+    SimulationProvider simulationProvider,
+  ) {
+    final speedOptions = [0.5, 1.0, 2.0, 4.0, 6.0];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1F2937), Color(0xFF111827)],
+          ),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Velocidad de Simulación',
+                style: TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...speedOptions.map((speed) {
+                final isSelected =
+                    simulationProvider.ticksPerSecondFactor == speed;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    onTap: () {
+                      // Pausar temporalmente mientras se ajusta la velocidad
+                      bool wasRunning = simulationProvider.isSimulationRunning;
+                      if (wasRunning) {
+                        simulationProvider.pauseTickSimulation();
+                      }
+
+                      simulationProvider.ticksPerSecondFactor = speed;
+
+                      // Reanudar si estaba corriendo
+                      if (wasRunning &&
+                          simulationProvider.currentSetup != null) {
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          simulationProvider.resumeTickSimulation();
+                        });
+                      }
+
+                      Navigator.pop(context);
+                    },
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF3B82F6).withValues(alpha: 0.2)
+                            : const Color(0xFF374151),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.speed_rounded,
+                        color: isSelected
+                            ? const Color(0xFF3B82F6)
+                            : const Color(0xFF94A3B8),
+                        size: 18,
+                      ),
+                    ),
+                    title: Text(
+                      '${speed.toStringAsFixed(1)}x',
+                      style: TextStyle(
+                        color: isSelected
+                            ? const Color(0xFF3B82F6)
+                            : const Color(0xFFF8FAFC),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    subtitle: Text(
+                      speed == 0.5
+                          ? 'Lenta'
+                          : speed == 1.0
+                          ? 'Normal'
+                          : speed == 2.0
+                          ? 'Rápida'
+                          : speed == 4.0
+                          ? 'Muy rápida'
+                          : 'Ultra rápida',
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFF3B82F6),
+                            size: 20,
+                          )
+                        : null,
+                  ),
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -205,128 +829,244 @@ class _SimulationScreenState extends State<SimulationScreen> {
     return Consumer<SimulationProvider>(
       builder: (context, simulationProvider, child) {
         if (simulationProvider.historicalData.isEmpty) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            body: Container(
+              constraints: const BoxConstraints.expand(),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF0B1220), Color(0xFF0F172A)],
+                ),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF22C55E)),
+                ),
+              ),
+            ),
           );
         }
 
         return DefaultTabController(
           length: 2,
           child: Scaffold(
-            appBar: AppBar(
-              automaticallyImplyLeading: false,
-              title: const Text('Simulación'),
-              backgroundColor: const Color(0xFF1E1E1E),
-              foregroundColor: Colors.white,
-              actions: [
-                // Balance y P&L en el AppBar
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '\$${simulationProvider.currentBalance.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    Text(
-                      'P&L: \$${simulationProvider.totalPnL.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: simulationProvider.totalPnL >= 0
-                            ? const Color(0xFF21CE99)
-                            : const Color(0xFFFF6B6B),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    if (simulationProvider.inPosition &&
-                        simulationProvider.unrealizedPnL != 0) ...[
-                      Text(
-                        'Flotante: \$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: simulationProvider.unrealizedPnL >= 0
-                              ? const Color(0xFF21CE99)
-                              : const Color(0xFFFF6B6B),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                    ],
-                  ],
+            body: Container(
+              constraints: const BoxConstraints.expand(),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF0B1220), Color(0xFF0F172A)],
                 ),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () async {
-                    if (!mounted) return;
-                    final shouldExit = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('¿Salir de la simulación?'),
-                        content: const Text(
-                          '¿Estás seguro que quieres salir? Se perderá el progreso de la simulación actual.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Cancelar'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF21CE99),
-                              foregroundColor: Colors.white,
+              ),
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    // Custom AppBar
+                    _buildCustomAppBar(simulationProvider),
+
+                    // TabBar
+                    Container(
+                      color: const Color(0xFF1F2937),
+                      child: const TabBar(
+                        tabs: [
+                          Tab(
+                            icon: Icon(
+                              Icons.trending_up,
+                              color: Color(0xFFF8FAFC),
                             ),
-                            child: const Text('Salir'),
+                            text: 'Trading',
+                          ),
+                          Tab(
+                            icon: Icon(
+                              Icons.analytics,
+                              color: Color(0xFFF8FAFC),
+                            ),
+                            text: 'Estadísticas',
                           ),
                         ],
+                        indicatorColor: Color(0xFF22C55E),
+                        labelColor: Color(0xFFF8FAFC),
+                        unselectedLabelColor: Color(0xFF94A3B8),
+                        labelStyle: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    );
-                    if (shouldExit == true && mounted) {
-                      simulationProvider.stopSimulation();
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          Navigator.pushReplacementNamed(
-                            context,
-                            AppRoutes.dashboard,
-                          );
-                        }
-                      });
-                    }
-                  },
+                    ),
+
+                    // TabBarView
+                    Expanded(
+                      child: TabBarView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: [
+                          // Tab 1: Trading
+                          _buildTradingTab(simulationProvider),
+                          // Tab 2: Estadísticas
+                          _buildStatisticsTab(simulationProvider),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-              bottom: const TabBar(
-                tabs: [
-                  Tab(icon: Icon(Icons.trending_up), text: 'Trading'),
-                  Tab(icon: Icon(Icons.analytics), text: 'Estadísticas'),
-                ],
-                indicatorColor: Color(0xFF21CE99),
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.grey,
-              ),
-            ),
-            body: Container(
-              color: const Color(0xFF1E1E1E),
-              child: TabBarView(
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  // Tab 1: Trading
-                  _buildTradingTab(simulationProvider),
-                  // Tab 2: Estadísticas
-                  _buildStatisticsTab(simulationProvider),
-                ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCustomAppBar(SimulationProvider simulationProvider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        children: [
+          // Logo and App Name
+          Row(
+            children: [
+              Image.asset('assets/imgs/icono.png', height: 40, width: 45),
+              const SizedBox(width: 12),
+              const Text(
+                'Simulación',
+                style: TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+
+          // Balance y P&L
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F2937),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF374151)),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '\$${simulationProvider.currentBalance.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: Color(0xFFF8FAFC),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                Text(
+                  'P&L: \$${simulationProvider.totalPnL.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: simulationProvider.totalPnL >= 0
+                        ? const Color(0xFF22C55E)
+                        : const Color(0xFFFF6B6B),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                if (simulationProvider.inPosition &&
+                    simulationProvider.unrealizedPnL != 0) ...[
+                  Text(
+                    'Flotante: \$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: simulationProvider.unrealizedPnL >= 0
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFFFF6B6B),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Botón de cerrar
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F2937),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF374151)),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Color(0xFF94A3B8)),
+              onPressed: () async {
+                if (!mounted) return;
+                final shouldExit = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: const Color(0xFF1F2937),
+                    title: const Text(
+                      '¿Salir de la simulación?',
+                      style: TextStyle(
+                        color: Color(0xFFF8FAFC),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    content: const Text(
+                      '¿Estás seguro que quieres salir? Se perderá el progreso de la simulación actual.',
+                      style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text(
+                          'Cancelar',
+                          style: TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF22C55E),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Salir',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+                if (shouldExit == true && mounted) {
+                  simulationProvider.stopSimulation();
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      Navigator.pushReplacementNamed(context, AppRoutes.main);
+                    }
+                  });
+                }
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -336,215 +1076,962 @@ class _SimulationScreenState extends State<SimulationScreen> {
       ...simulationProvider.completedTrades,
       ...simulationProvider.currentTrades,
     ];
-    return Container(
-      color: const Color(0xFF1E1E1E),
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        children: [
-          // Chart Section - 50% of screen height
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.5,
-            child: Container(
-              margin: const EdgeInsets.all(12),
-              child:
-                  Selector<
-                    SimulationProvider,
-                    Tuple5<List<Trade>, int, double?, double?, double?>
-                  >(
-                    selector: (context, provider) => Tuple5(
-                      allTrades,
-                      provider.currentCandleIndex,
-                      provider.manualStopLossPrice,
-                      provider.manualTakeProfitPrice,
-                      provider.entryPrice > 0 ? provider.entryPrice : null,
-                    ),
-                    builder: (context, data, child) {
-                      final entryPrice = _clickPrice ?? data.item5;
-                      return TradingViewChart(
-                        key: _chartKey,
-                        candles: simulationProvider.historicalData,
-                        trades: data.item1,
-                        currentCandleIndex: data.item2,
-                        stopLoss: data.item3,
-                        takeProfit: data.item4,
-                        entryPrice: entryPrice,
-                        slPercent: -_slRiskPercent,
-                        slValue:
-                            -(simulationProvider.currentBalance *
-                                (_slRiskPercent / 100)),
-                        tpPercent: _tpRiskPercent,
-                        tpValue:
-                            simulationProvider.currentBalance *
-                            (_tpRiskPercent / 100),
-                        entryValue: simulationProvider.inPosition
-                            ? simulationProvider.unrealizedPnL
-                            : 0.0,
-                        isRunning: simulationProvider.isSimulationRunning,
-                      );
-                    },
-                  ),
-            ),
-          ),
 
-          // Controls Section - Flexible
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(5),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Order Container (when active)
-                  if (_showOrderContainerInline) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2C2C2C),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[700]!),
+    return SafeArea(
+      child: Stack(
+        children: [
+          // Contenido principal
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Chart Section -55% of screen height
+              SliverToBoxAdapter(
+                child: _ChartArea(
+                  height: MediaQuery.of(context).size.height * 0.55,
+                  child: Container(
+                    margin: const EdgeInsets.only(
+                      left: 10,
+                      right: 10,
+                      top: 15,
+                      bottom: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1F2937), Color(0xFF111827)],
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF374151),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          offset: const Offset(0, 8),
+                          blurRadius: 24,
+                          spreadRadius: -4,
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFF22C55E).withValues(alpha: 0.1),
+                          offset: const Offset(0, 0),
+                          blurRadius: 1,
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Chart Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          decoration: const BoxDecoration(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                            ),
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                _isBuyOrder ? 'Comprar' : 'Vender',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  simulationProvider.cancelOrder();
-                                  setState(() {
-                                    _showOrderContainerInline = false;
-                                    _showSlTpOnOrderInline = false;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          // Mostrar precio de entrada
-                          Text(
-                            'Precio de entrada: ${_clickPrice?.toStringAsFixed(5) ?? "--"}',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          if (_clickPrice != null &&
-                              simulationProvider.calculatedPositionSize !=
-                                  null &&
-                              simulationProvider.calculatedPositionSize! >
-                                  0) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Precio de SL: ${(() {
-                                final riskAmount = simulationProvider.currentBalance * (_slRiskPercent / 100);
-                                final priceDistance = riskAmount / simulationProvider.calculatedPositionSize!;
-                                final slPrice = _isBuyOrder ? _clickPrice! - priceDistance : _clickPrice! + priceDistance;
-                                return slPrice.toStringAsFixed(5);
-                              })()}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              'Precio de TP: ${(() {
-                                final potentialAmount = simulationProvider.currentBalance * (_tpRiskPercent / 100);
-                                final priceDistance = potentialAmount / simulationProvider.calculatedPositionSize!;
-                                final tpPrice = _isBuyOrder ? _clickPrice! + priceDistance : _clickPrice! - priceDistance;
-                                return tpPrice.toStringAsFixed(5);
-                              })()}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                          if (_showSlTpOnOrderInline) ...[
-                            const SizedBox(height: 16),
-                            // Stop Loss % Slider
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_clickPrice != null &&
-                                    simulationProvider.calculatedPositionSize !=
-                                        null &&
-                                    simulationProvider.currentBalance > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 4.0),
-                                    child: Text(
-                                      'Stop Loss: ${_slRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)})',
-                                      style: const TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    simulationProvider.activeSymbol ?? 'BTCUSD',
+                                    style: const TextStyle(
+                                      color: Color(0xFFF8FAFC),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  // Widget LIVE con tamaño fijo
+                                  SizedBox(
+                                    width: 55,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            simulationProvider
+                                                .isSimulationRunning
+                                            ? const Color(
+                                                0xFF22C55E,
+                                              ).withValues(alpha: 0.1)
+                                            : const Color(
+                                                0xFFF59E0B,
+                                              ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 5,
+                                            height: 5,
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  simulationProvider
+                                                      .isSimulationRunning
+                                                  ? const Color(0xFF22C55E)
+                                                  : const Color(0xFFF59E0B),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            simulationProvider
+                                                    .isSimulationRunning
+                                                ? 'LIVE'
+                                                : 'PAUSED',
+                                            style: TextStyle(
+                                              color:
+                                                  simulationProvider
+                                                      .isSimulationRunning
+                                                  ? const Color(0xFF22C55E)
+                                                  : const Color(0xFFF59E0B),
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w700,
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
+                                ],
+                              ),
+                              const Spacer(),
+                              // Botón de timeframe
+                              GestureDetector(
+                                onTap: () => _showTimeframeSelector(
+                                  context,
+                                  simulationProvider,
+                                ),
+                                child: Container(
+                                  height: 32,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF374151),
+                                        Color(0xFF1F2937),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFF4B5563),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.schedule_rounded,
+                                        color: Color(0xFF94A3B8),
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _selectedTimeframe?.name
+                                                .toUpperCase() ??
+                                            simulationProvider
+                                                .activeTimeframe
+                                                .name
+                                                .toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Color(0xFFF8FAFC),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Botón de control único (pausa/reanudar/iniciar) - Ancho fijo
+                              SizedBox(
+                                width: 48, // Ancho fijo para evitar overflow
+                                child: simulationProvider.isSimulationRunning
+                                    ?
+                                      // Mostrar botón de pausa cuando está corriendo
+                                      Container(
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFFF59E0B),
+                                              Color(0xFFD97706),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFFF59E0B,
+                                              ).withValues(alpha: 0.3),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 8,
+                                              spreadRadius: -2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed: () => simulationProvider
+                                              .pauseTickSimulation(),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            padding: EdgeInsets.zero,
+                                            minimumSize: const Size(48, 32),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.pause_rounded,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      )
+                                    : (simulationProvider.currentSetup !=
+                                              null &&
+                                          (simulationProvider
+                                                  .isSimulationPaused ||
+                                              !simulationProvider
+                                                  .isSimulationRunning))
+                                    ?
+                                      // Mostrar botón de reanudar/iniciar cuando está pausado o detenido
+                                      Container(
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFF22C55E),
+                                              Color(0xFF16A34A),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF22C55E,
+                                              ).withValues(alpha: 0.3),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 8,
+                                              spreadRadius: -2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed:
+                                              simulationProvider
+                                                  .isSimulationPaused
+                                              ? () => simulationProvider
+                                                    .resumeTickSimulation()
+                                              : () => simulationProvider
+                                                    .startTickSimulation(
+                                                      simulationProvider
+                                                          .currentSetup!,
+                                                      simulationProvider
+                                                          .historicalData
+                                                          .first
+                                                          .timestamp,
+                                                      simulationProvider
+                                                          .simulationSpeed,
+                                                      simulationProvider
+                                                          .currentBalance,
+                                                      simulationProvider
+                                                              .activeSymbol ??
+                                                          'BTCUSD',
+                                                    ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            padding: EdgeInsets.zero,
+                                            minimumSize: const Size(48, 32),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.play_arrow_rounded,
+                                            size: 20,
+                                          ),
+                                        ),
+                                      )
+                                    :
+                                      // Mostrar botón deshabilitado cuando no hay setup
+                                      Container(
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF374151),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed: null,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            padding: EdgeInsets.zero,
+                                            minimumSize: const Size(48, 32),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.play_arrow_rounded,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Botón de velocidad
+                              GestureDetector(
+                                onTap: () => _showSpeedSelector(
+                                  context,
+                                  simulationProvider,
+                                ),
+                                child: Container(
+                                  height: 32,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF374151),
+                                        Color(0xFF1F2937),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFF4B5563),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.speed_rounded,
+                                        color: Color(0xFF94A3B8),
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                                        style: const TextStyle(
+                                          color: Color(0xFFF8FAFC),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Chart Content
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(20),
+                              bottomRight: Radius.circular(20),
+                            ),
+                            child:
+                                Selector<
+                                  SimulationProvider,
+                                  Tuple5<
+                                    List<Trade>,
+                                    int,
+                                    double?,
+                                    double?,
+                                    double?
+                                  >
+                                >(
+                                  selector: (context, provider) => Tuple5(
+                                    allTrades,
+                                    provider.currentCandleIndex,
+                                    provider.manualStopLossPrice,
+                                    provider.manualTakeProfitPrice,
+                                    provider.entryPrice > 0
+                                        ? provider.entryPrice
+                                        : null,
+                                  ),
+                                  builder: (context, data, child) {
+                                    final entryPrice =
+                                        _clickPrice ?? data.item5;
+                                    return TradingViewChart(
+                                      key: _chartKey,
+                                      candles:
+                                          simulationProvider.historicalData,
+                                      trades: data.item1,
+                                      currentCandleIndex: data.item2,
+                                      stopLoss: data.item3,
+                                      takeProfit: data.item4,
+                                      entryPrice: entryPrice,
+                                      slPercent: -_slRiskPercent,
+                                      slValue:
+                                          -(simulationProvider.currentBalance *
+                                              (_slRiskPercent / 100)),
+                                      tpPercent: _tpRiskPercent,
+                                      tpValue:
+                                          simulationProvider.currentBalance *
+                                          (_tpRiskPercent / 100),
+                                      entryValue: simulationProvider.inPosition
+                                          ? simulationProvider.unrealizedPnL
+                                          : 0.0,
+                                      isRunning: simulationProvider
+                                          .isSimulationRunning,
+                                    );
+                                  },
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Controls Section - Flexible
+              if (_showOrderContainerInline) ...[
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF1F2937),
+                          const Color(0xFF111827),
+                          _isBuyOrder
+                              ? const Color(0xFF22C55E).withValues(alpha: 0.05)
+                              : const Color(0xFFFF6B6B).withValues(alpha: 0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _isBuyOrder
+                            ? const Color(0xFF22C55E).withValues(alpha: 0.3)
+                            : const Color(0xFFFF6B6B).withValues(alpha: 0.3),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          offset: const Offset(0, 8),
+                          blurRadius: 32,
+                          spreadRadius: -4,
+                        ),
+                        BoxShadow(
+                          color: _isBuyOrder
+                              ? const Color(0xFF22C55E).withValues(alpha: 0.2)
+                              : const Color(0xFFFF6B6B).withValues(alpha: 0.2),
+                          offset: const Offset(0, 0),
+                          blurRadius: 2,
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Enhanced Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: _isBuyOrder
+                                            ? [
+                                                const Color(0xFF22C55E),
+                                                const Color(0xFF16A34A),
+                                              ]
+                                            : [
+                                                const Color(0xFFFF6B6B),
+                                                const Color(0xFFDC2626),
+                                              ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _isBuyOrder
+                                              ? const Color(
+                                                  0xFF22C55E,
+                                                ).withValues(alpha: 0.4)
+                                              : const Color(
+                                                  0xFFFF6B6B,
+                                                ).withValues(alpha: 0.4),
+                                          offset: const Offset(0, 4),
+                                          blurRadius: 16,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      _isBuyOrder
+                                          ? Icons.trending_up
+                                          : Icons.trending_down,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _isBuyOrder
+                                            ? 'ORDEN DE COMPRA'
+                                            : 'ORDEN DE VENTA',
+                                        style: TextStyle(
+                                          color: _isBuyOrder
+                                              ? const Color(0xFF22C55E)
+                                              : const Color(0xFFFF6B6B),
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                          fontFamily: 'Inter',
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF374151,
+                                  ).withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFF4B5563),
+                                  ),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.close_rounded,
+                                    color: Color(0xFF94A3B8),
+                                    size: 22,
+                                  ),
+                                  onPressed: () {
+                                    simulationProvider.cancelOrder();
+                                    setState(() {
+                                      _showOrderContainerInline = false;
+                                      _showSlTpOnOrderInline = false;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Enhanced Price Entry Section
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF4B5563),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFF22C55E,
+                                      ).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.price_change_rounded,
+                                      color: Color(0xFF22C55E),
+                                      size: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'PRECIO DE ENTRADA',
+                                        style: TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 11,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '\$${_clickPrice?.toStringAsFixed(5) ?? "--"}',
+                                        style: const TextStyle(
+                                          color: Color(0xFFF8FAFC),
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_clickPrice != null &&
+                            simulationProvider.calculatedPositionSize != null &&
+                            simulationProvider.calculatedPositionSize! > 0) ...[
+                          const SizedBox(height: 12),
+                          // Enhanced SL/TP Display
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFFFF6B6B),
+                                        Color(0xFFDC2626),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFFFF6B6B,
+                                        ).withValues(alpha: 0.3),
+                                        offset: const Offset(0, 4),
+                                        blurRadius: 12,
+                                        spreadRadius: -2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.stop_circle_rounded,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            'STOP LOSS',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '\$${(() {
+                                          final riskAmount = simulationProvider.currentBalance * (_slRiskPercent / 100);
+                                          final priceDistance = riskAmount / simulationProvider.calculatedPositionSize!;
+                                          final slPrice = _isBuyOrder ? _clickPrice! - priceDistance : _clickPrice! + priceDistance;
+                                          return slPrice.toStringAsFixed(5);
+                                        })()}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '-${_slRiskPercent.toStringAsFixed(1)}%',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          fontSize: 10,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFF22C55E),
+                                        Color(0xFF16A34A),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF22C55E,
+                                        ).withValues(alpha: 0.3),
+                                        offset: const Offset(0, 4),
+                                        blurRadius: 12,
+                                        spreadRadius: -2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.trending_up_rounded,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            'TAKE PROFIT',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '\$${(() {
+                                          final potentialAmount = simulationProvider.currentBalance * (_tpRiskPercent / 100);
+                                          final priceDistance = potentialAmount / simulationProvider.calculatedPositionSize!;
+                                          final tpPrice = _isBuyOrder ? _clickPrice! + priceDistance : _clickPrice! - priceDistance;
+                                          return tpPrice.toStringAsFixed(5);
+                                        })()}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '+${_tpRiskPercent.toStringAsFixed(1)}%',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          fontSize: 10,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (_showSlTpOnOrderInline) ...[
+                          const SizedBox(height: 24),
+                          // Enhanced SL/TP Slider Section - Single Container
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF4B5563),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Header
                                 Row(
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.remove,
-                                        color: Colors.red,
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF3B82F6,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _slRiskPercent =
-                                              (_slRiskPercent - 0.1).clamp(
-                                                0.1,
-                                                100,
-                                              );
-                                        });
-                                        if (simulationProvider
-                                                    .calculatedPositionSize !=
-                                                null &&
-                                            simulationProvider
-                                                    .calculatedPositionSize! >
-                                                0) {
-                                          final riskAmount =
-                                              simulationProvider
-                                                  .currentBalance *
-                                              (_slRiskPercent / 100);
-                                          final priceDistance =
-                                              riskAmount /
-                                              simulationProvider
-                                                  .calculatedPositionSize!;
-                                          final slPrice = _isBuyOrder
-                                              ? _clickPrice! - priceDistance
-                                              : _clickPrice! + priceDistance;
-                                          simulationProvider
-                                              .updateManualStopLoss(slPrice);
-                                        }
-                                      },
+                                      child: const Icon(
+                                        Icons.tune_rounded,
+                                        color: Color(0xFF3B82F6),
+                                        size: 14,
+                                      ),
                                     ),
-                                    Expanded(
-                                      child: Slider(
-                                        value: _slRiskPercent.clamp(0.1, 100),
-                                        min: 0.1,
-                                        max: 100,
-                                        divisions: 999,
-                                        label:
-                                            '${_slRiskPercent.toStringAsFixed(1)}%',
-                                        activeColor: Colors.red,
-                                        inactiveColor: Colors.red.withValues(
-                                          alpha: 0.2,
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'SL / TP',
+                                      style: TextStyle(
+                                        color: Color(0xFFF8FAFC),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Stop Loss Row
+                                Row(
+                                  children: [
+                                    // SL Icon & Label
+                                    SizedBox(
+                                      width: 50,
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFFFF6B6B,
+                                              ).withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: const Icon(
+                                              Icons.stop_circle_rounded,
+                                              color: Color(0xFFFF6B6B),
+                                              size: 10,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Text(
+                                            'SL',
+                                            style: TextStyle(
+                                              color: Color(0xFF94A3B8),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // SL Decrease Button
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFFF6B6B,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFFFF6B6B,
+                                          ).withValues(alpha: 0.3),
+                                          width: 1,
                                         ),
-                                        onChanged: (newPercent) {
-                                          setState(
-                                            () => _slRiskPercent = newPercent,
-                                          );
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _slRiskPercent =
+                                                (_slRiskPercent - 0.1).clamp(
+                                                  0.1,
+                                                  10,
+                                                );
+                                          });
                                           if (simulationProvider
                                                       .calculatedPositionSize !=
                                                   null &&
@@ -566,120 +2053,220 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                 .updateManualStopLoss(slPrice);
                                           }
                                         },
+                                        icon: const Icon(
+                                          Icons.remove,
+                                          color: Color(0xFFFF6B6B),
+                                          size: 12,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
                                       ),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.red,
+
+                                    const SizedBox(width: 4),
+
+                                    // SL Slider
+                                    Expanded(
+                                      child: SliderTheme(
+                                        data: SliderTheme.of(context).copyWith(
+                                          activeTrackColor: const Color(
+                                            0xFFFF6B6B,
+                                          ),
+                                          inactiveTrackColor: const Color(
+                                            0xFFFF6B6B,
+                                          ).withValues(alpha: 0.2),
+                                          thumbColor: const Color(0xFFFF6B6B),
+                                          overlayColor: const Color(
+                                            0xFFFF6B6B,
+                                          ).withValues(alpha: 0.2),
+                                          thumbShape:
+                                              const RoundSliderThumbShape(
+                                                enabledThumbRadius: 5,
+                                              ),
+                                          trackHeight: 2,
+                                        ),
+                                        child: Slider(
+                                          value: _slRiskPercent.clamp(0.1, 10),
+                                          min: 0.1,
+                                          max: 10,
+                                          divisions: 99,
+                                          onChanged: (newPercent) {
+                                            setState(
+                                              () => _slRiskPercent = newPercent,
+                                            );
+                                            if (simulationProvider
+                                                        .calculatedPositionSize !=
+                                                    null &&
+                                                simulationProvider
+                                                        .calculatedPositionSize! >
+                                                    0) {
+                                              final riskAmount =
+                                                  simulationProvider
+                                                      .currentBalance *
+                                                  (_slRiskPercent / 100);
+                                              final priceDistance =
+                                                  riskAmount /
+                                                  simulationProvider
+                                                      .calculatedPositionSize!;
+                                              final slPrice = _isBuyOrder
+                                                  ? _clickPrice! - priceDistance
+                                                  : _clickPrice! +
+                                                        priceDistance;
+                                              simulationProvider
+                                                  .updateManualStopLoss(
+                                                    slPrice,
+                                                  );
+                                            }
+                                          },
+                                        ),
                                       ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _slRiskPercent =
-                                              (_slRiskPercent + 0.1).clamp(
-                                                0.1,
-                                                100,
-                                              );
-                                        });
-                                        if (simulationProvider
-                                                    .calculatedPositionSize !=
-                                                null &&
+                                    ),
+
+                                    const SizedBox(width: 4),
+
+                                    // SL Increase Button
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFFF6B6B,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFFFF6B6B,
+                                          ).withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _slRiskPercent =
+                                                (_slRiskPercent + 0.1).clamp(
+                                                  0.1,
+                                                  10,
+                                                );
+                                          });
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
+                                              simulationProvider
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final riskAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_slRiskPercent / 100);
+                                            final priceDistance =
+                                                riskAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final slPrice = _isBuyOrder
+                                                ? _clickPrice! - priceDistance
+                                                : _clickPrice! + priceDistance;
                                             simulationProvider
-                                                    .calculatedPositionSize! >
-                                                0) {
-                                          final riskAmount =
-                                              simulationProvider
-                                                  .currentBalance *
-                                              (_slRiskPercent / 100);
-                                          final priceDistance =
-                                              riskAmount /
-                                              simulationProvider
-                                                  .calculatedPositionSize!;
-                                          final slPrice = _isBuyOrder
-                                              ? _clickPrice! - priceDistance
-                                              : _clickPrice! + priceDistance;
-                                          simulationProvider
-                                              .updateManualStopLoss(slPrice);
-                                        }
-                                      },
+                                                .updateManualStopLoss(slPrice);
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: Color(0xFFFF6B6B),
+                                          size: 12,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
+                                      ),
+                                    ),
+
+                                    // SL Value
+                                    SizedBox(
+                                      width: 45,
+                                      child: Text(
+                                        '${_slRiskPercent.toStringAsFixed(1)}%',
+                                        textAlign: TextAlign.end,
+                                        style: const TextStyle(
+                                          color: Color(0xFFFF6B6B),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            // Take Profit % Slider
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_clickPrice != null &&
-                                    simulationProvider.calculatedPositionSize !=
-                                        null &&
-                                    simulationProvider.currentBalance > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 4.0),
-                                    child: Text(
-                                      'Take Profit: ${_tpRiskPercent.toStringAsFixed(1)}% (\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)})',
-                                      style: const TextStyle(
-                                        color: Colors.green,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
+
+                                const SizedBox(height: 8),
+
+                                // Take Profit Row
                                 Row(
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.remove,
-                                        color: Colors.green,
+                                    // TP Icon & Label
+                                    SizedBox(
+                                      width: 50,
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF22C55E,
+                                              ).withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: const Icon(
+                                              Icons.trending_up_rounded,
+                                              color: Color(0xFF22C55E),
+                                              size: 10,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Text(
+                                            'TP',
+                                            style: TextStyle(
+                                              color: Color(0xFF94A3B8),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _tpRiskPercent =
-                                              (_tpRiskPercent - 0.1).clamp(
-                                                0.1,
-                                                100,
-                                              );
-                                        });
-                                        if (simulationProvider
-                                                    .calculatedPositionSize !=
-                                                null &&
-                                            simulationProvider
-                                                    .calculatedPositionSize! >
-                                                0) {
-                                          final potentialAmount =
-                                              simulationProvider
-                                                  .currentBalance *
-                                              (_tpRiskPercent / 100);
-                                          final priceDistance =
-                                              potentialAmount /
-                                              simulationProvider
-                                                  .calculatedPositionSize!;
-                                          final tpPrice = _isBuyOrder
-                                              ? _clickPrice! + priceDistance
-                                              : _clickPrice! - priceDistance;
-                                          simulationProvider
-                                              .updateManualTakeProfit(tpPrice);
-                                        }
-                                      },
                                     ),
-                                    Expanded(
-                                      child: Slider(
-                                        value: _tpRiskPercent.clamp(0.1, 100),
-                                        min: 0.1,
-                                        max: 100,
-                                        divisions: 999,
-                                        label:
-                                            '+${_tpRiskPercent.toStringAsFixed(1)}%',
-                                        activeColor: Colors.green,
-                                        inactiveColor: Colors.green.withValues(
-                                          alpha: 0.2,
+
+                                    // TP Decrease Button
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF22C55E,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFF22C55E,
+                                          ).withValues(alpha: 0.3),
+                                          width: 1,
                                         ),
-                                        onChanged: (newPercent) {
-                                          setState(
-                                            () => _tpRiskPercent = newPercent,
-                                          );
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _tpRiskPercent =
+                                                (_tpRiskPercent - 0.1).clamp(
+                                                  0.1,
+                                                  20,
+                                                );
+                                          });
                                           if (simulationProvider
                                                       .calculatedPositionSize !=
                                                   null &&
@@ -703,232 +2290,543 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                                 );
                                           }
                                         },
+                                        icon: const Icon(
+                                          Icons.remove,
+                                          color: Color(0xFF22C55E),
+                                          size: 12,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
                                       ),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.green,
+
+                                    const SizedBox(width: 4),
+
+                                    // TP Slider
+                                    Expanded(
+                                      child: SliderTheme(
+                                        data: SliderTheme.of(context).copyWith(
+                                          activeTrackColor: const Color(
+                                            0xFF22C55E,
+                                          ),
+                                          inactiveTrackColor: const Color(
+                                            0xFF22C55E,
+                                          ).withValues(alpha: 0.2),
+                                          thumbColor: const Color(0xFF22C55E),
+                                          overlayColor: const Color(
+                                            0xFF22C55E,
+                                          ).withValues(alpha: 0.2),
+                                          thumbShape:
+                                              const RoundSliderThumbShape(
+                                                enabledThumbRadius: 5,
+                                              ),
+                                          trackHeight: 2,
+                                        ),
+                                        child: Slider(
+                                          value: _tpRiskPercent.clamp(0.1, 20),
+                                          min: 0.1,
+                                          max: 20,
+                                          divisions: 199,
+                                          onChanged: (newPercent) {
+                                            setState(
+                                              () => _tpRiskPercent = newPercent,
+                                            );
+                                            if (simulationProvider
+                                                        .calculatedPositionSize !=
+                                                    null &&
+                                                simulationProvider
+                                                        .calculatedPositionSize! >
+                                                    0) {
+                                              final potentialAmount =
+                                                  simulationProvider
+                                                      .currentBalance *
+                                                  (_tpRiskPercent / 100);
+                                              final priceDistance =
+                                                  potentialAmount /
+                                                  simulationProvider
+                                                      .calculatedPositionSize!;
+                                              final tpPrice = _isBuyOrder
+                                                  ? _clickPrice! + priceDistance
+                                                  : _clickPrice! -
+                                                        priceDistance;
+                                              simulationProvider
+                                                  .updateManualTakeProfit(
+                                                    tpPrice,
+                                                  );
+                                            }
+                                          },
+                                        ),
                                       ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _tpRiskPercent =
-                                              (_tpRiskPercent + 0.1).clamp(
-                                                0.1,
-                                                100,
-                                              );
-                                        });
-                                        if (simulationProvider
-                                                    .calculatedPositionSize !=
-                                                null &&
+                                    ),
+
+                                    const SizedBox(width: 4),
+
+                                    // TP Increase Button
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF22C55E,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFF22C55E,
+                                          ).withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _tpRiskPercent =
+                                                (_tpRiskPercent + 0.1).clamp(
+                                                  0.1,
+                                                  20,
+                                                );
+                                          });
+                                          if (simulationProvider
+                                                      .calculatedPositionSize !=
+                                                  null &&
+                                              simulationProvider
+                                                      .calculatedPositionSize! >
+                                                  0) {
+                                            final potentialAmount =
+                                                simulationProvider
+                                                    .currentBalance *
+                                                (_tpRiskPercent / 100);
+                                            final priceDistance =
+                                                potentialAmount /
+                                                simulationProvider
+                                                    .calculatedPositionSize!;
+                                            final tpPrice = _isBuyOrder
+                                                ? _clickPrice! + priceDistance
+                                                : _clickPrice! - priceDistance;
                                             simulationProvider
-                                                    .calculatedPositionSize! >
-                                                0) {
-                                          final potentialAmount =
-                                              simulationProvider
-                                                  .currentBalance *
-                                              (_tpRiskPercent / 100);
-                                          final priceDistance =
-                                              potentialAmount /
-                                              simulationProvider
-                                                  .calculatedPositionSize!;
-                                          final tpPrice = _isBuyOrder
-                                              ? _clickPrice! + priceDistance
-                                              : _clickPrice! - priceDistance;
-                                          simulationProvider
-                                              .updateManualTakeProfit(tpPrice);
-                                        }
-                                      },
+                                                .updateManualTakeProfit(
+                                                  tpPrice,
+                                                );
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: Color(0xFF22C55E),
+                                          size: 12,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
+                                      ),
+                                    ),
+
+                                    // TP Value
+                                    SizedBox(
+                                      width: 45,
+                                      child: Text(
+                                        '${_tpRiskPercent.toStringAsFixed(1)}%',
+                                        textAlign: TextAlign.end,
+                                        style: const TextStyle(
+                                          color: Color(0xFF22C55E),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
+
+                                const SizedBox(height: 8),
+
+                                // Risk/Reward Summary
+                                if (_clickPrice != null &&
+                                    simulationProvider.calculatedPositionSize !=
+                                        null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1F2937),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: Color(0xFF374151),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        Column(
+                                          children: [
+                                            const Text(
+                                              'RIESGO',
+                                              style: TextStyle(
+                                                color: Color(0xFF94A3B8),
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                            Text(
+                                              '\$${(simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)}',
+                                              style: const TextStyle(
+                                                color: Color(0xFFFF6B6B),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Container(
+                                          width: 1,
+                                          height: 24,
+                                          color: const Color(0xFF374151),
+                                        ),
+                                        Column(
+                                          children: [
+                                            const Text(
+                                              'GANANCIA',
+                                              style: TextStyle(
+                                                color: Color(0xFF94A3B8),
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                            Text(
+                                              '\$${(simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)}',
+                                              style: const TextStyle(
+                                                color: Color(0xFF22C55E),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Container(
+                                          width: 1,
+                                          height: 24,
+                                          color: const Color(0xFF374151),
+                                        ),
+                                        Column(
+                                          children: [
+                                            const Text(
+                                              'R:R',
+                                              style: TextStyle(
+                                                color: Color(0xFF94A3B8),
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                            Text(
+                                              '1:${(_tpRiskPercent / _slRiskPercent).toStringAsFixed(1)}',
+                                              style: const TextStyle(
+                                                color: Color(0xFF3B82F6),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
-                            const SizedBox(height: 16),
-                          ],
-                          // Confirm Button
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed:
-                                  simulationProvider.canCalculatePosition() &&
-                                      _clickPrice != null &&
-                                      _slRiskPercent > 0 &&
-                                      _tpRiskPercent > 0
-                                  ? () {
-                                      debugPrint(
-                                        '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = $_slRiskPercent, TP % = $_tpRiskPercent',
-                                      );
-                                      // Calcular precios a partir de los porcentajes de riesgo/potencial
-                                      final riskAmount =
-                                          simulationProvider.currentBalance *
-                                          (_slRiskPercent / 100);
-                                      final tpAmount =
-                                          simulationProvider.currentBalance *
-                                          (_tpRiskPercent / 100);
-                                      final slPrice = _isBuyOrder
-                                          ? _clickPrice! -
-                                                (riskAmount /
-                                                    (simulationProvider
-                                                            .calculatedPositionSize ??
-                                                        1))
-                                          : _clickPrice! +
-                                                (riskAmount /
-                                                    (simulationProvider
-                                                            .calculatedPositionSize ??
-                                                        1));
-                                      final tpPrice = _isBuyOrder
-                                          ? _clickPrice! +
-                                                (tpAmount /
-                                                    (simulationProvider
-                                                            .calculatedPositionSize ??
-                                                        1))
-                                          : _clickPrice! -
-                                                (tpAmount /
-                                                    (simulationProvider
-                                                            .calculatedPositionSize ??
-                                                        1));
-                                      simulationProvider.updateManualStopLoss(
-                                        slPrice,
-                                      );
-                                      simulationProvider.updateManualTakeProfit(
-                                        tpPrice,
-                                      );
-                                      debugPrint(
-                                        '🔥 [CONFIRMAR] Orden ejecutada. SL final = $slPrice, TP final = $tpPrice',
-                                      );
-                                      simulationProvider.executeManualTrade(
-                                        type: _isBuyOrder ? 'buy' : 'sell',
-                                        amount:
-                                            simulationProvider
-                                                .calculatedPositionSize ??
-                                            0.0,
-                                        leverage:
-                                            simulationProvider
-                                                .calculatedLeverage
-                                                ?.toInt() ??
-                                            1,
-                                        entryPrice: _clickPrice!,
-                                      );
-                                      Future.delayed(
-                                        const Duration(milliseconds: 100),
-                                        () {
-                                          simulationProvider.resumeSimulation();
-                                        },
-                                      );
-                                      setState(() {
-                                        _showOrderContainerInline = false;
-                                        _showSlTpOnOrderInline = false;
-                                        _clickPrice = null;
-                                      });
-                                    }
-                                  : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _isBuyOrder
-                                    ? const Color(0xFF21CE99)
-                                    : const Color(0xFFFF6B6B),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                        // Confirm Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed:
+                                simulationProvider.canCalculatePosition() &&
+                                    _clickPrice != null &&
+                                    _slRiskPercent > 0 &&
+                                    _tpRiskPercent > 0
+                                ? () {
+                                    // debugPrint(
+                                    //   '🔥 [CONFIRMAR] Valores antes de confirmar: SL % = $_slRiskPercent, TP % = $_tpRiskPercent',
+                                    // );
+                                    // Calcular precios a partir de los porcentajes de riesgo/potencial
+                                    final riskAmount =
+                                        simulationProvider.currentBalance *
+                                        (_slRiskPercent / 100);
+                                    final tpAmount =
+                                        simulationProvider.currentBalance *
+                                        (_tpRiskPercent / 100);
+                                    final slPrice = _isBuyOrder
+                                        ? _clickPrice! -
+                                              (riskAmount /
+                                                  (simulationProvider
+                                                          .calculatedPositionSize ??
+                                                      1))
+                                        : _clickPrice! +
+                                              (riskAmount /
+                                                  (simulationProvider
+                                                          .calculatedPositionSize ??
+                                                      1));
+                                    final tpPrice = _isBuyOrder
+                                        ? _clickPrice! +
+                                              (tpAmount /
+                                                  (simulationProvider
+                                                          .calculatedPositionSize ??
+                                                      1))
+                                        : _clickPrice! -
+                                              (tpAmount /
+                                                  (simulationProvider
+                                                          .calculatedPositionSize ??
+                                                      1));
+                                    simulationProvider.updateManualStopLoss(
+                                      slPrice,
+                                    );
+                                    simulationProvider.updateManualTakeProfit(
+                                      tpPrice,
+                                    );
+                                    // debugPrint(
+                                    //   '🔥 [CONFIRMAR] Orden ejecutada. SL final = $slPrice, TP final = $tpPrice',
+                                    // );
+                                    simulationProvider.executeManualTrade(
+                                      type: _isBuyOrder ? 'buy' : 'sell',
+                                      amount:
+                                          simulationProvider
+                                              .calculatedPositionSize ??
+                                          0.0,
+                                      leverage:
+                                          simulationProvider.calculatedLeverage
+                                              ?.toInt() ??
+                                          1,
+                                      entryPrice: _clickPrice!,
+                                    );
+                                    Future.delayed(
+                                      const Duration(milliseconds: 100),
+                                      () {
+                                        simulationProvider.resumeSimulation();
+                                      },
+                                    );
+                                    setState(() {
+                                      _showOrderContainerInline = false;
+                                      _showSlTpOnOrderInline = false;
+                                      _clickPrice = null;
+                                    });
+                                  }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shadowColor: Colors.transparent,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 24,
                               ),
-                              child: Text(
-                                _isBuyOrder ? 'Comprar' : 'Vender',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Inter',
-                                ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Position summary - solo mostrar después de ejecutar la orden
-                          if (simulationProvider.inPosition) ...[
-                            Container(
-                              padding: const EdgeInsets.all(12),
+                            child: Container(
+                              width: double.infinity,
+                              height: 48,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1E1E1E),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey[600]!),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: _isBuyOrder
+                                      ? [
+                                          const Color(0xFF22C55E),
+                                          const Color(0xFF16A34A),
+                                        ]
+                                      : [
+                                          const Color(0xFFFF6B6B),
+                                          const Color(0xFFDC2626),
+                                        ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        (_isBuyOrder
+                                                ? const Color(0xFF22C55E)
+                                                : const Color(0xFFFF6B6B))
+                                            .withValues(alpha: 0.4),
+                                    offset: const Offset(0, 4),
+                                    blurRadius: 16,
+                                    spreadRadius: -2,
+                                  ),
+                                ],
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    simulationProvider.getPositionSummaryText(),
-                                    style: const TextStyle(
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Icon(
+                                      _isBuyOrder
+                                          ? Icons.trending_up
+                                          : Icons.trending_down,
+                                      size: 16,
                                       color: Colors.white,
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(width: 12),
                                   Text(
-                                    'Stop Loss: ${simulationProvider.manualStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                    _isBuyOrder
+                                        ? 'CONFIRMAR COMPRA'
+                                        : 'CONFIRMAR VENTA',
                                     style: const TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 12,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
                                       fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                  Text(
-                                    'Take Profit: ${simulationProvider.manualTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
-                                    style: const TextStyle(
-                                      color: Colors.green,
-                                      fontSize: 12,
-                                      fontFamily: 'Inter',
+                                      letterSpacing: 1.0,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // --- Controles de compra/venta en la sección media ---
-                  if (!_showOrderContainerInline) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2C2C2C),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[700]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.trending_up,
-                                color: Color(0xFF21CE99),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Controles de Trading',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                            ],
                           ),
-                          const SizedBox(height: 16),
+                        ),
+                        const SizedBox(height: 16),
+                        // Position summary - solo mostrar después de ejecutar la orden
+                        if (simulationProvider.inPosition) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[600]!),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  simulationProvider.getPositionSummaryText(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Stop Loss: ${simulationProvider.manualStopLossPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 12,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                                Text(
+                                  'Take Profit: ${simulationProvider.manualTakeProfitPrice?.toStringAsFixed(5) ?? 'N/A'}',
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 12,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(child: const SizedBox(height: 16)),
+              ],
 
-                          // Trading Buttons Row
-                          Row(
-                            children: [
-                              Expanded(
+              // --- Controles de compra/venta en la sección media ---
+              if (!_showOrderContainerInline) ...[
+                SliverToBoxAdapter(child: const SizedBox(height: 16)),
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1F2937), Color(0xFF111827)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF374151),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          offset: const Offset(0, 6),
+                          blurRadius: 20,
+                          spreadRadius: -2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Enhanced Trading Buttons Row
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  gradient:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Color(0xFF22C55E),
+                                            Color(0xFF16A34A),
+                                          ],
+                                        )
+                                      : null,
+                                  color:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? null
+                                      : const Color(0xFF374151),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFF22C55E,
+                                            ).withValues(alpha: 0.3),
+                                            offset: const Offset(0, 4),
+                                            blurRadius: 16,
+                                            spreadRadius: -2,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
                                 child: ElevatedButton.icon(
                                   onPressed:
                                       (!simulationProvider.inPosition &&
@@ -940,22 +2838,73 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                           true,
                                         )
                                       : null,
-                                  icon: const Icon(Icons.trending_up),
-                                  label: const Text('Comprar'),
+                                  icon: const Icon(Icons.trending_up, size: 22),
+                                  label: const Text(
+                                    'COMPRAR',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF21CE99),
+                                    backgroundColor: Colors.transparent,
                                     foregroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    elevation: 0,
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
+                                      vertical: 16,
+                                      horizontal: 20,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Container(
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  gradient:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Color(0xFFFF6B6B),
+                                            Color(0xFFDC2626),
+                                          ],
+                                        )
+                                      : null,
+                                  color:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? null
+                                      : const Color(0xFF374151),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow:
+                                      (!simulationProvider.inPosition &&
+                                          simulationProvider
+                                              .canCalculatePosition())
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFFFF6B6B,
+                                            ).withValues(alpha: 0.3),
+                                            offset: const Offset(0, 4),
+                                            blurRadius: 16,
+                                            spreadRadius: -2,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
                                 child: ElevatedButton.icon(
                                   onPressed:
                                       (!simulationProvider.inPosition &&
@@ -967,583 +2916,1085 @@ class _SimulationScreenState extends State<SimulationScreen> {
                                           false,
                                         )
                                       : null,
-                                  icon: const Icon(Icons.trending_down),
-                                  label: const Text('Vender'),
+                                  icon: const Icon(
+                                    Icons.trending_down,
+                                    size: 22,
+                                  ),
+                                  label: const Text(
+                                    'VENDER',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFF6B6B),
+                                    backgroundColor: Colors.transparent,
                                     foregroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    elevation: 0,
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
+                                      vertical: 16,
+                                      horizontal: 20,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
+                        ),
 
-                          // Close Position Button (only show if position is open)
-                          if (simulationProvider.inPosition) ...[
-                            const SizedBox(height: 12),
-                            Row(
+                        // Close Position Button (only show if position is open)
+                        if (simulationProvider.inPosition) ...[
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF374151,
+                              ).withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF4B5563),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
                               children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      simulationProvider.closeManualPosition(
-                                        simulationProvider.currentTickPrice,
-                                      );
-                                    },
-                                    icon: const Icon(Icons.close),
-                                    label: const Text('Cerrar Entrada'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.orange,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFF59E0B,
+                                        ).withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
+                                      child: const Icon(
+                                        Icons.account_balance_wallet,
+                                        color: Color(0xFFF59E0B),
+                                        size: 16,
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Posición Activa',
+                                      style: TextStyle(
+                                        color: Color(0xFFF8FAFC),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      _showManageSLTPContainer(
-                                        context,
-                                        simulationProvider,
-                                      );
-                                    },
-                                    icon: const Icon(Icons.tune),
-                                    label: const Text('Gestionar SL/TP'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF1976D2),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFFFF6B6B),
+                                              Color(0xFFDC2626),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFFFF6B6B,
+                                              ).withValues(alpha: 0.3),
+                                              offset: const Offset(0, 4),
+                                              blurRadius: 12,
+                                              spreadRadius: -2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            simulationProvider
+                                                .closeManualPosition(
+                                                  simulationProvider
+                                                      .currentTickPrice,
+                                                );
+                                          },
+                                          icon: const Icon(
+                                            Icons.close_rounded,
+                                            size: 18,
+                                          ),
+                                          label: const Text(
+                                            'CERRAR',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Container(
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFF3B82F6),
+                                              Color(0xFF1D4ED8),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF3B82F6,
+                                              ).withValues(alpha: 0.3),
+                                              offset: const Offset(0, 4),
+                                              blurRadius: 12,
+                                              spreadRadius: -2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            setState(() {
+                                              _showManageSLTPContainer =
+                                                  !_showManageSLTPContainer;
+                                            });
+                                          },
+                                          icon: const Icon(
+                                            Icons.tune_rounded,
+                                            size: 18,
+                                          ),
+                                          label: const Text(
+                                            'SL/TP',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.white,
+                                            shadowColor: Colors.transparent,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ],
+
+                        // Panel de gestión de SL/TP para trades abiertos
+                        if (_showManageSLTPContainer &&
+                            simulationProvider.inPosition) ...[
+                          const SizedBox(height: 20),
+                          _buildManageSLTPPanel(simulationProvider),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // Debug Button (temporary) - COMMENTED OUT
+                  /* 
+            if (simulationProvider.setupParametersCalculated) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F2937),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF374151)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      offset: const Offset(0, 4),
+                      blurRadius: 12,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.bug_report,
+                          color: Color(0xFFF59E0B),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Debug Info',
+                          style: TextStyle(
+                            color: Color(0xFFF59E0B),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF374151),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        simulationProvider.getDebugSLTPInfo(),
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            */
 
-                    // Debug Button (temporary)
-                    if (simulationProvider.setupParametersCalculated) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[600]!),
+                  // --- Enhanced Simulation Controls ---
+                  // COMENTADO: Los controles de simulación se han movido al header del chart para simplificar la pantalla
+                  /*
+          if (!_showOrderContainerInline) ...[
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1F2937), Color(0xFF111827)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF374151),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    offset: const Offset(0, 6),
+                    blurRadius: 20,
+                    spreadRadius: -2,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Enhanced Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF3B82F6),
+                                Color(0xFF1D4ED8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF3B82F6,
+                                ).withValues(alpha: 0.3),
+                                offset: const Offset(0, 4),
+                                blurRadius: 12,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.speed_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.bug_report,
-                                  color: Colors.orange,
-                                  size: 16,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Control de Simulación',
+                                style: TextStyle(
+                                  color: Color(0xFFF8FAFC),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  fontFamily: 'Inter',
                                 ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Debug Info',
-                                  style: TextStyle(
-                                    color: Colors.orange,
-                                    fontSize: 14,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Gestiona la velocidad y marco temporal',
+                                style: TextStyle(
+                                  color: const Color(0xFF94A3B8),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Enhanced Timeframe Selector - Made more compact
+                        Container(
+                          constraints: const BoxConstraints(
+                            minWidth: 70,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFF374151),
+                                Color(0xFF1F2937),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: const Color(0xFF4B5563),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: 0.2,
+                                ),
+                                offset: const Offset(0, 2),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: DropdownButton<Timeframe>(
+                            value:
+                                _selectedTimeframe ??
+                                simulationProvider.activeTimeframe,
+                            dropdownColor: const Color(0xFF1F2937),
+                            underline: Container(),
+                            isDense: true,
+                            icon: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: Color(0xFF94A3B8),
+                              size: 16,
+                            ),
+                            items: Timeframe.values.map((tf) {
+                              String label;
+                              switch (tf) {
+                                case Timeframe.d1:
+                                  label = '1D';
+                                  break;
+                                case Timeframe.h1:
+                                  label = '1H';
+                                  break;
+                                case Timeframe.m15:
+                                  label = '15M';
+                                  break;
+                                case Timeframe.m5:
+                                  label = '5M';
+                                  break;
+                                case Timeframe.m1:
+                                  label = '1M';
+                                  break;
+                              }
+                              return DropdownMenuItem(
+                                value: tf,
+                                child: Text(
+                                  label,
+                                  style: const TextStyle(
+                                    color: Color(0xFFF8FAFC),
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     fontFamily: 'Inter',
                                   ),
                                 ),
+                              );
+                            }).toList(),
+                            onChanged: (tf) {
+                              setState(() => _selectedTimeframe = tf);
+                              if (tf != null) {
+                                simulationProvider.setTimeframe(tf);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                
+                  const SizedBox(height: 20),
+                
+                  // Enhanced Simulation Control Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient:
+                                (simulationProvider.currentSetup !=
+                                        null &&
+                                    (simulationProvider
+                                            .isSimulationPaused ||
+                                        !simulationProvider
+                                            .isSimulationRunning))
+                                ? const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF22C55E),
+                                      Color(0xFF16A34A),
+                                    ],
+                                  )
+                                : null,
+                            color:
+                                (simulationProvider.currentSetup !=
+                                        null &&
+                                    (simulationProvider
+                                            .isSimulationPaused ||
+                                        !simulationProvider
+                                            .isSimulationRunning))
+                                ? null
+                                : const Color(0xFF374151),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow:
+                                (simulationProvider.currentSetup !=
+                                        null &&
+                                    (simulationProvider
+                                            .isSimulationPaused ||
+                                        !simulationProvider
+                                            .isSimulationRunning))
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF22C55E,
+                                      ).withValues(alpha: 0.3),
+                                      offset: const Offset(0, 4),
+                                      blurRadius: 16,
+                                      spreadRadius: -2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed:
+                                (simulationProvider.currentSetup !=
+                                        null &&
+                                    simulationProvider
+                                        .isSimulationPaused)
+                                ? () => simulationProvider
+                                      .resumeTickSimulation()
+                                : (simulationProvider.currentSetup !=
+                                          null &&
+                                      !simulationProvider
+                                          .isSimulationRunning)
+                                ? () => simulationProvider
+                                      .startTickSimulation(
+                                        simulationProvider
+                                            .currentSetup!,
+                                        simulationProvider
+                                            .historicalData
+                                            .first
+                                            .timestamp,
+                                        simulationProvider
+                                            .simulationSpeed,
+                                        simulationProvider
+                                            .currentBalance,
+                                        simulationProvider
+                                                .activeSymbol ??
+                                            'BTCUSD',
+                                      )
+                                : null,
+                            icon: Icon(
+                              simulationProvider.isSimulationPaused
+                                  ? Icons.play_arrow_rounded
+                                  : Icons.play_arrow_rounded,
+                              size: 22,
+                            ),
+                            label: Text(
+                              simulationProvider.isSimulationPaused
+                                  ? 'REANUDAR'
+                                  : 'INICIAR',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shadowColor: Colors.transparent,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient:
+                                simulationProvider.isSimulationRunning
+                                ? const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFFF59E0B),
+                                      Color(0xFFD97706),
+                                    ],
+                                  )
+                                : null,
+                            color:
+                                simulationProvider.isSimulationRunning
+                                ? null
+                                : const Color(0xFF374151),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow:
+                                simulationProvider.isSimulationRunning
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFFF59E0B,
+                                      ).withValues(alpha: 0.3),
+                                      offset: const Offset(0, 4),
+                                      blurRadius: 16,
+                                      spreadRadius: -2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed:
+                                simulationProvider.isSimulationRunning
+                                ? () => simulationProvider
+                                      .pauseTickSimulation()
+                                : null,
+                            icon: const Icon(
+                              Icons.pause_rounded,
+                              size: 22,
+                            ),
+                            label: const Text(
+                              'PAUSAR',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shadowColor: Colors.transparent,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                
+                  // --- Botones de siguiente vela y siguiente tick ---
+                  // -- Por el momento esto se comentara, ya que no funciona correctamente y no es escencial en el MVP.
+                  /*
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed:
+                              simulationProvider.simulationMode ==
+                                  SimulationMode.manual
+                              ? () => simulationProvider.advanceCandle()
+                              : null,
+                          icon: const Icon(Icons.skip_next),
+                          label: const Text('Siguiente Vela'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2C2C2C),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(color: Colors.grey[700]!),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed:
+                              simulationProvider.simulationMode ==
+                                  SimulationMode.manual
+                              ? () => simulationProvider.advanceTick()
+                              : null,
+                          icon: const Icon(Icons.arrow_forward),
+                          label: const Text('Siguiente Tick'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2C2C2C),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(color: Colors.grey[700]!),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  */
+                  const SizedBox(height: 24),
+                
+                  // Enhanced Speed Control
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFF4B5563),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF3B82F6,
+                                ).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.speed_rounded,
+                                color: Color(0xFF3B82F6),
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'VELOCIDAD: ${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                                  style: const TextStyle(
+                                    color: Color(0xFFF8FAFC),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily: 'Inter',
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                if (_isAdjustingSpeed) ...[
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFFF59E0B),
+                                          Color(0xFFD97706),
+                                        ],
+                                      ),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                    child: const Text(
+                                      'PAUSADO',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              simulationProvider.getDebugSLTPInfo(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontFamily: 'Inter',
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: const Color(0xFF3B82F6),
+                            inactiveTrackColor: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.2),
+                            thumbColor: const Color(0xFF3B82F6),
+                            overlayColor: const Color(
+                              0xFF3B82F6,
+                            ).withValues(alpha: 0.2),
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 10,
+                            ),
+                            trackHeight: 4,
+                          ),
+                          child: Slider(
+                            value:
+                                simulationProvider.ticksPerSecondFactor,
+                            min: 0.1,
+                            max: 5.0,
+                            divisions: 49,
+                            label:
+                                '${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
+                            onChanged: (value) {
+                              // Pausar temporalmente mientras se ajusta la velocidad
+                              if (!_isAdjustingSpeed &&
+                                  simulationProvider
+                                      .isSimulationRunning) {
+                                _isAdjustingSpeed = true;
+                                simulationProvider
+                                    .pauseTickSimulation();
+                              }
+                              simulationProvider.ticksPerSecondFactor =
+                                  value;
+                            },
+                            onChangeEnd: (value) {
+                              // Reanudar después de ajustar la velocidad
+                              if (_isAdjustingSpeed &&
+                                  simulationProvider.currentSetup !=
+                                      null) {
+                                _isAdjustingSpeed = false;
+                                simulationProvider
+                                    .resumeTickSimulation();
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          */
+                ),
+              ],
+
+              // Setup Details Section (below controls)
+              if (simulationProvider.currentSetup != null &&
+                  !_showOrderContainerInline &&
+                  !_showSLTPContainer) ...[
+                SliverToBoxAdapter(child: const SizedBox(height: 16)),
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1F2937), Color(0xFF111827)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF374151),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          offset: const Offset(0, 6),
+                          blurRadius: 20,
+                          spreadRadius: -2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Enhanced Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF10B981),
+                                      Color(0xFF059669),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF10B981,
+                                      ).withValues(alpha: 0.3),
+                                      offset: const Offset(0, 4),
+                                      blurRadius: 12,
+                                      spreadRadius: -2,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.settings_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Configuración Activa',
+                                    style: TextStyle(
+                                      color: Color(0xFFF8FAFC),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    simulationProvider.currentSetup!.name,
+                                    style: TextStyle(
+                                      color: const Color(0xFF94A3B8),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Setup details in compact format
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildCompactSetupDetail(
+                                'Riesgo',
+                                simulationProvider.currentSetup!
+                                    .getRiskPercentDisplay(),
+                                Icons.security,
+                                Colors.orange,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildCompactSetupDetail(
+                                'SL',
+                                simulationProvider.currentSetup!
+                                    .getStopLossDisplay(),
+                                Icons.trending_down,
+                                Colors.red,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildCompactSetupDetail(
+                                'TP',
+                                simulationProvider.currentSetup!
+                                    .getTakeProfitRatioDisplay(),
+                                Icons.trending_up,
+                                Colors.green,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ],
 
-                  // --- Control de simulación con timeframe integrado ---
-                  if (!_showOrderContainerInline) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2C2C2C),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[700]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header con título y timeframe
-                          Row(
-                            children: [
-                              const Icon(Icons.speed, color: Color(0xFF21CE99)),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Control de simulación',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Inter',
-                                ),
+                        // Enhanced Advanced Rules Section
+                        if (simulationProvider
+                            .currentSetup!
+                            .rules
+                            .isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF111827,
+                              ).withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFF374151,
+                                ).withValues(alpha: 0.5),
+                                width: 1,
                               ),
-                              const Spacer(),
-                              // Dropdown de timeframe integrado
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  offset: const Offset(0, 4),
+                                  blurRadius: 12,
+                                  spreadRadius: -2,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1E1E1E),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: Colors.grey[600]!),
-                                ),
-                                child: DropdownButton<Timeframe>(
-                                  value:
-                                      _selectedTimeframe ??
-                                      simulationProvider.activeTimeframe,
-                                  dropdownColor: const Color(0xFF2C2C2C),
-                                  underline: Container(), // Sin línea
-                                  icon: const Icon(
-                                    Icons.arrow_drop_down,
-                                    color: Colors.grey,
-                                    size: 16,
-                                  ),
-                                  items: Timeframe.values.map((tf) {
-                                    String label;
-                                    switch (tf) {
-                                      case Timeframe.d1:
-                                        label = '1D';
-                                        break;
-                                      case Timeframe.h1:
-                                        label = '1H';
-                                        break;
-                                      case Timeframe.m15:
-                                        label = '15M';
-                                        break;
-                                      case Timeframe.m5:
-                                        label = '5M';
-                                        break;
-                                      case Timeframe.m1:
-                                        label = '1M';
-                                        break;
-                                    }
-                                    return DropdownMenuItem(
-                                      value: tf,
-                                      child: Text(
-                                        label,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontFamily: 'Inter',
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (tf) {
-                                    debugPrint(
-                                      '🔥🔥🔥 UI: Timeframe dropdown changed to: ${tf?.name}',
-                                    );
-                                    setState(() => _selectedTimeframe = tf);
-                                    if (tf != null) {
-                                      debugPrint(
-                                        '🔥🔥🔥 UI: Calling simulationProvider.setTimeframe(${tf.name})',
-                                      );
-                                      simulationProvider.setTimeframe(tf);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // --- Controles de simulación ---
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed:
-                                      (simulationProvider.currentSetup !=
-                                              null &&
-                                          simulationProvider.isSimulationPaused)
-                                      ? () => simulationProvider
-                                            .resumeTickSimulation()
-                                      : (simulationProvider.currentSetup !=
-                                                null &&
-                                            !simulationProvider
-                                                .isSimulationRunning)
-                                      ? () => simulationProvider
-                                            .startTickSimulation(
-                                              simulationProvider.currentSetup!,
-                                              simulationProvider
-                                                  .historicalData
-                                                  .first
-                                                  .timestamp,
-                                              simulationProvider
-                                                  .simulationSpeed,
-                                              simulationProvider.currentBalance,
-                                              simulationProvider.activeSymbol ??
-                                                  'BTCUSD', // fallback to BTCUSD if no symbol set
-                                            )
-                                      : null,
-                                  icon: const Icon(Icons.play_arrow),
-                                  label: Text(
-                                    simulationProvider.isSimulationPaused
-                                        ? 'Reanudar'
-                                        : 'Iniciar',
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF21CE99),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed:
-                                      simulationProvider.isSimulationRunning
-                                      ? () => simulationProvider
-                                            .pauseTickSimulation()
-                                      : null,
-                                  icon: const Icon(Icons.pause),
-                                  label: const Text('Pausar'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // Botón de detener comentado temporalmente
-                              /*
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed:
-                                      simulationProvider.isSimulationRunning
-                                      ? () {
-                                          _isAdjustingSpeed =
-                                              false; // Resetear estado de ajuste
-                                          simulationProvider.stopTickSimulation();
-                                        }
-                                      : null,
-                                  icon: const Icon(Icons.stop),
-                                  label: const Text('Detener'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFF6B6B),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              */
-                            ],
-                          ),
-
-                          // --- Botones de siguiente vela y siguiente tick ---
-                          // -- Por el momento esto se comentara, ya que no funciona correctamente y no es escencial en el MVP.
-                          /*
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed:
-                                      simulationProvider.simulationMode ==
-                                          SimulationMode.manual
-                                      ? () => simulationProvider.advanceCandle()
-                                      : null,
-                                  icon: const Icon(Icons.skip_next),
-                                  label: const Text('Siguiente Vela'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2C2C2C),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      side: BorderSide(color: Colors.grey[700]!),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed:
-                                      simulationProvider.simulationMode ==
-                                          SimulationMode.manual
-                                      ? () => simulationProvider.advanceTick()
-                                      : null,
-                                  icon: const Icon(Icons.arrow_forward),
-                                  label: const Text('Siguiente Tick'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2C2C2C),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      side: BorderSide(color: Colors.grey[700]!),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          */
-                          const SizedBox(height: 16),
-
-                          // Factor de velocidad
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          'Velocidad: ${simulationProvider.ticksPerSecondFactor.toStringAsFixed(1)}x',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14,
-                                            fontFamily: 'Inter',
-                                          ),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Color(0xFFF59E0B),
+                                            Color(0xFFD97706),
+                                          ],
                                         ),
-                                        if (_isAdjustingSpeed) ...[
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.orange.withValues(
-                                                alpha: 0.2,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              border: Border.all(
-                                                color: Colors.orange,
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'PAUSADO',
-                                              style: TextStyle(
-                                                color: Colors.orange,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
+                                        borderRadius: BorderRadius.circular(10),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFFF59E0B,
+                                            ).withValues(alpha: 0.3),
+                                            offset: const Offset(0, 2),
+                                            blurRadius: 8,
+                                            spreadRadius: -1,
                                           ),
                                         ],
-                                      ],
+                                      ),
+                                      child: const Icon(
+                                        Icons.rule_rounded,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
                                     ),
-                                    Slider(
-                                      value: simulationProvider
-                                          .ticksPerSecondFactor,
-                                      min: 0.1,
-                                      max: 5.0,
-                                      divisions: 49,
-                                      activeColor: const Color(0xFF21CE99),
-                                      onChanged: (value) {
-                                        // Pausar temporalmente mientras se ajusta la velocidad
-                                        if (!_isAdjustingSpeed &&
-                                            simulationProvider
-                                                .isSimulationRunning) {
-                                          _isAdjustingSpeed = true;
-                                          simulationProvider
-                                              .pauseTickSimulation();
-                                        }
-
-                                        simulationProvider
-                                                .ticksPerSecondFactor =
-                                            value;
-                                      },
-                                      onChangeEnd: (value) {
-                                        // Reanudar después de ajustar la velocidad
-                                        if (_isAdjustingSpeed &&
-                                            simulationProvider.currentSetup !=
-                                                null) {
-                                          _isAdjustingSpeed = false;
-                                          simulationProvider
-                                              .resumeTickSimulation();
-                                        }
-                                      },
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Reglas Avanzadas',
+                                      style: TextStyle(
+                                        color: Color(0xFFF8FAFC),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter',
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 16),
+
+                                // Enhanced Scrollable rules list
+                                Container(
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 200,
+                                  ),
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      children: simulationProvider
+                                          .currentSetup!
+                                          .rules
+                                          .map(
+                                            (rule) =>
+                                                _buildCompactRuleItem(rule),
+                                          )
+                                          .toList(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                  ],
-                  // Setup Details Section (below controls)
-                  if (simulationProvider.currentSetup != null &&
-                      !_showOrderContainerInline &&
-                      !_showSLTPContainer) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2C2C2C),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[700]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.settings,
-                                color: const Color(0xFF21CE99),
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Setup: ${simulationProvider.currentSetup!.name}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Setup details in compact format
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildCompactSetupDetail(
-                                  'Riesgo',
-                                  simulationProvider.currentSetup!
-                                      .getRiskPercentDisplay(),
-                                  Icons.security,
-                                  Colors.orange,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildCompactSetupDetail(
-                                  'SL',
-                                  simulationProvider.currentSetup!
-                                      .getStopLossDisplay(),
-                                  Icons.trending_down,
-                                  Colors.red,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildCompactSetupDetail(
-                                  'TP',
-                                  simulationProvider.currentSetup!
-                                      .getTakeProfitRatioDisplay(),
-                                  Icons.trending_up,
-                                  Colors.green,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          // Advanced Rules Section
-                          if (simulationProvider
-                              .currentSetup!
-                              .rules
-                              .isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              'Reglas Avanzadas',
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-
-                            // Scrollable rules list
-                            Container(
-                              constraints: const BoxConstraints(maxHeight: 120),
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  children: simulationProvider
-                                      .currentSetup!
-                                      .rules
-                                      .map(
-                                        (rule) => _buildCompactRuleItem(rule),
-                                      )
-                                      .toList(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -1585,7 +4036,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
         simulationProvider.historicalData.length - 1;
 
     return Container(
-      color: const Color(0xFF1E1E1E),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+        ),
+      ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1593,198 +4050,339 @@ class _SimulationScreenState extends State<SimulationScreen> {
           children: [
             // Progress Indicator
             if (!isSimulationComplete) ...[
-              Card(
-                color: const Color(0xFF2C2C2C),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Progreso de Simulación',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'Inter',
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F2937),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF374151)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      offset: const Offset(0, 4),
+                      blurRadius: 12,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.timeline,
+                          color: Color(0xFF22C55E),
+                          size: 20,
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      LinearProgressIndicator(
-                        value: simulationProvider.historicalData.isNotEmpty
-                            ? (simulationProvider.currentCandleIndex + 1) /
-                                  simulationProvider.historicalData.length
-                            : 0.0,
-                        backgroundColor: Colors.grey[700],
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF21CE99),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Progreso de Simulación',
+                          style: const TextStyle(
+                            color: Color(0xFFF8FAFC),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Inter',
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    LinearProgressIndicator(
+                      value: simulationProvider.historicalData.isNotEmpty
+                          ? (simulationProvider.currentCandleIndex + 1) /
+                                simulationProvider.historicalData.length
+                          : 0.0,
+                      backgroundColor: const Color(0xFF374151),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFF22C55E),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Vela ${simulationProvider.currentCandleIndex + 1} de ${simulationProvider.historicalData.length}',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                        ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Vela ${simulationProvider.currentCandleIndex + 1} de ${simulationProvider.historicalData.length}',
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
             ],
 
-            // Real-time Statistics
-            Card(
-              color: const Color(0xFF2C2C2C),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Estadísticas en Tiempo Real',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Key Metrics Grid
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetricCard(
-                            'Trades Abiertos',
-                            trades.length.toString(),
-                            Icons.pending,
-                            Colors.orange,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMetricCard(
-                            'Win Rate',
-                            '${(winRate * 100).toStringAsFixed(1)}%',
-                            Icons.trending_up,
-                            winRate >= 0.5 ? Colors.green : Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetricCard(
-                            'Operaciones Completadas',
-                            totalCompletedOperations.toString(),
-                            Icons.check_circle,
-                            Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMetricCard(
-                            'P&L Total',
-                            '\$${totalPnL.toStringAsFixed(2)}',
-                            Icons.trending_up,
-                            totalPnL >= 0 ? Colors.green : Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetricCard(
-                            'Ganancia Máx',
-                            '\$${maxProfit.toStringAsFixed(2)}',
-                            Icons.trending_up,
-                            Colors.green,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMetricCard(
-                            'Pérdida Máx',
-                            '\$${maxLoss.toStringAsFixed(2)}',
-                            Icons.trending_down,
-                            Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetricCard(
-                            'Balance Actual',
-                            '\$${simulationProvider.currentBalance.toStringAsFixed(2)}',
-                            Icons.account_balance_wallet,
-                            Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMetricCard(
-                            'P&L Flotante',
-                            '\$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
-                            Icons.pending,
-                            simulationProvider.unrealizedPnL >= 0
-                                ? Colors.green
-                                : Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+            // Enhanced Real-time Statistics
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1F2937), Color(0xFF111827)],
                 ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF374151), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    offset: const Offset(0, 8),
+                    blurRadius: 24,
+                    spreadRadius: -4,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF22C55E,
+                              ).withValues(alpha: 0.3),
+                              offset: const Offset(0, 4),
+                              blurRadius: 12,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.analytics_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Estadísticas en Tiempo Real',
+                            style: TextStyle(
+                              color: Color(0xFFF8FAFC),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Resumen de tu rendimiento',
+                            style: TextStyle(
+                              color: const Color(0xFF94A3B8),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Key Metrics Grid
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildMetricCard(
+                          'Trades Abiertos',
+                          trades.length.toString(),
+                          Icons.pending,
+                          const Color(0xFFF59E0B),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildMetricCard(
+                          'Win Rate',
+                          '${(winRate * 100).toStringAsFixed(1)}%',
+                          Icons.trending_up,
+                          winRate >= 0.5
+                              ? const Color(0xFF22C55E)
+                              : const Color(0xFFFF6B6B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildMetricCard(
+                          'Operaciones Completadas',
+                          totalCompletedOperations.toString(),
+                          Icons.check_circle,
+                          const Color(0xFF3B82F6),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildMetricCard(
+                          'P&L Total',
+                          '\$${totalPnL.toStringAsFixed(2)}',
+                          Icons.trending_up,
+                          totalPnL >= 0
+                              ? const Color(0xFF22C55E)
+                              : const Color(0xFFFF6B6B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildMetricCard(
+                          'Ganancia Máx',
+                          '\$${maxProfit.toStringAsFixed(2)}',
+                          Icons.trending_up,
+                          const Color(0xFF22C55E),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildMetricCard(
+                          'Pérdida Máx',
+                          '\$${maxLoss.toStringAsFixed(2)}',
+                          Icons.trending_down,
+                          const Color(0xFFFF6B6B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildMetricCard(
+                          'Balance Actual',
+                          '\$${simulationProvider.currentBalance.toStringAsFixed(2)}',
+                          Icons.account_balance_wallet,
+                          const Color(0xFF3B82F6),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildMetricCard(
+                          'P&L Flotante',
+                          '\$${simulationProvider.unrealizedPnL.toStringAsFixed(2)}',
+                          Icons.pending,
+                          simulationProvider.unrealizedPnL >= 0
+                              ? const Color(0xFF22C55E)
+                              : const Color(0xFFFF6B6B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
 
-            // P&L Statistics
-            Card(
-              color: const Color(0xFF2C2C2C),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Información de Trading',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildPnLMetric('P&L Total', totalPnL),
-                    const SizedBox(height: 8),
-                    _buildPnLMetric('Balance Inicial', 10000.0),
-                    const SizedBox(height: 8),
-                    _buildPnLMetric(
-                      'Balance Actual',
-                      simulationProvider.currentBalance,
-                    ),
-                    const SizedBox(height: 8),
-                    _buildPnLMetric(
-                      'P&L Flotante',
-                      simulationProvider.unrealizedPnL,
-                    ),
-                  ],
+            // Enhanced P&L Statistics
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1F2937), Color(0xFF111827)],
                 ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF374151), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    offset: const Offset(0, 8),
+                    blurRadius: 24,
+                    spreadRadius: -4,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF3B82F6,
+                              ).withValues(alpha: 0.3),
+                              offset: const Offset(0, 4),
+                              blurRadius: 12,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.account_balance_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Información de Trading',
+                            style: TextStyle(
+                              color: Color(0xFFF8FAFC),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Balance y gestión de capital',
+                            style: TextStyle(
+                              color: const Color(0xFF94A3B8),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildPnLMetric('P&L Total', totalPnL),
+                  const SizedBox(height: 8),
+                  _buildPnLMetric('Balance Inicial', 10000.0),
+                  const SizedBox(height: 8),
+                  _buildPnLMetric(
+                    'Balance Actual',
+                    simulationProvider.currentBalance,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildPnLMetric(
+                    'P&L Flotante',
+                    simulationProvider.unrealizedPnL,
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -1831,61 +4429,132 @@ class _SimulationScreenState extends State<SimulationScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Completed Operations History
+            // Enhanced Completed Operations History
             if (completedOperations.isNotEmpty) ...[
-              Card(
-                color: const Color(0xFF2C2C2C),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF1F2937), Color(0xFF111827)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFF374151),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      offset: const Offset(0, 6),
+                      blurRadius: 20,
+                      spreadRadius: -2,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Enhanced Header
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
                         children: [
-                          Text(
-                            'Historial de Operaciones Completadas',
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Inter',
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFF8B5CF6,
+                                  ).withValues(alpha: 0.3),
+                                  offset: const Offset(0, 4),
+                                  blurRadius: 12,
+                                  spreadRadius: -2,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.history_rounded,
+                              color: Colors.white,
+                              size: 20,
                             ),
                           ),
-                          Text(
-                            '$winningTrades/$totalCompletedOperations ganadores',
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontSize: 12,
-                              fontFamily: 'Inter',
-                            ),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Historial de Operaciones',
+                                style: TextStyle(
+                                  color: Color(0xFFF8FAFC),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '$winningTrades/$totalCompletedOperations ganadores',
+                                style: TextStyle(
+                                  color: const Color(0xFF94A3B8),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Operations List
+                    ...completedOperations
+                        .take(10)
+                        .map(
+                          (operation) =>
+                              _buildCompletedOperationItem(operation),
+                        ),
+
+                    if (completedOperations.length > 10) ...[
                       const SizedBox(height: 16),
-
-                      ...completedOperations
-                          .take(10)
-                          .map(
-                            (operation) =>
-                                _buildCompletedOperationItem(operation),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF374151).withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF4B5563),
+                            width: 1,
                           ),
-
-                      if (completedOperations.length > 10) ...[
-                        const SizedBox(height: 8),
-                        Center(
+                        ),
+                        child: Center(
                           child: Text(
                             '... y ${completedOperations.length - 10} operaciones más',
-                            style: TextStyle(
-                              color: Colors.grey[500],
+                            style: const TextStyle(
+                              color: Color(0xFF94A3B8),
                               fontSize: 12,
+                              fontWeight: FontWeight.w500,
                               fontFamily: 'Inter',
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ],
-                  ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -1947,32 +4616,73 @@ class _SimulationScreenState extends State<SimulationScreen> {
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF1F2937),
+            const Color(0xFF111827),
+            color.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+          BoxShadow(
+            color: color.withValues(alpha: 0.1),
+            offset: const Offset(0, 0),
+            blurRadius: 1,
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [color, color.withValues(alpha: 0.8)],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.3),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(height: 12),
           Text(
             value,
             style: TextStyle(
               color: color,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
               fontFamily: 'Inter',
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 12,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
               fontFamily: 'Inter',
             ),
           ),
@@ -2070,165 +4780,364 @@ class _SimulationScreenState extends State<SimulationScreen> {
   }
 
   Widget _buildCompletedOperationItem(CompletedTrade operation) {
+    final isProfit = operation.totalPnL >= 0;
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: operation.totalPnL >= 0
-              ? Colors.green.withValues(alpha: 0.3)
-              : Colors.red.withValues(alpha: 0.3),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF374151), const Color(0xFF1F2937)],
         ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isProfit
+              ? const Color(0xFF10B981).withValues(alpha: 0.4)
+              : const Color(0xFFEF4444).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isProfit
+                ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                : const Color(0xFFEF4444).withValues(alpha: 0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header con tipo de operación y P&L
+          // Enhanced Header con tipo de operación y P&L
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Icon(
-                    operation.totalPnL >= 0
-                        ? Icons.trending_up
-                        : Icons.trending_down,
-                    color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
-                    size: 16,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isProfit
+                          ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                          : const Color(0xFFEF4444).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isProfit
+                            ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                            : const Color(0xFFEF4444).withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      isProfit
+                          ? Icons.trending_up_rounded
+                          : Icons.trending_down_rounded,
+                      color: isProfit
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFEF4444),
+                      size: 18,
+                    ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Text(
                     operation.operationType.toUpperCase(),
                     style: TextStyle(
-                      color: operation.totalPnL >= 0
-                          ? Colors.green
-                          : Colors.red,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      color: isProfit
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFEF4444),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                       fontFamily: 'Inter',
                     ),
                   ),
                 ],
               ),
-              Text(
-                '\$${operation.totalPnL.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: operation.totalPnL >= 0 ? Colors.green : Colors.red,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Inter',
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Precios de entrada y salida
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Entrada: \$${operation.entryPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    Text(
-                      operation.entryTime.toString().substring(
-                        11,
-                        16,
-                      ), // Solo hora:minuto
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 10,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
+                decoration: BoxDecoration(
+                  color: isProfit
+                      ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                      : const Color(0xFFEF4444).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isProfit
+                        ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                        : const Color(0xFFEF4444).withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
-              ),
-              const Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Salida: \$${operation.exitPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    Text(
-                      operation.exitTime.toString().substring(
-                        11,
-                        16,
-                      ), // Solo hora:minuto
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 10,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          // Información adicional
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Cantidad: ${operation.quantity.toStringAsFixed(4)}',
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 10,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              if (operation.leverage != null)
-                Text(
-                  'Apalancamiento: ${operation.leverage}x',
+                child: Text(
+                  '\$${operation.totalPnL.toStringAsFixed(2)}',
                   style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 10,
+                    color: isProfit
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFEF4444),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                     fontFamily: 'Inter',
                   ),
                 ),
-              Text(
-                'Duración: ${operation.durationFormatted}',
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 10,
-                  fontFamily: 'Inter',
-                ),
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // Enhanced Precios de entrada y salida
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F2937).withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF4B5563).withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF3B82F6),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'ENTRADA',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '\$${operation.entryPrice.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Color(0xFFF8FAFC),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      Text(
+                        operation.entryTime.toString().substring(11, 16),
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 10,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF374151).withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Color(0xFF9CA3AF),
+                    size: 16,
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'SALIDA',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isProfit
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '\$${operation.exitPrice.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Color(0xFFF8FAFC),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      Text(
+                        operation.exitTime.toString().substring(11, 16),
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 10,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Enhanced Información adicional
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111827).withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFF374151).withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildOperationDetailChip(
+                    'Cantidad',
+                    '$operation.quantity.toStringAsFixed(4)',
+                    Icons.account_balance_wallet_rounded,
+                  ),
+                ),
+                if (operation.leverage != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildOperationDetailChip(
+                      'Apalancamiento',
+                      '${operation.leverage}x',
+                      Icons.trending_up_rounded,
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildOperationDetailChip(
+                    'Duración',
+                    operation.durationFormatted,
+                    Icons.timer_rounded,
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (operation.reason != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Razón: ${operation.reason}',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 10,
-                fontFamily: 'Inter',
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF374151).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF4B5563).withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: const Color(0xFF94A3B8),
+                    size: 14,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      operation.reason!,
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOperationDetailChip(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF374151).withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFF4B5563).withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: const Color(0xFF9CA3AF), size: 12),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 9,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 1),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFFF8FAFC),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -2241,34 +5150,57 @@ class _SimulationScreenState extends State<SimulationScreen> {
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF374151), const Color(0xFF1F2937)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
               color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
               fontFamily: 'Inter',
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          const SizedBox(height: 2),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 9,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
               fontFamily: 'Inter',
             ),
           ),
@@ -2278,26 +5210,44 @@ class _SimulationScreenState extends State<SimulationScreen> {
   }
 
   Widget _buildCompactRuleItem(Rule rule) {
+    final ruleColor = rule.isActive
+        ? const Color(0xFF10B981)
+        : const Color(0xFF6B7280);
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: rule.isActive
-              ? const Color(0xFF21CE99).withValues(alpha: 0.3)
-              : Colors.grey.withValues(alpha: 0.3),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF374151), const Color(0xFF1F2937)],
         ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ruleColor.withValues(alpha: 0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: ruleColor.withValues(alpha: 0.1),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(
-            _getRuleIcon(rule.type),
-            color: rule.isActive ? const Color(0xFF21CE99) : Colors.grey,
-            size: 12,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: ruleColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: ruleColor.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Icon(_getRuleIcon(rule.type), color: ruleColor, size: 16),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2305,19 +5255,23 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 Text(
                   rule.name,
                   style: TextStyle(
-                    color: rule.isActive ? Colors.white : Colors.grey[400],
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    color: rule.isActive
+                        ? const Color(0xFFF8FAFC)
+                        : const Color(0xFF94A3B8),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                     fontFamily: 'Inter',
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   rule.description,
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 9,
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
                     fontFamily: 'Inter',
                   ),
                   maxLines: 1,
@@ -2326,21 +5280,35 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: rule.isActive
-                  ? const Color(0xFF21CE99).withValues(alpha: 0.2)
-                  : Colors.grey.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
+              gradient: rule.isActive
+                  ? const LinearGradient(
+                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    )
+                  : const LinearGradient(
+                      colors: [Color(0xFF6B7280), Color(0xFF4B5563)],
+                    ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: ruleColor.withValues(alpha: 0.2),
+                  offset: const Offset(0, 2),
+                  blurRadius: 6,
+                  spreadRadius: -1,
+                ),
+              ],
             ),
             child: Text(
               rule.isActive ? 'ON' : 'OFF',
-              style: TextStyle(
-                color: rule.isActive ? const Color(0xFF21CE99) : Colors.grey,
-                fontSize: 8,
-                fontWeight: FontWeight.w600,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
                 fontFamily: 'Inter',
+                letterSpacing: 0.5,
               ),
             ),
           ),
@@ -2691,5 +5659,18 @@ class _ManageSLTPContainerState extends State<_ManageSLTPContainer> {
         ),
       ),
     );
+  }
+}
+
+class _ChartArea extends StatelessWidget {
+  final double height;
+  final Widget child;
+
+  const _ChartArea({required this.height, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    // No GestureDetector aquí: dejamos que el hijo (WebView) compita
+    return SizedBox(height: height, child: child);
   }
 }

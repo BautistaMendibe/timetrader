@@ -58,7 +58,8 @@ class SimulationProvider with ChangeNotifier {
 
   bool _isSimulationRunning = false;
   int _currentCandleIndex = 0;
-  double _currentBalance = 10000.0;
+  double _currentBalance =
+      1000.0; // Default balance, will be set by startTickSimulation
   List<Trade> _currentTrades = [];
   List<Trade> _completedTrades = [];
   List<CompletedTrade> _completedOperations = [];
@@ -158,18 +159,26 @@ class SimulationProvider with ChangeNotifier {
   // Get current tick price (for manual trades when simulation is paused)
   double get currentTickPrice {
     if (_syntheticTicks.isEmpty) {
-      final fallbackPrice = historicalData[_currentCandleIndex].close;
-      // debugPrint(
-      //   '🔥 SimulationProvider: currentTickPrice - usando precio de vela: $fallbackPrice (no hay ticks disponibles)',
-      // );
-      return fallbackPrice;
+      if (_currentCandleIndex >= 0 &&
+          _currentCandleIndex < historicalData.length) {
+        final fallbackPrice = historicalData[_currentCandleIndex].close;
+        // debugPrint(
+        //   '🔥 SimulationProvider: currentTickPrice - usando precio de vela: $fallbackPrice (no hay ticks disponibles)',
+        // );
+        return fallbackPrice;
+      }
+      return 0.0; // Fallback seguro
     }
 
     // Usar el índice anterior al actual para obtener el precio del tick procesado
     final tickIndex = _currentTickIndex > 0 ? _currentTickIndex - 1 : 0;
     if (tickIndex >= _syntheticTicks.length) {
-      final fallbackPrice = historicalData[_currentCandleIndex].close;
-      return fallbackPrice;
+      if (_currentCandleIndex >= 0 &&
+          _currentCandleIndex < historicalData.length) {
+        final fallbackPrice = historicalData[_currentCandleIndex].close;
+        return fallbackPrice;
+      }
+      return 0.0; // Fallback seguro
     }
 
     final tickPrice = _syntheticTicks[tickIndex].price;
@@ -210,7 +219,11 @@ class SimulationProvider with ChangeNotifier {
 
   // P&L total (realizado + flotante)
   double get totalPnL {
-    double realizedPnL = _currentBalance - 10000.0; // Balance inicial
+    // Necesitamos trackear el balance inicial para calcular P&L realizado
+    double initialBalance = _equityCurve.isNotEmpty
+        ? _equityCurve.first
+        : _currentBalance;
+    double realizedPnL = _currentBalance - initialBalance;
     return realizedPnL + unrealizedPnL;
   }
 
@@ -598,6 +611,15 @@ class SimulationProvider with ChangeNotifier {
         }
       }
     }
+
+    // Asegurar que el índice esté dentro del rango válido
+    if (newIndex >= allTimeframeData.length) {
+      newIndex = allTimeframeData.length - 1;
+    }
+    if (newIndex < 0) {
+      newIndex = 0;
+    }
+
     _currentCandleIndex = newIndex;
 
     debugPrint(
@@ -660,9 +682,10 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void _setupTicksForCurrentCandle() {
-    if (_currentCandleIndex >= historicalData.length) {
+    if (_currentCandleIndex >= historicalData.length ||
+        _currentCandleIndex < 0) {
       debugPrint(
-        '🔥 SimulationProvider: _setupTicksForCurrentCandle - índice fuera de rango: $_currentCandleIndex',
+        '🔥 SimulationProvider: _setupTicksForCurrentCandle - índice fuera de rango: $_currentCandleIndex (total: ${historicalData.length})',
       );
       return;
     }
@@ -671,7 +694,8 @@ class SimulationProvider with ChangeNotifier {
     //   '🔥 SimulationProvider: Configurando ticks para vela $_currentCandleIndex: ${candle.timestamp} - OHLC: ${candle.open}/${candle.high}/${candle.low}/${candle.close}',
     // );
     int? nextMs;
-    if (_currentCandleIndex < historicalData.length - 1) {
+    if (_currentCandleIndex < historicalData.length - 1 &&
+        _currentCandleIndex >= 0) {
       nextMs = historicalData[_currentCandleIndex + 1]
           .timestamp
           .millisecondsSinceEpoch;
@@ -781,14 +805,19 @@ class SimulationProvider with ChangeNotifier {
         ? historicalData.last.timestamp
         : DateTime.now();
 
+    // Obtener el balance inicial de la equity curve
+    double initialBalance = _equityCurve.isNotEmpty
+        ? _equityCurve.first
+        : _currentBalance;
+
     _currentSimulation = SimulationResult(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       setupId: _currentSetup?.id ?? 'unknown',
       startDate: startDate,
       endDate: endDate,
-      initialBalance: 10000.0,
+      initialBalance: initialBalance,
       finalBalance: _currentBalance,
-      netPnL: _currentBalance - 10000.0,
+      netPnL: _currentBalance - initialBalance,
       winRate: winRate,
       maxDrawdown: maxDrawdown,
       totalTrades: completedOperations.length,
@@ -826,7 +855,7 @@ class SimulationProvider with ChangeNotifier {
   void reset() {
     _currentSimulation = null;
     _currentCandleIndex = 0;
-    _currentBalance = 10000.0;
+    _currentBalance = 1000.0; // Default balance
     _currentTrades = [];
     _completedTrades = [];
     _completedOperations = [];
@@ -879,6 +908,14 @@ class SimulationProvider with ChangeNotifier {
     }
 
     _currentCandleIndex++;
+    if (_currentCandleIndex >= historicalData.length ||
+        _currentCandleIndex < 0) {
+      debugPrint(
+        '🔥 SimulationProvider: ERROR - Índice de vela fuera de rango después de avanzar: $_currentCandleIndex',
+      );
+      return;
+    }
+
     final currentCandle = historicalData[_currentCandleIndex];
 
     debugPrint(
@@ -1005,12 +1042,17 @@ class SimulationProvider with ChangeNotifier {
     // Para operaciones manuales (con entryPrice específico), usar el timestamp de la vela actual
     // Para operaciones automáticas, usar el timestamp del tick actual
     final currentTime = entryPrice != null
-        ? historicalData[_currentCandleIndex]
-              .timestamp // Siempre usar timestamp de la vela para operaciones manuales
+        ? (_currentCandleIndex >= 0 &&
+                  _currentCandleIndex < historicalData.length
+              ? historicalData[_currentCandleIndex].timestamp
+              : DateTime.now()) // Fallback seguro
         : (_syntheticTicks.isNotEmpty &&
                   _currentTickIndex < _syntheticTicks.length
               ? _syntheticTicks[_currentTickIndex].time
-              : historicalData[_currentCandleIndex].timestamp);
+              : (_currentCandleIndex >= 0 &&
+                        _currentCandleIndex < historicalData.length
+                    ? historicalData[_currentCandleIndex].timestamp
+                    : DateTime.now())); // Fallback seguro
 
     debugPrint(
       '🔥 SimulationProvider: executeManualTrade - Using price: $price (${entryPrice != null ? 'provided entry price' : 'current tick price'})',
@@ -1092,7 +1134,11 @@ class SimulationProvider with ChangeNotifier {
 
     final closeTrade = Trade(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      timestamp: historicalData[_currentCandleIndex].timestamp,
+      timestamp:
+          (_currentCandleIndex >= 0 &&
+              _currentCandleIndex < historicalData.length)
+          ? historicalData[_currentCandleIndex].timestamp
+          : DateTime.now(), // Fallback seguro
       type: closeType,
       price: exitPrice,
       quantity: lastTrade.quantity,
@@ -1241,7 +1287,7 @@ class SimulationProvider with ChangeNotifier {
     info += '• Setup TP Ratio: $takeProfitRatio\n';
     info += '• Current Tick Price: $currentPrice\n';
     info +=
-        '• Candle Close Price: ${historicalData[_currentCandleIndex].close}\n';
+        '• Candle Close Price: ${(_currentCandleIndex >= 0 && _currentCandleIndex < historicalData.length) ? historicalData[_currentCandleIndex].close : 'N/A'}\n';
     info += '• Tick Index: $_currentTickIndex/${_syntheticTicks.length}\n';
     info += '• Risk Amount: \$${riskAmount.toStringAsFixed(2)}\n';
     info += '• In Position: $_inPosition\n';
@@ -1516,7 +1562,18 @@ class SimulationProvider with ChangeNotifier {
       debugPrint(
         '🔥 SimulationProvider: Configurando ticks para vela $_currentCandleIndex',
       );
-      _setupTicksForCurrentCandle();
+
+      // Verificar que el índice esté dentro del rango antes de configurar ticks
+      if (_currentCandleIndex >= 0 &&
+          _currentCandleIndex < historicalData.length) {
+        _setupTicksForCurrentCandle();
+      } else {
+        debugPrint(
+          '🔥 SimulationProvider: ERROR - Índice fuera de rango antes de configurar ticks: $_currentCandleIndex',
+        );
+        stopTickSimulation();
+        return;
+      }
     }
 
     if (_currentTickIndex < _syntheticTicks.length) {
@@ -1678,9 +1735,12 @@ class SimulationProvider with ChangeNotifier {
       debugPrint('🔥🔥🔥 SimulationProvider: Enviando señal de RESET al chart');
 
       // Obtener solo las velas históricas hasta la vela actual (inclusive)
-      final historicalCandles = historicalData
-          .take(_currentCandleIndex + 1)
-          .toList();
+      final safeIndex =
+          _currentCandleIndex >= 0 &&
+              _currentCandleIndex < historicalData.length
+          ? _currentCandleIndex
+          : historicalData.length - 1;
+      final historicalCandles = historicalData.take(safeIndex + 1).toList();
 
       debugPrint(
         '🔥🔥🔥 SimulationProvider: Enviando ${historicalCandles.length} velas históricas al chart (índice actual: $_currentCandleIndex)',
@@ -1833,8 +1893,11 @@ class SimulationProvider with ChangeNotifier {
     // Crear trade de cierre
     final closeTrade = Trade(
       id: 'close_${DateTime.now().millisecondsSinceEpoch}',
-      timestamp: historicalData[_currentCandleIndex]
-          .timestamp, // Usar timestamp de la vela actual
+      timestamp:
+          (_currentCandleIndex >= 0 &&
+              _currentCandleIndex < historicalData.length)
+          ? historicalData[_currentCandleIndex].timestamp
+          : DateTime.now(), // Fallback seguro
       type: lastTrade.type == 'buy' ? 'sell' : 'buy',
       price: exactClosePrice,
       quantity: lastTrade.quantity,

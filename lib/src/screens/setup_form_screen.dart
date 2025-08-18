@@ -81,13 +81,72 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.setupToEdit != null ? 'Editar Setup' : 'Nuevo Setup',
+      body: Container(
+        constraints: const BoxConstraints.expand(),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0B1220), Color(0xFF0F172A)],
+          ),
         ),
-        backgroundColor: const Color(0xFF1A1A1A),
-        foregroundColor: Colors.white,
-        actions: [
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header
+              _buildHeader(),
+
+              // Content
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      _buildBasicInfoSection(),
+                      const SizedBox(height: 24),
+                      _buildRiskManagementSection(),
+                      const SizedBox(height: 24),
+                      _buildRulesSection(),
+                      const SizedBox(height: 24),
+                      if (_showRulesSelector) _buildRulesSelector(),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Color(0xFF94A3B8),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              widget.setupToEdit != null ? 'Editar Setup' : 'Nuevo Setup',
+              style: const TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                fontFamily: 'Inter',
+              ),
+            ),
+          ),
           if (_isSaving)
             const Padding(
               padding: EdgeInsets.all(16.0),
@@ -96,60 +155,70 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF21CE99)),
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF22C55E)),
                 ),
               ),
             )
           else
-            TextButton(
+            ElevatedButton(
               onPressed: _saveSetup,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF22C55E),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                elevation: 0,
+                shadowColor: const Color(0xFF22C55E).withValues(alpha: 0.18),
+              ),
               child: const Text(
                 'Guardar',
                 style: TextStyle(
-                  color: Color(0xFF21CE99),
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
                 ),
               ),
             ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _buildBasicInfoSection(),
-            const SizedBox(height: 24),
-            _buildRiskManagementSection(),
-            const SizedBox(height: 24),
-            _buildRulesSection(),
-            const SizedBox(height: 24),
-            if (_showRulesSelector) _buildRulesSelector(),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildBasicInfoSection() {
-    return Card(
-      color: const Color(0xFF2A2A2A),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF374151), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            offset: const Offset(0, 6),
+            blurRadius: 16,
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.info_outline, color: Color(0xFF21CE99)),
+                const Icon(Icons.info_outline, color: Color(0xFF22C55E)),
                 const SizedBox(width: 8),
                 const Text(
                   'Información Básica',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFF8FAFC),
+                    fontFamily: 'Inter',
                   ),
                 ),
               ],
@@ -157,18 +226,32 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Nombre del Setup *',
-                labelStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(),
+                labelStyle: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFF374151)),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF21CE99)),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFF22C55E)),
                 ),
+                filled: true,
+                fillColor: const Color(0xFF111827),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Por favor ingresa un nombre';
@@ -183,23 +266,35 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
   }
 
   Widget _buildRiskManagementSection() {
-    return Card(
-      color: const Color(0xFF2A2A2A),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF374151), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            offset: const Offset(0, 6),
+            blurRadius: 16,
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.security, color: Color(0xFF21CE99)),
+                const Icon(Icons.security, color: Color(0xFF22C55E)),
                 const SizedBox(width: 8),
                 const Text(
                   'Gestión de Riesgo',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFF8FAFC),
+                    fontFamily: 'Inter',
                   ),
                 ),
               ],
@@ -210,19 +305,33 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
             TextFormField(
               controller: _riskPercentController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Riesgo por Operación (%)',
-                labelStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(),
+                labelStyle: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFF374151)),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF21CE99)),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFF22C55E)),
                 ),
                 suffixText: '%',
+                filled: true,
+                fillColor: const Color(0xFF111827),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+              ),
               onChanged: (value) {
                 setState(() {});
               },
@@ -243,11 +352,12 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
             const SizedBox(height: 16),
 
             // Stop Loss
-            Text(
+            const Text(
               'Stop Loss',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
+              style: TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
               ),
             ),
             const SizedBox(height: 8),
@@ -261,16 +371,30 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                       labelText: _stopLossType == StopLossType.pips
                           ? 'Distancia (pips)'
                           : 'Precio (\$)',
-                      labelStyle: const TextStyle(color: Colors.grey),
-                      border: const OutlineInputBorder(),
-                      enabledBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey),
+                      labelStyle: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
                       ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFF21CE99)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFF374151)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFF22C55E)),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF111827),
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(
+                      color: Color(0xFFF8FAFC),
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Inter',
+                    ),
                     onChanged: (value) {
                       setState(() {});
                     },
@@ -292,14 +416,18 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                 const SizedBox(width: 8),
                 Container(
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFF374151)),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: DropdownButton<StopLossType>(
                     value: _stopLossType,
                     underline: const SizedBox(),
-                    dropdownColor: const Color(0xFF2A2A2A),
-                    style: const TextStyle(color: Colors.white),
+                    dropdownColor: const Color(0xFF1F2937),
+                    style: const TextStyle(
+                      color: Color(0xFFF8FAFC),
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Inter',
+                    ),
                     items: const [
                       DropdownMenuItem(
                         value: StopLossType.pips,
@@ -332,18 +460,15 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                  width: 1,
-                ),
+                color: const Color(0xFF374151).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF374151), width: 1),
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: Colors.grey.shade400,
+                    color: const Color(0xFF94A3B8),
                     size: 16,
                   ),
                   const SizedBox(width: 8),
@@ -352,10 +477,12 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                       _stopLossType == StopLossType.price
                           ? 'Nivel exacto al que cierras la operación. La app ajusta tu posición para que al tocar ese precio pierdas justo tu % de riesgo.'
                           : 'Distancia en pips desde la entrada. La app calcula cuántas unidades necesitas para que esa cantidad de pips equivalga a tu % de riesgo.',
-                      style: TextStyle(
-                        color: Colors.grey.shade400,
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
                         fontSize: 12,
                         height: 1.3,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
                       ),
                     ),
                   ),
@@ -364,29 +491,44 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
             ),
             const SizedBox(height: 16),
             // Take Profit Ratio
-            Text(
+            const Text(
               'Take Profit',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
+              style: TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
               ),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<TakeProfitRatio>(
               value: _takeProfitRatio,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Ratio Riesgo/Recompensa',
-                labelStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(),
+                labelStyle: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFF374151)),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF21CE99)),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: Color(0xFF22C55E)),
                 ),
+                filled: true,
+                fillColor: const Color(0xFF111827),
               ),
-              dropdownColor: const Color(0xFF2A2A2A),
-              style: const TextStyle(color: Colors.white),
+              dropdownColor: const Color(0xFF1F2937),
+              style: const TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+              ),
               items: TakeProfitRatio.values.map((ratio) {
                 return DropdownMenuItem(
                   value: ratio,
@@ -408,18 +550,32 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
               TextFormField(
                 controller: _customTakeProfitController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Ratio Personalizado (ej: 2.5)',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFF374151)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF21CE99)),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFF22C55E)),
                   ),
+                  filled: true,
+                  fillColor: const Color(0xFF111827),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
                 onChanged: (value) {
                   setState(() {});
                 },
@@ -459,23 +615,35 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
   }
 
   Widget _buildRulesSection() {
-    return Card(
-      color: const Color(0xFF2A2A2A),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF374151), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            offset: const Offset(0, 6),
+            blurRadius: 16,
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.rule, color: Color(0xFF21CE99)),
+                const Icon(Icons.rule, color: Color(0xFF22C55E)),
                 const SizedBox(width: 8),
                 const Text(
                   'Reglas de Trading',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFF8FAFC),
+                    fontFamily: 'Inter',
                   ),
                 ),
               ],
@@ -484,11 +652,19 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
             SwitchListTile(
               title: const Text(
                 'Usar reglas avanzadas',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
               ),
               subtitle: const Text(
                 'Agregar condiciones específicas para las entradas',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                ),
               ),
               value: _useAdvancedRules,
               onChanged: (value) {
@@ -500,7 +676,7 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                   }
                 });
               },
-              activeColor: const Color(0xFF21CE99),
+              activeColor: const Color(0xFF22C55E),
             ),
             if (_useAdvancedRules) ...[
               const SizedBox(height: 16),
@@ -508,8 +684,9 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                 Text(
                   'Reglas seleccionadas (${_selectedRules.length})',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFFF8FAFC),
                     fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -535,8 +712,17 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
                 icon: Icon(_showRulesSelector ? Icons.close : Icons.add),
                 label: Text(_showRulesSelector ? 'Cerrar' : 'Agregar Reglas'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF21CE99),
+                  backgroundColor: const Color(0xFF22C55E),
                   foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  elevation: 0,
+                  shadowColor: const Color(0xFF22C55E).withValues(alpha: 0.18),
                 ),
               ),
             ],
@@ -550,23 +736,35 @@ class _SetupFormScreenState extends State<SetupFormScreen> {
     final setupProvider = context.read<SetupProvider>();
     final availableRules = setupProvider.getAllAvailableRules();
 
-    return Card(
-      color: const Color(0xFF2A2A2A),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF374151), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            offset: const Offset(0, 6),
+            blurRadius: 16,
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.list_alt, color: Color(0xFF21CE99)),
+                const Icon(Icons.list_alt, color: Color(0xFF22C55E)),
                 const SizedBox(width: 8),
                 const Text(
                   'Seleccionar Reglas',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFF8FAFC),
+                    fontFamily: 'Inter',
                   ),
                 ),
               ],

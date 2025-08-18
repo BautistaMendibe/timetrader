@@ -19,8 +19,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
   String? _selectedAsset;
   DateTime? _selectedDate;
   Setup? _selectedSetup;
-  // double _selectedSpeed = 1.0; // Comentado - no se usa en modo manual
-  double _initialBalance = 10000.0; // Default initial balance
+  double _initialBalance = 1000.0; // Default initial balance
   bool _isLoading = false;
   bool _isInitialized = false;
 
@@ -35,7 +34,6 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
     final assets = _dataService.getAvailableAssets();
 
     if (assets.isNotEmpty) _selectedAsset = assets.first;
-    // Don't set a default date - let user choose from calendar
 
     _isInitialized = true;
   }
@@ -100,8 +98,8 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
         _selectedDate!,
         1.0,
         _initialBalance,
-        _selectedAsset!, // <-- aquí el símbolo
-      ); // Usar simulación por ticks
+        _selectedAsset!,
+      );
 
       if (mounted) {
         Navigator.pushNamed(context, AppRoutes.simulation);
@@ -139,391 +137,662 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Configurar Simulación')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Asset Selection
-            Card(
-              color: const Color(0xFF2C2C2C),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Activo',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: _selectedAsset,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFF1E1E1E),
-                      ),
-                      dropdownColor: const Color(0xFF2C2C2C),
-                      style: const TextStyle(color: Colors.white),
-                      items: _dataService.getAvailableAssets().map((asset) {
-                        return DropdownMenuItem(
-                          value: asset,
-                          child: Text(asset),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedAsset = value;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+      body: Container(
+        constraints: const BoxConstraints.expand(),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF0B1220), Color(0xFF0F172A)],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header
+              _buildHeader(),
 
-            // Date Selection
-            Card(
-              color: const Color(0xFF2C2C2C),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Fecha de Inicio',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    InkWell(
-                      onTap: () async {
-                        final DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate:
-                              _selectedDate ??
-                              DateTime.now().subtract(const Duration(days: 1)),
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now().subtract(
-                            const Duration(days: 1),
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Asset Selection
+                      _buildSection(
+                        title: 'Activo',
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedAsset,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF374151),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF374151),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF22C55E),
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFF111827),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
-                          builder: (context, child) {
-                            return Theme(
-                              data: Theme.of(context).copyWith(
-                                colorScheme: const ColorScheme.dark(
-                                  primary: Color(0xFF21CE99),
-                                  onPrimary: Colors.white,
-                                  surface: Color(0xFF2C2C2C),
-                                  onSurface: Colors.white,
-                                ),
-                                dialogTheme: const DialogThemeData(
-                                  backgroundColor: Color(0xFF1E1E1E),
-                                ),
-                              ),
-                              child: child!,
-                            );
-                          },
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _selectedDate = picked;
-                          });
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[600]!),
-                          borderRadius: BorderRadius.circular(8),
-                          color: const Color(0xFF1E1E1E),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              color: Colors.grey[400],
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
+                          dropdownColor: const Color(0xFF1F2937),
+                          style: const TextStyle(
+                            color: Color(0xFFF8FAFC),
+                            fontSize: 16,
+                            fontFamily: 'Inter',
+                          ),
+                          items: _dataService.getAvailableAssets().map((asset) {
+                            return DropdownMenuItem(
+                              value: asset,
                               child: Text(
-                                _selectedDate != null
-                                    ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                                    : 'Seleccionar fecha',
-                                style: TextStyle(
-                                  color: _selectedDate != null
-                                      ? Colors.white
-                                      : Colors.grey[400],
-                                  fontSize: 16,
+                                asset,
+                                style: const TextStyle(
+                                  color: Color(0xFFF8FAFC),
+                                  fontFamily: 'Inter',
                                 ),
                               ),
-                            ),
-                            Icon(
-                              Icons.arrow_drop_down,
-                              color: Colors.grey[400],
-                            ),
-                          ],
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedAsset = value;
+                            });
+                          },
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Selecciona cualquier fecha desde 2020 hasta ayer (no fechas futuras)',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+                      const SizedBox(height: 20),
 
-            // Setup Selection
-            Consumer<SetupProvider>(
-              builder: (context, setupProvider, child) {
-                return Card(
-                  color: const Color(0xFF2C2C2C),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Setup',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
+                      // Date Selection
+                      _buildSection(
+                        title: 'Fecha de Inicio',
+                        child: InkWell(
+                          onTap: () async {
+                            final DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate:
+                                  _selectedDate ??
+                                  DateTime.now().subtract(
+                                    const Duration(days: 1),
+                                  ),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now().subtract(
+                                const Duration(days: 1),
                               ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (setupProvider.setups.isEmpty)
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey[600]!),
-                              borderRadius: BorderRadius.circular(8),
+                              builder: (context, child) {
+                                return Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: const ColorScheme.dark(
+                                      primary: Color(0xFF22C55E),
+                                      onPrimary: Colors.white,
+                                      surface: Color(0xFF1F2937),
+                                      onSurface: Colors.white,
+                                    ),
+                                    dialogTheme: const DialogThemeData(
+                                      backgroundColor: Color(0xFF111827),
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _selectedDate = picked;
+                              });
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
-                            child: Column(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0xFF374151),
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              color: const Color(0xFF111827),
+                            ),
+                            child: Row(
                               children: [
-                                Icon(
-                                  Icons.add_chart,
-                                  color: Colors.grey[400],
-                                  size: 48,
+                                const Icon(
+                                  Icons.calendar_today,
+                                  color: Color(0xFF94A3B8),
+                                  size: 20,
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'No hay setups disponibles',
-                                  style: TextStyle(color: Colors.grey[400]),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _selectedDate != null
+                                        ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                                        : 'Seleccionar fecha',
+                                    style: TextStyle(
+                                      color: _selectedDate != null
+                                          ? const Color(0xFFF8FAFC)
+                                          : const Color(0xFF94A3B8),
+                                      fontSize: 16,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(height: 8),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      AppRoutes.setupForm,
-                                    );
-                                  },
-                                  child: const Text('Crear Setup'),
+                                const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Color(0xFF94A3B8),
                                 ),
                               ],
                             ),
-                          )
-                        else
-                          DropdownButtonFormField<String>(
-                            value: _selectedSetup?.id,
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFF1E1E1E),
-                            ),
-                            dropdownColor: const Color(0xFF2C2C2C),
-                            style: const TextStyle(color: Colors.white),
-                            items: setupProvider.setups.map((setup) {
-                              return DropdownMenuItem(
-                                value: setup.id,
-                                child: Text(setup.name),
-                              );
-                            }).toList(),
-                            onChanged: (value) async {
-                              if (value != null) {
-                                final selectedSetup = setupProvider.setups
-                                    .firstWhere(
-                                      (setup) => setup.id == value,
-                                      orElse: () => setupProvider.setups.first,
-                                    );
-                                setState(() {
-                                  _selectedSetup = selectedSetup;
-                                });
-                              }
-                            },
-                            validator: (value) {
-                              if (value == null) {
-                                return 'Por favor selecciona un setup';
-                              }
-                              return null;
-                            },
                           ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Speed Selection - OCULTO para modo manual
-            // Card(
-            //   color: const Color(0xFF2C2C2C),
-            //   child: Padding(
-            //     padding: const EdgeInsets.all(16.0),
-            //     child: Column(
-            //       crossAxisAlignment: CrossAxisAlignment.start,
-            //       children: [
-            //         Text(
-            //           'Velocidad de Simulación',
-            //           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            //             color: Colors.white,
-            //             fontWeight: FontWeight.w600,
-            //           ),
-            //         ),
-            //         const SizedBox(height: 12),
-            //         Row(
-            //           children: [
-            //             Expanded(
-            //               child: Slider(
-            //                 value: _selectedSpeed,
-            //                 min: 0.1,
-            //                 max: 5.0,
-            //                 divisions: 49,
-            //                 activeColor: const Color(0xFF21CE99),
-            //                 onChanged: (value) {
-            //                   setState(() {
-            //                     _selectedSpeed = value;
-            //                   });
-            //                 },
-            //               ),
-            //             ),
-            //             const SizedBox(width: 16),
-            //             Text(
-            //               '${_selectedSpeed.toStringAsFixed(1)}x',
-            //               style: const TextStyle(
-            //                 color: Colors.white,
-            //                 fontSize: 16,
-            //                 fontWeight: FontWeight.w600,
-            //               ),
-            //             ),
-            //           ],
-            //         ),
-            //         Row(
-            //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //           children: [
-            //             Text(
-            //               '0.1x',
-            //               style: TextStyle(color: Colors.grey[400]),
-            //             ),
-            //             Text(
-            //               '5.0x',
-            //               style: TextStyle(color: Colors.grey[400]),
-            //             ),
-            //           ],
-            //         ),
-            //       ],
-            //     ),
-            //   ),
-            // ),
-            // const SizedBox(height: 16),
-
-            // Initial Balance Selection
-            Card(
-              color: const Color(0xFF2C2C2C),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Balance Inicial',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      initialValue: _initialBalance.toString(),
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Cantidad en USD',
-                        labelStyle: TextStyle(color: Colors.grey[400]),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
                         ),
-                        filled: true,
-                        fillColor: const Color(0xFF1E1E1E),
-                        prefixText: '\$ ',
-                        prefixStyle: const TextStyle(color: Colors.white),
+                        subtitle:
+                            'Selecciona cualquier fecha desde 2020 hasta ayer',
                       ),
-                      style: const TextStyle(color: Colors.white),
-                      onChanged: (value) {
-                        final balance = double.tryParse(value);
-                        if (balance != null && balance > 0) {
-                          setState(() {
-                            _initialBalance = balance;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Balance inicial para la simulación (mínimo \$100)',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
+                      const SizedBox(height: 20),
 
-            // Start Simulation Button
-            ElevatedButton(
-              onPressed: _isLoading || _selectedSetup == null
-                  ? null
-                  : _startSimulation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF21CE99),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                      // Setup Selection
+                      Consumer<SetupProvider>(
+                        builder: (context, setupProvider, child) {
+                          return _buildSection(
+                            title: 'Setup',
+                            child: setupProvider.setups.isEmpty
+                                ? Container(
+                                    padding: const EdgeInsets.all(32),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Color(0xFF111827),
+                                          Color(0xFF374151),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: const Color(0xFF4B5563),
+                                        width: 1.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          offset: const Offset(0, 4),
+                                          blurRadius: 12,
+                                          spreadRadius: -2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              colors: [
+                                                Color(0xFF6B7280),
+                                                Color(0xFF4B5563),
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(
+                                                  0xFF6B7280,
+                                                ).withValues(alpha: 0.2),
+                                                offset: const Offset(0, 4),
+                                                blurRadius: 12,
+                                                spreadRadius: -2,
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Icon(
+                                            Icons.add_chart_rounded,
+                                            color: Colors.white,
+                                            size: 48,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 20),
+                                        const Text(
+                                          'No hay setups disponibles',
+                                          style: TextStyle(
+                                            color: Color(0xFFF8FAFC),
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            fontFamily: 'Inter',
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Crea tu primer setup para comenzar',
+                                          style: TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            fontFamily: 'Inter',
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              AppRoutes.setupForm,
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF10B981,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 32,
+                                              vertical: 16,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            elevation: 0,
+                                            shadowColor: const Color(
+                                              0xFF10B981,
+                                            ).withValues(alpha: 0.3),
+                                          ),
+                                          child: const Text(
+                                            'Crear Setup',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : DropdownButtonFormField<String>(
+                                    value: _selectedSetup?.id,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF374151),
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF374151),
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF22C55E),
+                                        ),
+                                      ),
+                                      filled: true,
+                                      fillColor: const Color(0xFF111827),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
+                                    ),
+                                    dropdownColor: const Color(0xFF1F2937),
+                                    style: const TextStyle(
+                                      color: Color(0xFFF8FAFC),
+                                      fontSize: 16,
+                                      fontFamily: 'Inter',
+                                    ),
+                                    items: setupProvider.setups.map((setup) {
+                                      return DropdownMenuItem(
+                                        value: setup.id,
+                                        child: Text(
+                                          setup.name,
+                                          style: const TextStyle(
+                                            color: Color(0xFFF8FAFC),
+                                            fontFamily: 'Inter',
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) async {
+                                      if (value != null) {
+                                        final selectedSetup = setupProvider
+                                            .setups
+                                            .firstWhere(
+                                              (setup) => setup.id == value,
+                                              orElse: () =>
+                                                  setupProvider.setups.first,
+                                            );
+                                        setState(() {
+                                          _selectedSetup = selectedSetup;
+                                        });
+                                      }
+                                    },
+                                    validator: (value) {
+                                      if (value == null) {
+                                        return 'Por favor selecciona un setup';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Initial Balance Selection
+                      _buildSection(
+                        title: 'Balance Inicial',
+                        child: TextFormField(
+                          initialValue: _initialBalance.toString(),
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Cantidad en USD',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontFamily: 'Inter',
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF374151),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF374151),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF22C55E),
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFF111827),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            prefixText: '\$ ',
+                            prefixStyle: const TextStyle(
+                              color: Color(0xFFF8FAFC),
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                          style: const TextStyle(
+                            color: Color(0xFFF8FAFC),
+                            fontSize: 16,
+                            fontFamily: 'Inter',
+                          ),
+                          onChanged: (value) {
+                            final balance = double.tryParse(value);
+                            if (balance != null && balance > 100) {
+                              setState(() {
+                                _initialBalance = balance;
+                              });
+                            }
+                          },
+                          validator: (value) {
+                            final balance = double.tryParse(value ?? '');
+                            if (balance == null || balance < 100) {
+                              return 'El balance mínimo es \$100';
+                            }
+                            return null;
+                          },
+                        ),
+                        subtitle:
+                            'Balance inicial para la simulación (mínimo \$100)',
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Enhanced Start Simulation Button
+                      Container(
+                        width: double.infinity,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: _isLoading || _selectedSetup == null
+                              ? const LinearGradient(
+                                  colors: [
+                                    Color(0xFF6B7280),
+                                    Color(0xFF4B5563),
+                                  ],
+                                )
+                              : const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF10B981),
+                                    Color(0xFF059669),
+                                  ],
+                                ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            if (!(_isLoading || _selectedSetup == null))
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF10B981,
+                                ).withValues(alpha: 0.3),
+                                offset: const Offset(0, 6),
+                                blurRadius: 20,
+                                spreadRadius: -2,
+                              ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isLoading || _selectedSetup == null
+                              ? null
+                              : _startSimulation,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.play_arrow_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Iniciar Simulación',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      'Iniciar Simulación',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Color(0xFF94A3B8),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Configurar Simulación',
+            style: TextStyle(
+              color: Color(0xFFF8FAFC),
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+              fontFamily: 'Inter',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSection({
+    required String title,
+    required Widget child,
+    String? subtitle,
+    IconData? icon,
+    List<Color>? iconGradient,
+  }) {
+    // Determine icon and gradient based on title
+    IconData sectionIcon;
+    List<Color> sectionGradient;
+
+    switch (title.toLowerCase()) {
+      case 'activo':
+        sectionIcon = Icons.trending_up_rounded;
+        sectionGradient = [const Color(0xFF10B981), const Color(0xFF059669)];
+        break;
+      case 'fecha de inicio':
+        sectionIcon = Icons.calendar_today_rounded;
+        sectionGradient = [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)];
+        break;
+      case 'setup':
+        sectionIcon = Icons.tune_rounded;
+        sectionGradient = [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)];
+        break;
+      case 'balance inicial':
+        sectionIcon = Icons.account_balance_wallet_rounded;
+        sectionGradient = [const Color(0xFFF59E0B), const Color(0xFFD97706)];
+        break;
+      default:
+        sectionIcon = icon ?? Icons.settings_rounded;
+        sectionGradient =
+            iconGradient ?? [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)];
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF374151), Color(0xFF1F2937)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF4B5563), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+            spreadRadius: -4,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: sectionGradient,
                     ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: sectionGradient.first.withValues(alpha: 0.3),
+                        offset: const Offset(0, 4),
+                        blurRadius: 12,
+                        spreadRadius: -2,
+                      ),
+                    ],
+                  ),
+                  child: Icon(sectionIcon, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFFF8FAFC),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          child,
+          if (subtitle != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 12,
+                fontFamily: 'Inter',
+              ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
