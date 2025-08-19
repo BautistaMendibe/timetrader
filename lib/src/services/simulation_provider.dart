@@ -785,6 +785,8 @@ class SimulationProvider with ChangeNotifier {
 
   void stopSimulation() {
     _isSimulationRunning = false;
+    _tickTimer?.cancel();
+    _tickTimer = null;
     _finalizeSimulation();
     _notifySimulationState();
   }
@@ -857,6 +859,12 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void reset() {
+    // Stop and clean up timer first
+    _isSimulationRunning = false;
+    _tickTimer?.cancel();
+    _tickTimer = null;
+
+    // Reset all simulation state
     _currentSimulation = null;
     _currentCandleIndex = 0;
     _currentBalance = 1000.0; // Default balance
@@ -864,13 +872,18 @@ class SimulationProvider with ChangeNotifier {
     _completedTrades = [];
     _completedOperations = [];
     _equityCurve = [];
-    _isSimulationRunning = false;
     _inPosition = false;
     _entryPrice = 0.0;
     _positionSize = 0.0;
     _stopLossPrice = 0.0;
     _takeProfitPrice = 0.0;
+
+    // Reset tick simulation state
+    _syntheticTicks = [];
+    _currentTickIndex = 0;
+
     _notifyChartReset();
+    notifyListeners();
   }
 
   void setSimulationMode(SimulationMode mode) {
@@ -1509,8 +1522,12 @@ class SimulationProvider with ChangeNotifier {
   }
 
   void stopTickSimulation() {
+    debugPrint('🔥 SimulationProvider: Stopping tick simulation completely');
+    _isSimulationRunning = false;
     _tickTimer?.cancel();
+    _tickTimer = null;
     stopSimulation();
+    debugPrint('🔥 SimulationProvider: Tick simulation stopped and cleaned up');
   }
 
   void pauseTickSimulation() {

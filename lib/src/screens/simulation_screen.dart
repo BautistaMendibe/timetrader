@@ -263,56 +263,173 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 if (!mounted) return;
                 final shouldExit = await showDialog<bool>(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    backgroundColor: const Color(0xFF1F2937),
-                    title: const Text(
-                      '¿Salir de la simulación?',
-                      style: TextStyle(
-                        color: Color(0xFFF8FAFC),
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
+                  barrierDismissible: false,
+                  builder: (context) => Dialog(
+                    backgroundColor: Colors.transparent,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF4B5563),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            offset: const Offset(0, 8),
+                            blurRadius: 32,
+                            spreadRadius: -4,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Icon
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFEF4444,
+                              ).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFFEF4444,
+                                ).withValues(alpha: 0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.exit_to_app_rounded,
+                              size: 32,
+                              color: Color(0xFFEF4444),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Title
+                          const Text(
+                            '¿Salir de la simulación?',
+                            style: TextStyle(
+                              color: Color(0xFFF8FAFC),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 20,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Content
+                          Text(
+                            '¿Estás seguro que quieres salir?\nSe perderá el progreso de la simulación actual.',
+                            style: TextStyle(
+                              color: const Color(0xFF94A3B8),
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 28),
+
+                          // Actions
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF374151),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFF4B5563),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    style: TextButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Cancelar',
+                                      style: TextStyle(
+                                        color: Color(0xFFF8FAFC),
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Container(
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFFEF4444),
+                                        Color(0xFFDC2626),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFFEF4444,
+                                        ).withValues(alpha: 0.3),
+                                        offset: const Offset(0, 4),
+                                        blurRadius: 12,
+                                        spreadRadius: -2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    style: TextButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Salir',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    content: const Text(
-                      '¿Estás seguro que quieres salir? Se perderá el progreso de la simulación actual.',
-                      style: TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text(
-                          'Cancelar',
-                          style: TextStyle(
-                            color: Color(0xFF94A3B8),
-                            fontFamily: 'Inter',
-                          ),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF22C55E),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Salir',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 );
                 if (shouldExit == true && mounted) {
-                  simulationProvider.stopSimulation();
+                  // Properly stop the simulation and clean up timers
+                  simulationProvider.stopTickSimulation();
+                  simulationProvider.reset();
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted) {
                       Navigator.pushReplacementNamed(context, AppRoutes.main);
