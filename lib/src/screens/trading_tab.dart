@@ -2168,7 +2168,7 @@ class _TradingTabState extends State<TradingTab>
                                               'RIESGO',
                                               style: TextStyle(
                                                 color: Color(0xFF94A3B8),
-                                                fontSize: 8,
+                                                fontSize: 10,
                                                 fontWeight: FontWeight.w600,
                                                 fontFamily: 'Inter',
                                               ),
@@ -2177,7 +2177,7 @@ class _TradingTabState extends State<TradingTab>
                                               '\$${(widget.simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)}',
                                               style: const TextStyle(
                                                 color: Color(0xFFFF6B6B),
-                                                fontSize: 10,
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.w700,
                                                 fontFamily: 'Inter',
                                               ),
@@ -2195,7 +2195,7 @@ class _TradingTabState extends State<TradingTab>
                                               'GANANCIA',
                                               style: TextStyle(
                                                 color: Color(0xFF94A3B8),
-                                                fontSize: 8,
+                                                fontSize: 10,
                                                 fontWeight: FontWeight.w600,
                                                 fontFamily: 'Inter',
                                               ),
@@ -2204,7 +2204,7 @@ class _TradingTabState extends State<TradingTab>
                                               '\$${(widget.simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)}',
                                               style: const TextStyle(
                                                 color: Color(0xFF22C55E),
-                                                fontSize: 10,
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.w700,
                                                 fontFamily: 'Inter',
                                               ),
@@ -2222,7 +2222,7 @@ class _TradingTabState extends State<TradingTab>
                                               'R:R',
                                               style: TextStyle(
                                                 color: Color(0xFF94A3B8),
-                                                fontSize: 8,
+                                                fontSize: 10,
                                                 fontWeight: FontWeight.w600,
                                                 fontFamily: 'Inter',
                                               ),
@@ -2231,7 +2231,7 @@ class _TradingTabState extends State<TradingTab>
                                               '1:${(_tpRiskPercent / _slRiskPercent).toStringAsFixed(1)}',
                                               style: const TextStyle(
                                                 color: Color(0xFF3B82F6),
-                                                fontSize: 10,
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.w700,
                                                 fontFamily: 'Inter',
                                               ),
