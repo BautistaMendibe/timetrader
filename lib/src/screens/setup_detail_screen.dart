@@ -468,87 +468,197 @@ class SetupDetailScreen extends StatelessWidget {
   void _showDeleteDialog(BuildContext context, Setup setup) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1F2937),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Eliminar Setup',
-            style: TextStyle(
-              color: Color(0xFFF8FAFC),
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Inter',
-            ),
-          ),
-          content: Text(
-            '¿Estás seguro de que quieres eliminar el setup "${setup.name}"? Esta acción no se puede deshacer.',
-            style: const TextStyle(
-              color: Color(0xFF94A3B8),
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancelar',
-                style: TextStyle(
-                  color: Color(0xFF94A3B8),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                ),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF374151), Color(0xFF1F2937)],
               ),
-            ),
-            TextButton(
-              onPressed: () async {
-                debugPrint('DEBUG: Iniciando proceso de eliminación...');
-
-                // Guardar el nombre del setup antes de eliminarlo
-                final setupName = setup.name;
-                debugPrint(
-                  'DEBUG: Setup a eliminar: $setupName (ID: ${setup.id})',
-                );
-
-                // Cerrar diálogo y navegar inmediatamente
-                Navigator.of(context).pop(); // Cerrar diálogo
-                Navigator.of(context).pop(); // Navegar de vuelta al listado
-                debugPrint('DEBUG: Navegación completada inmediatamente');
-
-                try {
-                  debugPrint('DEBUG: Llamando a deleteSetup...');
-                  await context.read<SetupProvider>().deleteSetup(
-                    setup.id,
-                    setupName: setupName,
-                  );
-                  debugPrint('DEBUG: deleteSetup completado exitosamente');
-                } catch (e) {
-                  debugPrint('DEBUG: Error durante la eliminación: $e');
-                  if (context.mounted) {
-                    TopSnackBar.showError(
-                      context: context,
-                      message: 'Error al eliminar: ${e.toString()}',
-                      duration: const Duration(seconds: 3),
-                    );
-                  }
-                }
-              },
-              child: const Text(
-                'Eliminar',
-                style: TextStyle(
-                  color: Color(0xFFEF4444),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF4B5563), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  offset: const Offset(0, 8),
+                  blurRadius: 32,
+                  spreadRadius: -4,
                 ),
-              ),
+              ],
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.delete_forever_rounded,
+                    size: 32,
+                    color: Color(0xFFEF4444),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Title
+                const Text(
+                  'Eliminar Setup',
+                  style: TextStyle(
+                    color: Color(0xFFF8FAFC),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+
+                // Content
+                Text(
+                  '¿Estás seguro de que quieres eliminar el setup "${setup.name}"?\nEsta acción no se puede deshacer.',
+                  style: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 28),
+
+                // Actions
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF374151),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF4B5563),
+                            width: 1,
+                          ),
+                        ),
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: TextButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancelar',
+                            style: TextStyle(
+                              color: Color(0xFFF8FAFC),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFFEF4444,
+                              ).withValues(alpha: 0.3),
+                              offset: const Offset(0, 4),
+                              blurRadius: 12,
+                              spreadRadius: -2,
+                            ),
+                          ],
+                        ),
+                        child: TextButton(
+                          onPressed: () async {
+                            debugPrint(
+                              'DEBUG: Iniciando proceso de eliminación...',
+                            );
+
+                            // Guardar el nombre del setup antes de eliminarlo
+                            final setupName = setup.name;
+                            debugPrint(
+                              'DEBUG: Setup a eliminar: $setupName (ID: ${setup.id})',
+                            );
+
+                            // Cerrar diálogo y navegar inmediatamente
+                            Navigator.of(context).pop(); // Cerrar diálogo
+                            Navigator.of(
+                              context,
+                            ).pop(); // Navegar de vuelta al listado
+                            debugPrint(
+                              'DEBUG: Navegación completada inmediatamente',
+                            );
+
+                            try {
+                              debugPrint('DEBUG: Llamando a deleteSetup...');
+                              await context.read<SetupProvider>().deleteSetup(
+                                setup.id,
+                                setupName: setupName,
+                              );
+                              debugPrint(
+                                'DEBUG: deleteSetup completado exitosamente',
+                              );
+                            } catch (e) {
+                              debugPrint(
+                                'DEBUG: Error durante la eliminación: $e',
+                              );
+                              if (context.mounted) {
+                                TopSnackBar.showError(
+                                  context: context,
+                                  message: 'Error al eliminar: ${e.toString()}',
+                                  duration: const Duration(seconds: 3),
+                                );
+                              }
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Eliminar',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
