@@ -299,7 +299,7 @@ class TradingViewChartState extends State<TradingViewChart> {
               controller: _controller,
               // Clave: el WebView se adueña del drag/scale y NO deja scrollear al padre
               gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-                // Opción 1: que consuma TODO (súper seguro para charts)
+                // Opción 1: que consuma TO DO (súper seguro para charts)
                 Factory<OneSequenceGestureRecognizer>(
                   () => EagerGestureRecognizer(),
                 ),
