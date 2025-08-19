@@ -440,11 +440,11 @@
                 if (data.takeProfit != null) lastTakeProfit = parseFloat(data.takeProfit);
 
                 // Extraer los nuevos campos de porcentaje y valor
-                const slPct  = parseFloat(data.slPercent) || NaN;
-                const slVal  = parseFloat(data.slValue)   || NaN;
-                const tpPct  = parseFloat(data.tpPercent) || NaN;
-                const tpVal  = parseFloat(data.tpValue)   || NaN;
-                const entryVal = parseFloat(data.entryValue) || NaN;
+                const slPct  = (data.slPercent != null) ? parseFloat(data.slPercent) : NaN;
+                const slVal  = (data.slValue != null) ? parseFloat(data.slValue) : NaN;
+                const tpPct  = (data.tpPercent != null) ? parseFloat(data.tpPercent) : NaN;
+                const tpVal  = (data.tpValue != null) ? parseFloat(data.tpValue) : NaN;
+                const entryVal = (data.entryValue != null) ? parseFloat(data.entryValue) : NaN;
                 
                 console.log('📊 Datos recibidos:', {
                     slPercent: data.slPercent,

@@ -228,8 +228,12 @@ class SimulationProvider with ChangeNotifier {
   }
 
   // Getters para compatibilidad con la UI
-  double? get manualStopLossPrice => _calculatedStopLossPrice;
-  double? get manualTakeProfitPrice => _calculatedTakeProfitPrice;
+  double? get manualStopLossPrice => _inPosition && _stopLossPrice > 0
+      ? _stopLossPrice
+      : _calculatedStopLossPrice;
+  double? get manualTakeProfitPrice => _inPosition && _takeProfitPrice > 0
+      ? _takeProfitPrice
+      : _calculatedTakeProfitPrice;
   bool get isSimulationPaused => !_isSimulationRunning;
 
   // Getters para SL/TP manuales (compatibilidad)
@@ -1101,12 +1105,32 @@ class SimulationProvider with ChangeNotifier {
     _entryPrice = price;
     _positionSize = _calculatedPositionSize!;
 
+    // CRÍTICO: Asignar los valores de SL/TP a las variables de estado de trading
+    _stopLossPrice = _calculatedStopLossPrice ?? 0.0;
+    _takeProfitPrice = _calculatedTakeProfitPrice ?? 0.0;
+
     // Enviar datos al WebView para dibujar las líneas
     if (_tickCallback != null) {
       final msg = {
         'entryPrice': price,
-        'stopLoss': _calculatedStopLossPrice,
-        'takeProfit': _calculatedTakeProfitPrice,
+        'stopLoss': _stopLossPrice,
+        'takeProfit': _takeProfitPrice,
+        // Incluir valores adicionales requeridos por el chart HTML
+        if (_entryPrice > 0) ...{
+          'slPercent': _stopLossPrice > 0
+              ? -(((_entryPrice - _stopLossPrice).abs() / _entryPrice) * 100)
+              : null,
+          'slValue': _stopLossPrice > 0
+              ? -((_entryPrice - _stopLossPrice).abs() * _positionSize)
+              : null,
+          'tpPercent': _takeProfitPrice > 0
+              ? (((_takeProfitPrice - _entryPrice).abs() / _entryPrice) * 100)
+              : null,
+          'tpValue': _takeProfitPrice > 0
+              ? ((_takeProfitPrice - _entryPrice).abs() * _positionSize)
+              : null,
+          'entryValue': 0.0, // Al inicio no hay PnL flotante
+        },
       };
       debugPrint(
         '🔥 SimulationProvider: Enviando datos de posición al WebView: $msg',
@@ -1654,6 +1678,26 @@ class SimulationProvider with ChangeNotifier {
               },
             )
             .toList(),
+        // CRÍTICO: Incluir SL/TP en cada tick cuando hay posición activa
+        if (_inPosition) 'stopLoss': _stopLossPrice > 0 ? _stopLossPrice : null,
+        if (_inPosition)
+          'takeProfit': _takeProfitPrice > 0 ? _takeProfitPrice : null,
+        // Incluir valores adicionales requeridos por el chart HTML
+        if (_inPosition && _entryPrice > 0) ...{
+          'slPercent': _stopLossPrice > 0
+              ? -(((_entryPrice - _stopLossPrice).abs() / _entryPrice) * 100)
+              : null,
+          'slValue': _stopLossPrice > 0
+              ? -((_entryPrice - _stopLossPrice).abs() * _positionSize)
+              : null,
+          'tpPercent': _takeProfitPrice > 0
+              ? (((_takeProfitPrice - _entryPrice).abs() / _entryPrice) * 100)
+              : null,
+          'tpValue': _takeProfitPrice > 0
+              ? ((_takeProfitPrice - _entryPrice).abs() * _positionSize)
+              : null,
+          'entryValue': unrealizedPnL,
+        },
       };
 
       // Debug para timestamps de trades
@@ -1664,6 +1708,11 @@ class SimulationProvider with ChangeNotifier {
       }
 
       debugPrint('🔥 TICK: Enviando vela al chart: $msg');
+      if (_inPosition) {
+        debugPrint(
+          '🔥 TICK: Posición activa - SL: $_stopLossPrice, TP: $_takeProfitPrice',
+        );
+      }
       _tickCallback!(msg);
     } else {
       debugPrint(
@@ -1697,26 +1746,80 @@ class SimulationProvider with ChangeNotifier {
 
   // --- NUEVOS MÉTODOS PARA SL/TP MANUAL ---
   void updateManualStopLoss(double price) {
-    _calculatedStopLossPrice = price;
-    debugPrint('updateManualStopLoss: nuevo SL =  [33m$price [0m');
+    if (_inPosition) {
+      _stopLossPrice = price;
+    } else {
+      _calculatedStopLossPrice = price;
+    }
+    debugPrint(
+      'updateManualStopLoss: nuevo SL =  [33m$price [0m (inPosition: $_inPosition)',
+    );
     if (_tickCallback != null && _entryPrice > 0) {
+      final currentSL = _inPosition ? _stopLossPrice : _calculatedStopLossPrice;
+      final currentTP = _inPosition
+          ? _takeProfitPrice
+          : _calculatedTakeProfitPrice;
+
       _tickCallback!({
         'entryPrice': _entryPrice,
-        'stopLoss': _calculatedStopLossPrice,
-        'takeProfit': _calculatedTakeProfitPrice,
+        'stopLoss': currentSL,
+        'takeProfit': currentTP,
+        // Incluir valores adicionales requeridos por el chart HTML
+        if (_inPosition && _entryPrice > 0) ...{
+          'slPercent': currentSL != null && currentSL > 0
+              ? -(((_entryPrice - currentSL).abs() / _entryPrice) * 100)
+              : null,
+          'slValue': currentSL != null && currentSL > 0
+              ? -((_entryPrice - currentSL).abs() * _positionSize)
+              : null,
+          'tpPercent': currentTP != null && currentTP > 0
+              ? (((currentTP - _entryPrice).abs() / _entryPrice) * 100)
+              : null,
+          'tpValue': currentTP != null && currentTP > 0
+              ? ((currentTP - _entryPrice).abs() * _positionSize)
+              : null,
+          'entryValue': unrealizedPnL,
+        },
       });
     }
     notifyListeners();
   }
 
   void updateManualTakeProfit(double price) {
-    _calculatedTakeProfitPrice = price;
-    debugPrint('updateManualTakeProfit: nuevo TP =  [32m$price [0m');
+    if (_inPosition) {
+      _takeProfitPrice = price;
+    } else {
+      _calculatedTakeProfitPrice = price;
+    }
+    debugPrint(
+      'updateManualTakeProfit: nuevo TP =  [32m$price [0m (inPosition: $_inPosition)',
+    );
     if (_tickCallback != null && _entryPrice > 0) {
+      final currentSL = _inPosition ? _stopLossPrice : _calculatedStopLossPrice;
+      final currentTP = _inPosition
+          ? _takeProfitPrice
+          : _calculatedTakeProfitPrice;
+
       _tickCallback!({
         'entryPrice': _entryPrice,
-        'stopLoss': _calculatedStopLossPrice,
-        'takeProfit': _calculatedTakeProfitPrice,
+        'stopLoss': currentSL,
+        'takeProfit': currentTP,
+        // Incluir valores adicionales requeridos por el chart HTML
+        if (_inPosition && _entryPrice > 0) ...{
+          'slPercent': currentSL != null && currentSL > 0
+              ? -(((_entryPrice - currentSL).abs() / _entryPrice) * 100)
+              : null,
+          'slValue': currentSL != null && currentSL > 0
+              ? -((_entryPrice - currentSL).abs() * _positionSize)
+              : null,
+          'tpPercent': currentTP != null && currentTP > 0
+              ? (((currentTP - _entryPrice).abs() / _entryPrice) * 100)
+              : null,
+          'tpValue': currentTP != null && currentTP > 0
+              ? ((currentTP - _entryPrice).abs() * _positionSize)
+              : null,
+          'entryValue': unrealizedPnL,
+        },
       });
     }
     notifyListeners();
