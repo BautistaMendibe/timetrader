@@ -518,10 +518,14 @@ class _TradingTabState extends State<TradingTab>
         simulationProvider.entryPrice <= 0) {
       return 0.001;
     }
-    return (simulationProvider.entryPrice -
+    final distance =
+        (simulationProvider.entryPrice -
                 simulationProvider.manualStopLossPrice!)
             .abs() /
         simulationProvider.entryPrice;
+
+    // Asegurar que el valor esté dentro del rango del slider
+    return distance.clamp(0.0001, 0.01);
   }
 
   double _calculateTPDistance(SimulationProvider simulationProvider) {
@@ -529,10 +533,14 @@ class _TradingTabState extends State<TradingTab>
         simulationProvider.entryPrice <= 0) {
       return 0.002;
     }
-    return (simulationProvider.manualTakeProfitPrice! -
+    final distance =
+        (simulationProvider.manualTakeProfitPrice! -
                 simulationProvider.entryPrice)
             .abs() /
         simulationProvider.entryPrice;
+
+    // Asegurar que el valor esté dentro del rango del slider
+    return distance.clamp(0.0001, 0.02);
   }
 
   void _updateActiveTradeSL(
