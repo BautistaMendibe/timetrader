@@ -33,6 +33,7 @@ class _TradingTabState extends State<TradingTab>
   Timeframe? _selectedTimeframe;
   double _slRiskPercent = 1.0;
   double _tpRiskPercent = 2.0;
+  int _selectedLeverage = 1; // Nuevo: apalancamiento seleccionado
 
   @override
   void initState() {
@@ -1198,18 +1199,22 @@ class _TradingTabState extends State<TradingTab>
                                       stopLoss: data.item3,
                                       takeProfit: data.item4,
                                       entryPrice: entryPrice,
-                                      slPercent: -_slRiskPercent,
+                                      slPercent:
+                                          -(_slRiskPercent * _selectedLeverage),
                                       slValue:
                                           -(widget
                                                   .simulationProvider
                                                   .currentBalance *
-                                              (_slRiskPercent / 100)),
-                                      tpPercent: _tpRiskPercent,
+                                              (_slRiskPercent / 100) *
+                                              _selectedLeverage),
+                                      tpPercent:
+                                          _tpRiskPercent * _selectedLeverage,
                                       tpValue:
                                           widget
                                               .simulationProvider
                                               .currentBalance *
-                                          (_tpRiskPercent / 100),
+                                          (_tpRiskPercent / 100) *
+                                          _selectedLeverage,
                                       entryValue:
                                           widget.simulationProvider.inPosition
                                           ? widget
@@ -1314,6 +1319,36 @@ class _TradingTabState extends State<TradingTab>
                                           fontWeight: FontWeight.w800,
                                           fontFamily: 'Inter',
                                           letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(
+                                            0xFF8B5CF6,
+                                          ).withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(
+                                              0xFF8B5CF6,
+                                            ).withValues(alpha: 0.4),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${_selectedLeverage}x',
+                                          style: const TextStyle(
+                                            color: Color(0xFF8B5CF6),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            fontFamily: 'Inter',
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -1477,7 +1512,7 @@ class _TradingTabState extends State<TradingTab>
                                       const SizedBox(height: 8),
                                       Text(
                                         '\$${(() {
-                                          final riskAmount = widget.simulationProvider.currentBalance * (_slRiskPercent / 100);
+                                          final riskAmount = widget.simulationProvider.currentBalance * (_slRiskPercent / 100) * _selectedLeverage;
                                           final priceDistance = riskAmount / widget.simulationProvider.calculatedPositionSize!;
                                           final slPrice = _isBuyOrder ? _clickPrice! - priceDistance : _clickPrice! + priceDistance;
                                           return slPrice.toStringAsFixed(5);
@@ -1491,7 +1526,7 @@ class _TradingTabState extends State<TradingTab>
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '-${_slRiskPercent.toStringAsFixed(1)}%',
+                                        '-${(_slRiskPercent * _selectedLeverage).toStringAsFixed(1)}%',
                                         style: TextStyle(
                                           color: Colors.white.withValues(
                                             alpha: 0.8,
@@ -1559,7 +1594,7 @@ class _TradingTabState extends State<TradingTab>
                                       const SizedBox(height: 8),
                                       Text(
                                         '\$${(() {
-                                          final potentialAmount = widget.simulationProvider.currentBalance * (_tpRiskPercent / 100);
+                                          final potentialAmount = widget.simulationProvider.currentBalance * (_tpRiskPercent / 100) * _selectedLeverage;
                                           final priceDistance = potentialAmount / widget.simulationProvider.calculatedPositionSize!;
                                           final tpPrice = _isBuyOrder ? _clickPrice! + priceDistance : _clickPrice! - priceDistance;
                                           return tpPrice.toStringAsFixed(5);
@@ -1573,7 +1608,7 @@ class _TradingTabState extends State<TradingTab>
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '+${_tpRiskPercent.toStringAsFixed(1)}%',
+                                        '+${(_tpRiskPercent * _selectedLeverage).toStringAsFixed(1)}%',
                                         style: TextStyle(
                                           color: Colors.white.withValues(
                                             alpha: 0.8,
@@ -1590,6 +1625,190 @@ class _TradingTabState extends State<TradingTab>
                             ],
                           ),
                         ],
+
+                        // Leverage Selector
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF4B5563),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFF8B5CF6,
+                                      ).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(
+                                      Icons.trending_up_rounded,
+                                      color: Color(0xFF8B5CF6),
+                                      size: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'APALANCAMIENTO',
+                                    style: TextStyle(
+                                      color: Color(0xFFF8FAFC),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Leverage Options
+                              Row(
+                                children: [1, 2, 5, 10].map((leverage) {
+                                  final isSelected =
+                                      _selectedLeverage == leverage;
+                                  return Expanded(
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 2,
+                                      ),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedLeverage = leverage;
+                                          });
+                                          // Recalcular parámetros con el nuevo apalancamiento
+                                          if (_clickPrice != null) {
+                                            widget.simulationProvider
+                                                .calculatePositionParameters(
+                                                  _isBuyOrder ? 'buy' : 'sell',
+                                                  _clickPrice!,
+                                                  leverage: leverage,
+                                                );
+
+                                            // Actualizar SL/TP con los nuevos cálculos
+                                            final slSetup = widget
+                                                .simulationProvider
+                                                .calculatedStopLossPrice;
+                                            final tpSetup = widget
+                                                .simulationProvider
+                                                .calculatedTakeProfitPrice;
+
+                                            if (slSetup != null) {
+                                              widget.simulationProvider
+                                                  .updateManualStopLoss(
+                                                    slSetup,
+                                                  );
+                                            }
+                                            if (tpSetup != null) {
+                                              widget.simulationProvider
+                                                  .updateManualTakeProfit(
+                                                    tpSetup,
+                                                  );
+                                            }
+                                          }
+                                        },
+                                        child: Container(
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            gradient: isSelected
+                                                ? const LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: [
+                                                      Color(0xFF8B5CF6),
+                                                      Color(0xFF7C3AED),
+                                                    ],
+                                                  )
+                                                : null,
+                                            color: isSelected
+                                                ? null
+                                                : const Color(0xFF1F2937),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? const Color(0xFF8B5CF6)
+                                                  : const Color(0xFF4B5563),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '${leverage}x',
+                                              style: TextStyle(
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : const Color(0xFF94A3B8),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Leverage Info
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF1F2937,
+                                  ).withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF4B5563,
+                                    ).withValues(alpha: 0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline_rounded,
+                                      color: const Color(0xFF94A3B8),
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Riesgo: \$${(widget.simulationProvider.currentBalance * (_slRiskPercent / 100) * _selectedLeverage).toStringAsFixed(2)} (${(_slRiskPercent * _selectedLeverage).toStringAsFixed(1)}% del balance)',
+                                        style: const TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                         if (_showSlTpOnOrderInline) ...[
                           const SizedBox(height: 16),
@@ -1716,7 +1935,8 @@ class _TradingTabState extends State<TradingTab>
                                                 widget
                                                     .simulationProvider
                                                     .currentBalance *
-                                                (_slRiskPercent / 100);
+                                                (_slRiskPercent / 100) *
+                                                _selectedLeverage;
                                             final priceDistance =
                                                 riskAmount /
                                                 widget
@@ -1785,7 +2005,8 @@ class _TradingTabState extends State<TradingTab>
                                                   widget
                                                       .simulationProvider
                                                       .currentBalance *
-                                                  (_slRiskPercent / 100);
+                                                  (_slRiskPercent / 100) *
+                                                  _selectedLeverage;
                                               final priceDistance =
                                                   riskAmount /
                                                   widget
@@ -1844,7 +2065,8 @@ class _TradingTabState extends State<TradingTab>
                                                 widget
                                                     .simulationProvider
                                                     .currentBalance *
-                                                (_slRiskPercent / 100);
+                                                (_slRiskPercent / 100) *
+                                                _selectedLeverage;
                                             final priceDistance =
                                                 riskAmount /
                                                 widget
@@ -1963,7 +2185,8 @@ class _TradingTabState extends State<TradingTab>
                                                 widget
                                                     .simulationProvider
                                                     .currentBalance *
-                                                (_tpRiskPercent / 100);
+                                                (_tpRiskPercent / 100) *
+                                                _selectedLeverage;
                                             final priceDistance =
                                                 potentialAmount /
                                                 widget
@@ -2034,7 +2257,8 @@ class _TradingTabState extends State<TradingTab>
                                                   widget
                                                       .simulationProvider
                                                       .currentBalance *
-                                                  (_tpRiskPercent / 100);
+                                                  (_tpRiskPercent / 100) *
+                                                  _selectedLeverage;
                                               final priceDistance =
                                                   potentialAmount /
                                                   widget
@@ -2093,7 +2317,8 @@ class _TradingTabState extends State<TradingTab>
                                                 widget
                                                     .simulationProvider
                                                     .currentBalance *
-                                                (_tpRiskPercent / 100);
+                                                (_tpRiskPercent / 100) *
+                                                _selectedLeverage;
                                             final priceDistance =
                                                 potentialAmount /
                                                 widget
@@ -2174,7 +2399,7 @@ class _TradingTabState extends State<TradingTab>
                                               ),
                                             ),
                                             Text(
-                                              '\$${(widget.simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)}',
+                                              '\$${(widget.simulationProvider.currentBalance * (_slRiskPercent / 100) * _selectedLeverage).toStringAsFixed(2)}',
                                               style: const TextStyle(
                                                 color: Color(0xFFFF6B6B),
                                                 fontSize: 12,
@@ -2201,7 +2426,7 @@ class _TradingTabState extends State<TradingTab>
                                               ),
                                             ),
                                             Text(
-                                              '\$${(widget.simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)}',
+                                              '\$${(widget.simulationProvider.currentBalance * (_tpRiskPercent / 100) * _selectedLeverage).toStringAsFixed(2)}',
                                               style: const TextStyle(
                                                 color: Color(0xFF22C55E),
                                                 fontSize: 12,
@@ -2263,12 +2488,14 @@ class _TradingTabState extends State<TradingTab>
                                         widget
                                             .simulationProvider
                                             .currentBalance *
-                                        (_slRiskPercent / 100);
+                                        (_slRiskPercent / 100) *
+                                        _selectedLeverage;
                                     final tpAmount =
                                         widget
                                             .simulationProvider
                                             .currentBalance *
-                                        (_tpRiskPercent / 100);
+                                        (_tpRiskPercent / 100) *
+                                        _selectedLeverage;
                                     final slPrice = _isBuyOrder
                                         ? _clickPrice! -
                                               (riskAmount /
@@ -2309,12 +2536,7 @@ class _TradingTabState extends State<TradingTab>
                                                   .simulationProvider
                                                   .calculatedPositionSize ??
                                               0.0,
-                                          leverage:
-                                              widget
-                                                  .simulationProvider
-                                                  .calculatedLeverage
-                                                  ?.toInt() ??
-                                              1,
+                                          leverage: _selectedLeverage,
                                           entryPrice: _clickPrice!,
                                         );
 
@@ -2397,17 +2619,34 @@ class _TradingTabState extends State<TradingTab>
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Text(
-                                    _isBuyOrder
-                                        ? 'CONFIRMAR COMPRA'
-                                        : 'CONFIRMAR VENTA',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      fontFamily: 'Inter',
-                                      letterSpacing: 1.0,
-                                      color: Colors.white,
-                                    ),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _isBuyOrder
+                                            ? 'CONFIRMAR COMPRA'
+                                            : 'CONFIRMAR VENTA',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          fontFamily: 'Inter',
+                                          letterSpacing: 1.0,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Apalancamiento: ${_selectedLeverage}x',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Inter',
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
