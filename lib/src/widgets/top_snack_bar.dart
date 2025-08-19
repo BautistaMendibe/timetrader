@@ -12,7 +12,7 @@ class TopSnackBar {
 
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        top: MediaQuery.of(context).padding.top + 12,
+        top: MediaQuery.of(context).padding.top + 20,
         left: 12,
         right: 12,
         child: Material(
@@ -29,21 +29,17 @@ class TopSnackBar {
                 ),
               ],
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
             child: Row(
               children: [
-                Icon(
-                  _getIcon(type),
-                  color: Colors.white,
-                  size: 18,
-                ),
+                Icon(_getIcon(type), color: Colors.white, size: 18),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     message,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: FontWeight.w500,
                       fontFamily: 'Inter',
                     ),
@@ -54,11 +50,7 @@ class TopSnackBar {
                   onTap: () {
                     overlayEntry.remove();
                   },
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 16),
                 ),
               ],
             ),
@@ -145,7 +137,7 @@ class TopSnackBar {
   static Color _getBackgroundColor(SnackBarType type) {
     switch (type) {
       case SnackBarType.success:
-        return const Color(0xFF21CE99);
+        return const Color(0xFF22C55E);
       case SnackBarType.error:
         return const Color(0xFFE53E3E);
       case SnackBarType.warning:
@@ -156,9 +148,4 @@ class TopSnackBar {
   }
 }
 
-enum SnackBarType {
-  success,
-  error,
-  warning,
-  info,
-} 
+enum SnackBarType { success, error, warning, info }
