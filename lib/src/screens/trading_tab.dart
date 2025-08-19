@@ -1234,7 +1234,10 @@ class _TradingTabState extends State<TradingTab>
               if (_showOrderContainerInline) ...[
                 SliverToBoxAdapter(
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -1284,7 +1287,7 @@ class _TradingTabState extends State<TradingTab>
                                                 const Color(0xFFDC2626),
                                               ],
                                       ),
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Icon(
                                       _isBuyOrder
@@ -1307,7 +1310,7 @@ class _TradingTabState extends State<TradingTab>
                                           color: _isBuyOrder
                                               ? const Color(0xFF22C55E)
                                               : const Color(0xFFFF6B6B),
-                                          fontSize: 18,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.w800,
                                           fontFamily: 'Inter',
                                           letterSpacing: 0.5,
@@ -1331,7 +1334,7 @@ class _TradingTabState extends State<TradingTab>
                                   icon: const Icon(
                                     Icons.close_rounded,
                                     color: Color(0xFF94A3B8),
-                                    size: 22,
+                                    size: 20,
                                   ),
                                   onPressed: () {
                                     widget.simulationProvider.cancelOrder();
@@ -1375,7 +1378,7 @@ class _TradingTabState extends State<TradingTab>
                                     child: const Icon(
                                       Icons.price_change_rounded,
                                       color: Color(0xFF22C55E),
-                                      size: 16,
+                                      size: 14,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -1389,7 +1392,7 @@ class _TradingTabState extends State<TradingTab>
                                           color: Color(0xFF94A3B8),
                                           fontFamily: 'Inter',
                                           fontWeight: FontWeight.w600,
-                                          fontSize: 11,
+                                          fontSize: 10,
                                           letterSpacing: 0.5,
                                         ),
                                       ),
@@ -1417,13 +1420,13 @@ class _TradingTabState extends State<TradingTab>
                                 null &&
                             widget.simulationProvider.calculatedPositionSize! >
                                 0) ...[
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           // SL/TP Display
                           Row(
                             children: [
                               Expanded(
                                 child: Container(
-                                  padding: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.all(5),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       begin: Alignment.topLeft,
@@ -1505,7 +1508,7 @@ class _TradingTabState extends State<TradingTab>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Container(
-                                  padding: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.all(5),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       begin: Alignment.topLeft,
@@ -1589,7 +1592,7 @@ class _TradingTabState extends State<TradingTab>
                         ],
 
                         if (_showSlTpOnOrderInline) ...[
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
                           // SL/TP Slider Section
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -2241,7 +2244,7 @@ class _TradingTabState extends State<TradingTab>
                               ],
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 18),
                         ],
 
                         // Confirm Button
