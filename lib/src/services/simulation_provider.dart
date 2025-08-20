@@ -1020,35 +1020,47 @@ class SimulationProvider with ChangeNotifier {
         leverage?.toDouble() ?? 1.0; // Use provided leverage or default to 1x
 
     // 5. Calculate stop loss and take profit prices using ENTRY PRICE
-    final takeProfitRR = _currentSetup!.getEffectiveTakeProfitRatio();
+    // Solo calcular precios si no existen precios previos o si es la primera vez
+    if (_calculatedStopLossPrice == null ||
+        _calculatedTakeProfitPrice == null) {
+      final takeProfitRR = _currentSetup!.getEffectiveTakeProfitRatio();
 
-    debugPrint(
-      '🔥 SimulationProvider: DEBUG - Entry Price: $entryPrice, Price Distance: $priceDistance, Take Profit RR: $takeProfitRR',
-    );
-    debugPrint(
-      '🔥 SimulationProvider: DEBUG - Setup Take Profit Ratio: ${_currentSetup!.takeProfitRatio}, Custom Value: ${_currentSetup!.customTakeProfitRatio}',
-    );
-
-    // Mostrar cálculo de pips para mayor claridad
-    if (_currentSetup!.stopLossType == StopLossType.pips) {
-      final pipsDistance = _currentSetup!.stopLossDistance;
-      final calculatedPips = priceDistance / _pipValue;
       debugPrint(
-        '🔥 SimulationProvider: DEBUG - Pips calculation: $pipsDistance pips × $_pipValue pip value = $calculatedPips price distance',
+        '🔥 SimulationProvider: DEBUG - Entry Price: $entryPrice, Price Distance: $priceDistance, Take Profit RR: $takeProfitRR',
       );
-    }
-
-    if (type == 'buy') {
-      _calculatedStopLossPrice = entryPrice - priceDistance;
-      _calculatedTakeProfitPrice = entryPrice + (priceDistance * takeProfitRR);
       debugPrint(
-        '🔥 SimulationProvider: DEBUG - BUY - SL: $_calculatedStopLossPrice ($entryPrice - $priceDistance), TP: $_calculatedTakeProfitPrice ($entryPrice + $priceDistance * $takeProfitRR)',
+        '🔥 SimulationProvider: DEBUG - Setup Take Profit Ratio: ${_currentSetup!.takeProfitRatio}, Custom Value: ${_currentSetup!.customTakeProfitRatio}',
       );
+
+      // Mostrar cálculo de pips para mayor claridad
+      if (_currentSetup!.stopLossType == StopLossType.pips) {
+        final pipsDistance = _currentSetup!.stopLossDistance;
+        final calculatedPips = priceDistance / _pipValue;
+        debugPrint(
+          '🔥 SimulationProvider: DEBUG - Pips calculation: $pipsDistance pips × $_pipValue pip value = $calculatedPips price distance',
+        );
+      }
+
+      if (type == 'buy') {
+        _calculatedStopLossPrice = entryPrice - priceDistance;
+        _calculatedTakeProfitPrice =
+            entryPrice + (priceDistance * takeProfitRR);
+        debugPrint(
+          '🔥 SimulationProvider: DEBUG - BUY - SL: $_calculatedStopLossPrice ($entryPrice - $priceDistance), TP: $_calculatedTakeProfitPrice ($entryPrice + $priceDistance * $takeProfitRR)',
+        );
+      } else {
+        _calculatedStopLossPrice = entryPrice + priceDistance;
+        _calculatedTakeProfitPrice =
+            entryPrice - (priceDistance * takeProfitRR);
+        debugPrint(
+          '🔥 SimulationProvider: DEBUG - SELL - SL: $_calculatedStopLossPrice ($entryPrice + $priceDistance), TP: $_calculatedTakeProfitPrice ($entryPrice - $priceDistance * $takeProfitRR)',
+        );
+      }
     } else {
-      _calculatedStopLossPrice = entryPrice + priceDistance;
-      _calculatedTakeProfitPrice = entryPrice - (priceDistance * takeProfitRR);
+      // Si ya existen precios de SL/TP, mantenerlos fijos
+      // Solo se recalcula el tamaño de la posición con el nuevo apalancamiento
       debugPrint(
-        '🔥 SimulationProvider: DEBUG - SELL - SL: $_calculatedStopLossPrice ($entryPrice + $priceDistance), TP: $_calculatedTakeProfitPrice ($entryPrice - $priceDistance * $takeProfitRR)',
+        '🔥 SimulationProvider: Preserving existing SL/TP prices - SL: $_calculatedStopLossPrice, TP: $_calculatedTakeProfitPrice',
       );
     }
 
@@ -2104,5 +2116,13 @@ class SimulationProvider with ChangeNotifier {
 
     // Notificar cambios
     _notifyUIUpdate();
+  }
+
+  // --- MÉTODO PARA LIMPIAR PRECIOS CALCULADOS ---
+  void clearCalculatedPrices() {
+    _calculatedStopLossPrice = null;
+    _calculatedTakeProfitPrice = null;
+    _setupParametersCalculated = false;
+    debugPrint('🔥 SimulationProvider: Cleared calculated SL/TP prices');
   }
 }
