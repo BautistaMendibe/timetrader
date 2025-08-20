@@ -31,8 +31,9 @@ class _TradingTabState extends State<TradingTab>
   double? _clickPrice;
 
   Timeframe? _selectedTimeframe;
-  double _slRiskPercent = 1.0;
-  double _tpRiskPercent = 2.0;
+  double? _slPrice;
+  double? _tpPrice;
+  int _selectedLeverage = 1; // Nuevo: apalancamiento seleccionado
 
   @override
   void initState() {
@@ -52,18 +53,23 @@ class _TradingTabState extends State<TradingTab>
     simulationProvider.pauseSimulation();
     _clickPrice = simulationProvider.lastVisibleTickPrice;
 
+    // Limpiar precios calculados previos para recalcular desde cero
+    simulationProvider.clearCalculatedPrices();
+
     if (_clickPrice != null) {
       simulationProvider.calculatePositionParameters(
         isBuy ? 'buy' : 'sell',
         _clickPrice!,
+        leverage: _selectedLeverage, // Pasar el apalancamiento actual
       );
     }
     final slSetup = simulationProvider.calculatedStopLossPrice;
     final tpSetup = simulationProvider.calculatedTakeProfitPrice;
 
     if (_clickPrice != null && slSetup != null && tpSetup != null) {
-      _slRiskPercent = 1.0;
-      _tpRiskPercent = 2.0;
+      // Inicializar precios basándose en la configuración del setup activo
+      _slPrice = slSetup;
+      _tpPrice = tpSetup;
     }
 
     setState(() {
@@ -1198,18 +1204,51 @@ class _TradingTabState extends State<TradingTab>
                                       stopLoss: data.item3,
                                       takeProfit: data.item4,
                                       entryPrice: entryPrice,
-                                      slPercent: -_slRiskPercent,
+                                      slPercent:
+                                          _slPrice != null &&
+                                              _clickPrice != null
+                                          ? -(((_clickPrice! - _slPrice!)
+                                                        .abs() *
+                                                    (widget
+                                                            .simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1)) /
+                                                widget
+                                                    .simulationProvider
+                                                    .currentBalance *
+                                                100)
+                                          : 0.0,
                                       slValue:
-                                          -(widget
-                                                  .simulationProvider
-                                                  .currentBalance *
-                                              (_slRiskPercent / 100)),
-                                      tpPercent: _tpRiskPercent,
+                                          _slPrice != null &&
+                                              _clickPrice != null
+                                          ? -((_clickPrice! - _slPrice!).abs() *
+                                                (widget
+                                                        .simulationProvider
+                                                        .calculatedPositionSize ??
+                                                    1))
+                                          : 0.0,
+                                      tpPercent:
+                                          _tpPrice != null &&
+                                              _clickPrice != null
+                                          ? (((_tpPrice! - _clickPrice!).abs() *
+                                                    (widget
+                                                            .simulationProvider
+                                                            .calculatedPositionSize ??
+                                                        1)) /
+                                                widget
+                                                    .simulationProvider
+                                                    .currentBalance *
+                                                100)
+                                          : 0.0,
                                       tpValue:
-                                          widget
-                                              .simulationProvider
-                                              .currentBalance *
-                                          (_tpRiskPercent / 100),
+                                          _tpPrice != null &&
+                                              _clickPrice != null
+                                          ? ((_tpPrice! - _clickPrice!).abs() *
+                                                (widget
+                                                        .simulationProvider
+                                                        .calculatedPositionSize ??
+                                                    1))
+                                          : 0.0,
                                       entryValue:
                                           widget.simulationProvider.inPosition
                                           ? widget
@@ -1314,6 +1353,36 @@ class _TradingTabState extends State<TradingTab>
                                           fontWeight: FontWeight.w800,
                                           fontFamily: 'Inter',
                                           letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(
+                                            0xFF8B5CF6,
+                                          ).withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(
+                                              0xFF8B5CF6,
+                                            ).withValues(alpha: 0.4),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${_selectedLeverage}x',
+                                          style: const TextStyle(
+                                            color: Color(0xFF8B5CF6),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            fontFamily: 'Inter',
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -1476,12 +1545,7 @@ class _TradingTabState extends State<TradingTab>
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        '\$${(() {
-                                          final riskAmount = widget.simulationProvider.currentBalance * (_slRiskPercent / 100);
-                                          final priceDistance = riskAmount / widget.simulationProvider.calculatedPositionSize!;
-                                          final slPrice = _isBuyOrder ? _clickPrice! - priceDistance : _clickPrice! + priceDistance;
-                                          return slPrice.toStringAsFixed(5);
-                                        })()}',
+                                        '\$${_slPrice?.toStringAsFixed(5) ?? "--"}',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 16,
@@ -1491,7 +1555,9 @@ class _TradingTabState extends State<TradingTab>
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '-${_slRiskPercent.toStringAsFixed(1)}%',
+                                        _slPrice != null && _clickPrice != null
+                                            ? '-${(((_clickPrice! - _slPrice!).abs() * (widget.simulationProvider.calculatedPositionSize ?? 1)) / widget.simulationProvider.currentBalance * 100).toStringAsFixed(1)}%'
+                                            : '--',
                                         style: TextStyle(
                                           color: Colors.white.withValues(
                                             alpha: 0.8,
@@ -1558,12 +1624,7 @@ class _TradingTabState extends State<TradingTab>
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        '\$${(() {
-                                          final potentialAmount = widget.simulationProvider.currentBalance * (_tpRiskPercent / 100);
-                                          final priceDistance = potentialAmount / widget.simulationProvider.calculatedPositionSize!;
-                                          final tpPrice = _isBuyOrder ? _clickPrice! + priceDistance : _clickPrice! - priceDistance;
-                                          return tpPrice.toStringAsFixed(5);
-                                        })()}',
+                                        '\$${_tpPrice?.toStringAsFixed(5) ?? "--"}',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 16,
@@ -1573,7 +1634,9 @@ class _TradingTabState extends State<TradingTab>
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '+${_tpRiskPercent.toStringAsFixed(1)}%',
+                                        _tpPrice != null && _clickPrice != null
+                                            ? '+${(((_tpPrice! - _clickPrice!).abs() * (widget.simulationProvider.calculatedPositionSize ?? 1)) / widget.simulationProvider.currentBalance * 100).toStringAsFixed(1)}%'
+                                            : '--',
                                         style: TextStyle(
                                           color: Colors.white.withValues(
                                             alpha: 0.8,
@@ -1590,6 +1653,169 @@ class _TradingTabState extends State<TradingTab>
                             ],
                           ),
                         ],
+
+                        // Leverage Selector
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF4B5563),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFF8B5CF6,
+                                      ).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(
+                                      Icons.trending_up_rounded,
+                                      color: Color(0xFF8B5CF6),
+                                      size: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'APALANCAMIENTO',
+                                    style: TextStyle(
+                                      color: Color(0xFFF8FAFC),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Leverage Options
+                              Row(
+                                children: [1, 2, 5, 10].map((leverage) {
+                                  final isSelected =
+                                      _selectedLeverage == leverage;
+                                  return Expanded(
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 2,
+                                      ),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedLeverage = leverage;
+                                          });
+                                          // Recalcular parámetros con el nuevo apalancamiento
+                                          if (_clickPrice != null) {
+                                            widget.simulationProvider
+                                                .calculatePositionParameters(
+                                                  _isBuyOrder ? 'buy' : 'sell',
+                                                  _clickPrice!,
+                                                  leverage: leverage,
+                                                );
+                                          }
+                                        },
+                                        child: Container(
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            gradient: isSelected
+                                                ? const LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: [
+                                                      Color(0xFF8B5CF6),
+                                                      Color(0xFF7C3AED),
+                                                    ],
+                                                  )
+                                                : null,
+                                            color: isSelected
+                                                ? null
+                                                : const Color(0xFF1F2937),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? const Color(0xFF8B5CF6)
+                                                  : const Color(0xFF4B5563),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '${leverage}x',
+                                              style: TextStyle(
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : const Color(0xFF94A3B8),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Leverage Info
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF1F2937,
+                                  ).withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF4B5563,
+                                    ).withValues(alpha: 0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline_rounded,
+                                      color: const Color(0xFF94A3B8),
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Riesgo: \$${_slPrice != null && _clickPrice != null ? ((_clickPrice! - _slPrice!).abs() * (widget.simulationProvider.calculatedPositionSize ?? 1)).toStringAsFixed(2) : "0.00"} (${_slPrice != null && _clickPrice != null ? (((_clickPrice! - _slPrice!).abs() * (widget.simulationProvider.calculatedPositionSize ?? 1)) / widget.simulationProvider.currentBalance * 100).toStringAsFixed(1) : "0.0"}% del balance)',
+                                        style: const TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                         if (_showSlTpOnOrderInline) ...[
                           const SizedBox(height: 16),
@@ -1698,11 +1924,25 @@ class _TradingTabState extends State<TradingTab>
                                       child: IconButton(
                                         onPressed: () {
                                           setState(() {
-                                            _slRiskPercent =
-                                                (_slRiskPercent - 0.1).clamp(
-                                                  0.1,
-                                                  10,
+                                            if (_slPrice != null &&
+                                                _clickPrice != null) {
+                                              final newPrice =
+                                                  _slPrice! -
+                                                  0.00001; // Decrementar 1 pip
+                                              if (_isBuyOrder) {
+                                                // Para compras: SL debe estar entre clickPrice - 0.01 y clickPrice - 0.00001
+                                                _slPrice = newPrice.clamp(
+                                                  _clickPrice! - 0.01,
+                                                  _clickPrice! - 0.00001,
                                                 );
+                                              } else {
+                                                // Para ventas: SL debe estar entre clickPrice + 0.00001 y clickPrice + 0.01
+                                                _slPrice = newPrice.clamp(
+                                                  _clickPrice! + 0.00001,
+                                                  _clickPrice! + 0.01,
+                                                );
+                                              }
+                                            }
                                           });
                                           if (widget
                                                       .simulationProvider
@@ -1711,22 +1951,12 @@ class _TradingTabState extends State<TradingTab>
                                               widget
                                                       .simulationProvider
                                                       .calculatedPositionSize! >
-                                                  0) {
-                                            final riskAmount =
-                                                widget
-                                                    .simulationProvider
-                                                    .currentBalance *
-                                                (_slRiskPercent / 100);
-                                            final priceDistance =
-                                                riskAmount /
-                                                widget
-                                                    .simulationProvider
-                                                    .calculatedPositionSize!;
-                                            final slPrice = _isBuyOrder
-                                                ? _clickPrice! - priceDistance
-                                                : _clickPrice! + priceDistance;
+                                                  0 &&
+                                              _slPrice != null) {
                                             widget.simulationProvider
-                                                .updateManualStopLoss(slPrice);
+                                                .updateManualStopLoss(
+                                                  _slPrice!,
+                                                );
                                           }
                                         },
                                         icon: const Icon(
@@ -1765,14 +1995,22 @@ class _TradingTabState extends State<TradingTab>
                                           trackHeight: 2,
                                         ),
                                         child: Slider(
-                                          value: _slRiskPercent.clamp(0.1, 10),
-                                          min: 0.1,
-                                          max: 10,
-                                          divisions: 99,
-                                          onChanged: (newPercent) {
-                                            setState(
-                                              () => _slRiskPercent = newPercent,
-                                            );
+                                          value: _slPrice != null
+                                              ? _slPrice!
+                                              : 0.0,
+                                          min: _clickPrice != null
+                                              ? (_isBuyOrder
+                                                    ? _clickPrice! - 0.01
+                                                    : _clickPrice! - 0.01)
+                                              : 0.0,
+                                          max: _clickPrice != null
+                                              ? (_isBuyOrder
+                                                    ? _clickPrice! - 0.00001
+                                                    : _clickPrice! + 0.01)
+                                              : 0.01,
+                                          divisions: 999,
+                                          onChanged: (newPrice) {
+                                            setState(() => _slPrice = newPrice);
                                             if (widget
                                                         .simulationProvider
                                                         .calculatedPositionSize !=
@@ -1780,24 +2018,11 @@ class _TradingTabState extends State<TradingTab>
                                                 widget
                                                         .simulationProvider
                                                         .calculatedPositionSize! >
-                                                    0) {
-                                              final riskAmount =
-                                                  widget
-                                                      .simulationProvider
-                                                      .currentBalance *
-                                                  (_slRiskPercent / 100);
-                                              final priceDistance =
-                                                  riskAmount /
-                                                  widget
-                                                      .simulationProvider
-                                                      .calculatedPositionSize!;
-                                              final slPrice = _isBuyOrder
-                                                  ? _clickPrice! - priceDistance
-                                                  : _clickPrice! +
-                                                        priceDistance;
+                                                    0 &&
+                                                _slPrice != null) {
                                               widget.simulationProvider
                                                   .updateManualStopLoss(
-                                                    slPrice,
+                                                    _slPrice!,
                                                   );
                                             }
                                           },
@@ -1826,11 +2051,25 @@ class _TradingTabState extends State<TradingTab>
                                       child: IconButton(
                                         onPressed: () {
                                           setState(() {
-                                            _slRiskPercent =
-                                                (_slRiskPercent + 0.1).clamp(
-                                                  0.1,
-                                                  10,
+                                            if (_slPrice != null &&
+                                                _clickPrice != null) {
+                                              final newPrice =
+                                                  _slPrice! +
+                                                  0.00001; // Incrementar 1 pip
+                                              if (_isBuyOrder) {
+                                                // Para compras: SL debe estar entre clickPrice - 0.01 y clickPrice - 0.00001
+                                                _slPrice = newPrice.clamp(
+                                                  _clickPrice! - 0.01,
+                                                  _clickPrice! - 0.00001,
                                                 );
+                                              } else {
+                                                // Para ventas: SL debe estar entre clickPrice + 0.00001 y clickPrice + 0.01
+                                                _slPrice = newPrice.clamp(
+                                                  _clickPrice! + 0.00001,
+                                                  _clickPrice! + 0.01,
+                                                );
+                                              }
+                                            }
                                           });
                                           if (widget
                                                       .simulationProvider
@@ -1839,22 +2078,12 @@ class _TradingTabState extends State<TradingTab>
                                               widget
                                                       .simulationProvider
                                                       .calculatedPositionSize! >
-                                                  0) {
-                                            final riskAmount =
-                                                widget
-                                                    .simulationProvider
-                                                    .currentBalance *
-                                                (_slRiskPercent / 100);
-                                            final priceDistance =
-                                                riskAmount /
-                                                widget
-                                                    .simulationProvider
-                                                    .calculatedPositionSize!;
-                                            final slPrice = _isBuyOrder
-                                                ? _clickPrice! - priceDistance
-                                                : _clickPrice! + priceDistance;
+                                                  0 &&
+                                              _slPrice != null) {
                                             widget.simulationProvider
-                                                .updateManualStopLoss(slPrice);
+                                                .updateManualStopLoss(
+                                                  _slPrice!,
+                                                );
                                           }
                                         },
                                         icon: const Icon(
@@ -1872,13 +2101,15 @@ class _TradingTabState extends State<TradingTab>
 
                                     // SL Value
                                     SizedBox(
-                                      width: 45,
+                                      width: 60,
                                       child: Text(
-                                        '${_slRiskPercent.toStringAsFixed(1)}%',
+                                        _slPrice != null
+                                            ? '\$${_slPrice!.toStringAsFixed(5)}'
+                                            : '--',
                                         textAlign: TextAlign.end,
                                         style: const TextStyle(
                                           color: Color(0xFFFF6B6B),
-                                          fontSize: 11,
+                                          fontSize: 10,
                                           fontWeight: FontWeight.w600,
                                           fontFamily: 'Inter',
                                         ),
@@ -1945,11 +2176,25 @@ class _TradingTabState extends State<TradingTab>
                                       child: IconButton(
                                         onPressed: () {
                                           setState(() {
-                                            _tpRiskPercent =
-                                                (_tpRiskPercent - 0.1).clamp(
-                                                  0.1,
-                                                  20,
+                                            if (_tpPrice != null &&
+                                                _clickPrice != null) {
+                                              final newPrice =
+                                                  _tpPrice! -
+                                                  0.00001; // Decrementar 1 pip
+                                              if (_isBuyOrder) {
+                                                // Para compras: TP debe estar entre clickPrice + 0.00001 y clickPrice + 0.02
+                                                _tpPrice = newPrice.clamp(
+                                                  _clickPrice! + 0.00001,
+                                                  _clickPrice! + 0.02,
                                                 );
+                                              } else {
+                                                // Para ventas: TP debe estar entre clickPrice - 0.02 y clickPrice - 0.00001
+                                                _tpPrice = newPrice.clamp(
+                                                  _clickPrice! - 0.02,
+                                                  _clickPrice! - 0.00001,
+                                                );
+                                              }
+                                            }
                                           });
                                           if (widget
                                                       .simulationProvider
@@ -1958,23 +2203,11 @@ class _TradingTabState extends State<TradingTab>
                                               widget
                                                       .simulationProvider
                                                       .calculatedPositionSize! >
-                                                  0) {
-                                            final potentialAmount =
-                                                widget
-                                                    .simulationProvider
-                                                    .currentBalance *
-                                                (_tpRiskPercent / 100);
-                                            final priceDistance =
-                                                potentialAmount /
-                                                widget
-                                                    .simulationProvider
-                                                    .calculatedPositionSize!;
-                                            final tpPrice = _isBuyOrder
-                                                ? _clickPrice! + priceDistance
-                                                : _clickPrice! - priceDistance;
+                                                  0 &&
+                                              _tpPrice != null) {
                                             widget.simulationProvider
                                                 .updateManualTakeProfit(
-                                                  tpPrice,
+                                                  _tpPrice!,
                                                 );
                                           }
                                         },
@@ -2014,14 +2247,22 @@ class _TradingTabState extends State<TradingTab>
                                           trackHeight: 2,
                                         ),
                                         child: Slider(
-                                          value: _tpRiskPercent.clamp(0.1, 20),
-                                          min: 0.1,
-                                          max: 20,
-                                          divisions: 199,
-                                          onChanged: (newPercent) {
-                                            setState(
-                                              () => _tpRiskPercent = newPercent,
-                                            );
+                                          value: _tpPrice != null
+                                              ? _tpPrice!
+                                              : 0.0,
+                                          min: _clickPrice != null
+                                              ? (_isBuyOrder
+                                                    ? _clickPrice! + 0.00001
+                                                    : _clickPrice! - 0.02)
+                                              : 0.0,
+                                          max: _clickPrice != null
+                                              ? (_isBuyOrder
+                                                    ? _clickPrice! + 0.02
+                                                    : _clickPrice! - 0.00001)
+                                              : 0.02,
+                                          divisions: 1999,
+                                          onChanged: (newPrice) {
+                                            setState(() => _tpPrice = newPrice);
                                             if (widget
                                                         .simulationProvider
                                                         .calculatedPositionSize !=
@@ -2029,24 +2270,11 @@ class _TradingTabState extends State<TradingTab>
                                                 widget
                                                         .simulationProvider
                                                         .calculatedPositionSize! >
-                                                    0) {
-                                              final potentialAmount =
-                                                  widget
-                                                      .simulationProvider
-                                                      .currentBalance *
-                                                  (_tpRiskPercent / 100);
-                                              final priceDistance =
-                                                  potentialAmount /
-                                                  widget
-                                                      .simulationProvider
-                                                      .calculatedPositionSize!;
-                                              final tpPrice = _isBuyOrder
-                                                  ? _clickPrice! + priceDistance
-                                                  : _clickPrice! -
-                                                        priceDistance;
+                                                    0 &&
+                                                _tpPrice != null) {
                                               widget.simulationProvider
                                                   .updateManualTakeProfit(
-                                                    tpPrice,
+                                                    _tpPrice!,
                                                   );
                                             }
                                           },
@@ -2075,11 +2303,25 @@ class _TradingTabState extends State<TradingTab>
                                       child: IconButton(
                                         onPressed: () {
                                           setState(() {
-                                            _tpRiskPercent =
-                                                (_tpRiskPercent + 0.1).clamp(
-                                                  0.1,
-                                                  20,
+                                            if (_tpPrice != null &&
+                                                _clickPrice != null) {
+                                              final newPrice =
+                                                  _tpPrice! +
+                                                  0.00001; // Incrementar 1 pip
+                                              if (_isBuyOrder) {
+                                                // Para compras: TP debe estar entre clickPrice + 0.00001 y clickPrice + 0.02
+                                                _tpPrice = newPrice.clamp(
+                                                  _clickPrice! + 0.00001,
+                                                  _clickPrice! + 0.02,
                                                 );
+                                              } else {
+                                                // Para ventas: TP debe estar entre clickPrice - 0.02 y clickPrice - 0.00001
+                                                _tpPrice = newPrice.clamp(
+                                                  _clickPrice! - 0.02,
+                                                  _clickPrice! - 0.00001,
+                                                );
+                                              }
+                                            }
                                           });
                                           if (widget
                                                       .simulationProvider
@@ -2088,23 +2330,11 @@ class _TradingTabState extends State<TradingTab>
                                               widget
                                                       .simulationProvider
                                                       .calculatedPositionSize! >
-                                                  0) {
-                                            final potentialAmount =
-                                                widget
-                                                    .simulationProvider
-                                                    .currentBalance *
-                                                (_tpRiskPercent / 100);
-                                            final priceDistance =
-                                                potentialAmount /
-                                                widget
-                                                    .simulationProvider
-                                                    .calculatedPositionSize!;
-                                            final tpPrice = _isBuyOrder
-                                                ? _clickPrice! + priceDistance
-                                                : _clickPrice! - priceDistance;
+                                                  0 &&
+                                              _tpPrice != null) {
                                             widget.simulationProvider
                                                 .updateManualTakeProfit(
-                                                  tpPrice,
+                                                  _tpPrice!,
                                                 );
                                           }
                                         },
@@ -2123,13 +2353,15 @@ class _TradingTabState extends State<TradingTab>
 
                                     // TP Value
                                     SizedBox(
-                                      width: 45,
+                                      width: 60,
                                       child: Text(
-                                        '${_tpRiskPercent.toStringAsFixed(1)}%',
+                                        _tpPrice != null
+                                            ? '\$${_tpPrice!.toStringAsFixed(5)}'
+                                            : '--',
                                         textAlign: TextAlign.end,
                                         style: const TextStyle(
                                           color: Color(0xFF22C55E),
-                                          fontSize: 11,
+                                          fontSize: 10,
                                           fontWeight: FontWeight.w600,
                                           fontFamily: 'Inter',
                                         ),
@@ -2174,7 +2406,10 @@ class _TradingTabState extends State<TradingTab>
                                               ),
                                             ),
                                             Text(
-                                              '\$${(widget.simulationProvider.currentBalance * (_slRiskPercent / 100)).toStringAsFixed(2)}',
+                                              _slPrice != null &&
+                                                      _clickPrice != null
+                                                  ? '\$${((_clickPrice! - _slPrice!).abs() * (widget.simulationProvider.calculatedPositionSize ?? 1)).toStringAsFixed(2)} (${(((_clickPrice! - _slPrice!).abs() * (widget.simulationProvider.calculatedPositionSize ?? 1)) / widget.simulationProvider.currentBalance * 100).toStringAsFixed(1)}%)'
+                                                  : '--',
                                               style: const TextStyle(
                                                 color: Color(0xFFFF6B6B),
                                                 fontSize: 12,
@@ -2201,7 +2436,10 @@ class _TradingTabState extends State<TradingTab>
                                               ),
                                             ),
                                             Text(
-                                              '\$${(widget.simulationProvider.currentBalance * (_tpRiskPercent / 100)).toStringAsFixed(2)}',
+                                              _tpPrice != null &&
+                                                      _clickPrice != null
+                                                  ? '\$${((_tpPrice! - _clickPrice!).abs() * (widget.simulationProvider.calculatedPositionSize ?? 1)).toStringAsFixed(2)} (${(((_tpPrice! - _clickPrice!).abs() * (widget.simulationProvider.calculatedPositionSize ?? 1)) / widget.simulationProvider.currentBalance * 100).toStringAsFixed(1)}%)'
+                                                  : '--',
                                               style: const TextStyle(
                                                 color: Color(0xFF22C55E),
                                                 fontSize: 12,
@@ -2228,7 +2466,11 @@ class _TradingTabState extends State<TradingTab>
                                               ),
                                             ),
                                             Text(
-                                              '1:${(_tpRiskPercent / _slRiskPercent).toStringAsFixed(1)}',
+                                              _slPrice != null &&
+                                                      _tpPrice != null &&
+                                                      _clickPrice != null
+                                                  ? '1:${((_tpPrice! - _clickPrice!).abs() / (_clickPrice! - _slPrice!).abs()).toStringAsFixed(1)}'
+                                                  : '--',
                                               style: const TextStyle(
                                                 color: Color(0xFF3B82F6),
                                                 fontSize: 12,
@@ -2255,94 +2497,54 @@ class _TradingTabState extends State<TradingTab>
                                 widget.simulationProvider
                                         .canCalculatePosition() &&
                                     _clickPrice != null &&
-                                    _slRiskPercent > 0 &&
-                                    _tpRiskPercent > 0
+                                    _slPrice != null &&
+                                    _tpPrice != null
                                 ? () {
-                                    // Ejecutar la orden
-                                    final riskAmount =
-                                        widget
-                                            .simulationProvider
-                                            .currentBalance *
-                                        (_slRiskPercent / 100);
-                                    final tpAmount =
-                                        widget
-                                            .simulationProvider
-                                            .currentBalance *
-                                        (_tpRiskPercent / 100);
-                                    final slPrice = _isBuyOrder
-                                        ? _clickPrice! -
-                                              (riskAmount /
-                                                  (widget
-                                                          .simulationProvider
-                                                          .calculatedPositionSize ??
-                                                      1))
-                                        : _clickPrice! +
-                                              (riskAmount /
-                                                  (widget
-                                                          .simulationProvider
-                                                          .calculatedPositionSize ??
-                                                      1));
-                                    final tpPrice = _isBuyOrder
-                                        ? _clickPrice! +
-                                              (tpAmount /
-                                                  (widget
-                                                          .simulationProvider
-                                                          .calculatedPositionSize ??
-                                                      1))
-                                        : _clickPrice! -
-                                              (tpAmount /
-                                                  (widget
-                                                          .simulationProvider
-                                                          .calculatedPositionSize ??
-                                                      1));
+                                    // Ejecutar la orden usando los precios directamente
+                                    if (_slPrice != null && _tpPrice != null) {
+                                      widget.simulationProvider
+                                          .updateManualStopLoss(_slPrice!);
+                                      widget.simulationProvider
+                                          .updateManualTakeProfit(_tpPrice!);
 
-                                    widget.simulationProvider
-                                        .updateManualStopLoss(slPrice);
-                                    widget.simulationProvider
-                                        .updateManualTakeProfit(tpPrice);
+                                      widget.simulationProvider
+                                          .executeManualTrade(
+                                            type: _isBuyOrder ? 'buy' : 'sell',
+                                            amount:
+                                                widget
+                                                    .simulationProvider
+                                                    .calculatedPositionSize ??
+                                                0.0,
+                                            leverage: _selectedLeverage,
+                                            entryPrice: _clickPrice!,
+                                          );
 
-                                    widget.simulationProvider
-                                        .executeManualTrade(
-                                          type: _isBuyOrder ? 'buy' : 'sell',
-                                          amount:
-                                              widget
-                                                  .simulationProvider
-                                                  .calculatedPositionSize ??
-                                              0.0,
-                                          leverage:
-                                              widget
-                                                  .simulationProvider
-                                                  .calculatedLeverage
-                                                  ?.toInt() ??
-                                              1,
-                                          entryPrice: _clickPrice!,
-                                        );
+                                      Future.delayed(
+                                        const Duration(milliseconds: 100),
+                                        () {
+                                          widget.simulationProvider
+                                              .resumeSimulation();
+                                        },
+                                      );
 
-                                    Future.delayed(
-                                      const Duration(milliseconds: 100),
-                                      () {
-                                        widget.simulationProvider
-                                            .resumeSimulation();
-                                      },
-                                    );
+                                      setState(() {
+                                        _showOrderContainerInline = false;
+                                        // No limpiar _clickPrice inmediatamente para mantener SL/TP visible
+                                        // _clickPrice = null;
+                                      });
 
-                                    setState(() {
-                                      _showOrderContainerInline = false;
-                                      // No limpiar _clickPrice inmediatamente para mantener SL/TP visible
-                                      // _clickPrice = null;
-                                    });
-
-                                    // Limpiar _clickPrice después de un delay para que el chart tenga tiempo de actualizar
-                                    Future.delayed(
-                                      const Duration(milliseconds: 500),
-                                      () {
-                                        if (mounted) {
-                                          setState(() {
-                                            _clickPrice = null;
-                                          });
-                                        }
-                                      },
-                                    );
+                                      // Limpiar _clickPrice después de un delay para que el chart tenga tiempo de actualizar
+                                      Future.delayed(
+                                        const Duration(milliseconds: 500),
+                                        () {
+                                          if (mounted) {
+                                            setState(() {
+                                              _clickPrice = null;
+                                            });
+                                          }
+                                        },
+                                      );
+                                    }
                                   }
                                 : null,
                             style: ElevatedButton.styleFrom(
@@ -2397,17 +2599,34 @@ class _TradingTabState extends State<TradingTab>
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Text(
-                                    _isBuyOrder
-                                        ? 'CONFIRMAR COMPRA'
-                                        : 'CONFIRMAR VENTA',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      fontFamily: 'Inter',
-                                      letterSpacing: 1.0,
-                                      color: Colors.white,
-                                    ),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _isBuyOrder
+                                            ? 'CONFIRMAR COMPRA'
+                                            : 'CONFIRMAR VENTA',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          fontFamily: 'Inter',
+                                          letterSpacing: 1.0,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Apalancamiento: ${_selectedLeverage}x',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Inter',
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
