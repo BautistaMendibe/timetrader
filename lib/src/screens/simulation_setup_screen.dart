@@ -163,57 +163,94 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                       // Asset Selection
                       _buildSection(
                         title: 'Activo',
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedAsset,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF374151),
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF374151),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF22C55E),
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: const Color(0xFF111827),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                          ),
-                          dropdownColor: const Color(0xFF1F2937),
-                          style: const TextStyle(
-                            color: Color(0xFFF8FAFC),
-                            fontSize: 16,
-                            fontFamily: 'Inter',
-                          ),
-                          items: _dataService.getAvailableAssets().map((asset) {
-                            return DropdownMenuItem(
-                              value: asset,
-                              child: Text(
-                                asset,
-                                style: const TextStyle(
-                                  color: Color(0xFFF8FAFC),
-                                  fontFamily: 'Inter',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Dropdown no modificable
+                            DropdownButtonFormField<String>(
+                              value: _selectedAsset,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF374151),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF374151),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF22C55E),
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: const Color(0xFF111827),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
                                 ),
                               ),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedAsset = value;
-                            });
-                          },
+                              dropdownColor: const Color(0xFF1F2937),
+                              style: const TextStyle(
+                                color: Color(0xFFF8FAFC),
+                                fontSize: 16,
+                                fontFamily: 'Inter',
+                              ),
+                              items: _dataService.getAvailableAssets().map((
+                                asset,
+                              ) {
+                                return DropdownMenuItem(
+                                  value: asset,
+                                  child: Text(
+                                    asset,
+                                    style: const TextStyle(
+                                      color: Color(0xFFF8FAFC),
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: null, // No modificable
+                            ),
+                            const SizedBox(height: 12),
+                            // Mensaje informativo
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E40AF).withOpacity(0.1),
+                                border: Border.all(
+                                  color: const Color(0xFF3B82F6),
+                                  width: 1,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: const Color(0xFF3B82F6),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Estamos trabajando para sumar más pares de divisas y criptomonedas próximamente.',
+                                      style: TextStyle(
+                                        color: const Color(0xFF3B82F6),
+                                        fontSize: 14,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 20),
