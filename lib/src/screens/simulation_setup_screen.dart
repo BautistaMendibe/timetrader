@@ -742,18 +742,9 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(
-              Icons.arrow_back_ios,
-              color: Color(0xFF94A3B8),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 8),
           const Text(
             'Configurar Simulación',
             style: TextStyle(
