@@ -750,7 +750,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
             style: TextStyle(
               color: Color(0xFFF8FAFC),
               fontWeight: FontWeight.w600,
-              fontSize: 20,
+              fontSize: 22,
               fontFamily: 'Inter',
             ),
           ),
