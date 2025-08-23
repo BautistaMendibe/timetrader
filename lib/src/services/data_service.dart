@@ -228,7 +228,9 @@ class DataService {
   }
 
   List<String> getAvailableAssets() {
-    return ['BTC/USD', 'EUR/USD', 'S&P500'];
+    // MVP: Solo EURUSD disponible por ahora
+    // TODO: Agregar BTC/USD y S&P500 en futuras versiones
+    return ['EUR/USD'];
   }
 
   List<DateTime> getAvailableDates() {

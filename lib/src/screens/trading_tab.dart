@@ -821,7 +821,7 @@ class _TradingTabState extends State<TradingTab>
                                 children: [
                                   Text(
                                     widget.simulationProvider.activeSymbol ??
-                                        'BTCUSD',
+                                        'EUR/USD',
                                     style: const TextStyle(
                                       color: Color(0xFFF8FAFC),
                                       fontSize: 16,
@@ -1060,7 +1060,7 @@ class _TradingTabState extends State<TradingTab>
                                                       widget
                                                               .simulationProvider
                                                               .activeSymbol ??
-                                                          'BTCUSD',
+                                                          'EUR/USD',
                                                     ),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.transparent,
