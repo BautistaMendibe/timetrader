@@ -17,7 +17,8 @@ class SimulationSetupScreen extends StatefulWidget {
 class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
   final DataService _dataService = DataService();
   String? _selectedAsset;
-  DateTime? _selectedDate;
+  DateTime? _startDate;
+  DateTime? _endDate;
   Setup? _selectedSetup;
   double _initialBalance = 1000.0; // Default initial balance
   bool _isLoading = false;
@@ -35,6 +36,11 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
 
     if (assets.isNotEmpty) _selectedAsset = assets.first;
 
+    // Set default date range: 3 days ago to yesterday
+    final now = DateTime.now();
+    _startDate = now.subtract(const Duration(days: 3));
+    _endDate = now.subtract(const Duration(days: 1));
+
     _isInitialized = true;
   }
 
@@ -49,12 +55,16 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
 
   Future<void> _startSimulation() async {
     if (_selectedAsset == null ||
-        _selectedDate == null ||
+        _startDate == null ||
+        _endDate == null ||
         _selectedSetup == null) {
       String errorMessage = 'Por favor completa todos los campos:';
       if (_selectedAsset == null) errorMessage += '\n• Selecciona un activo';
-      if (_selectedDate == null) {
+      if (_startDate == null) {
         errorMessage += '\n• Selecciona una fecha de inicio';
+      }
+      if (_endDate == null) {
+        errorMessage += '\n• Selecciona una fecha de fin';
       }
       if (_selectedSetup == null) errorMessage += '\n• Selecciona un setup';
 
@@ -66,13 +76,23 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
       return;
     }
 
-    // Validar que la fecha no sea futura
+    // Validar que las fechas no sean futuras
     final now = DateTime.now();
-    if (_selectedDate!.isAfter(now)) {
+    if (_startDate!.isAfter(now) || _endDate!.isAfter(now)) {
       TopSnackBar.showError(
         context: context,
         message:
-            'No se puede simular con fechas futuras. Selecciona una fecha anterior a hoy.',
+            'No se puede simular con fechas futuras. Selecciona fechas anteriores a hoy.',
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
+
+    // Validar que la fecha de inicio sea anterior a la fecha de fin
+    if (_startDate!.isAfter(_endDate!)) {
+      TopSnackBar.showError(
+        context: context,
+        message: 'La fecha de inicio debe ser anterior a la fecha de fin.',
         duration: const Duration(seconds: 3),
       );
       return;
@@ -88,14 +108,14 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
       // Load historical data
       final data = await _dataService.loadHistorical(
         _selectedAsset!,
-        _selectedDate!,
+        _startDate!,
       );
 
       // Set data and start simulation
       simulationProvider.setHistoricalData(data);
       simulationProvider.startTickSimulation(
         _selectedSetup!,
-        _selectedDate!,
+        _startDate!,
         1.0,
         _initialBalance,
         _selectedAsset!,
@@ -222,7 +242,9 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1E40AF).withOpacity(0.1),
+                                color: const Color(
+                                  0xFF1E40AF,
+                                ).withValues(alpha: 0.1),
                                 border: Border.all(
                                   color: const Color(0xFF3B82F6),
                                   width: 1,
@@ -255,42 +277,53 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Date Selection
+                      // Date Range Selection
                       _buildSection(
-                        title: 'Fecha de Inicio',
+                        title: 'Rango de Fechas',
                         child: InkWell(
                           onTap: () async {
-                            final DateTime? picked = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  _selectedDate ??
-                                  DateTime.now().subtract(
+                            final DateTimeRange? picked =
+                                await showDateRangePicker(
+                                  context: context,
+                                  initialDateRange:
+                                      _startDate != null && _endDate != null
+                                      ? DateTimeRange(
+                                          start: _startDate!,
+                                          end: _endDate!,
+                                        )
+                                      : DateTimeRange(
+                                          start: DateTime.now().subtract(
+                                            const Duration(days: 2),
+                                          ),
+                                          end: DateTime.now().subtract(
+                                            const Duration(days: 1),
+                                          ),
+                                        ),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime.now().subtract(
                                     const Duration(days: 1),
                                   ),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime.now().subtract(
-                                const Duration(days: 1),
-                              ),
-                              builder: (context, child) {
-                                return Theme(
-                                  data: Theme.of(context).copyWith(
-                                    colorScheme: const ColorScheme.dark(
-                                      primary: Color(0xFF22C55E),
-                                      onPrimary: Colors.white,
-                                      surface: Color(0xFF1F2937),
-                                      onSurface: Colors.white,
-                                    ),
-                                    dialogTheme: const DialogThemeData(
-                                      backgroundColor: Color(0xFF111827),
-                                    ),
-                                  ),
-                                  child: child!,
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: Theme.of(context).copyWith(
+                                        colorScheme: const ColorScheme.dark(
+                                          primary: Color(0xFF22C55E),
+                                          onPrimary: Colors.white,
+                                          surface: Color(0xFF1F2937),
+                                          onSurface: Colors.white,
+                                        ),
+                                        dialogTheme: const DialogThemeData(
+                                          backgroundColor: Color(0xFF111827),
+                                        ),
+                                      ),
+                                      child: child!,
+                                    );
+                                  },
                                 );
-                              },
-                            );
                             if (picked != null) {
                               setState(() {
-                                _selectedDate = picked;
+                                _startDate = picked.start;
+                                _endDate = picked.end;
                               });
                             }
                           },
@@ -309,18 +342,19 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                             child: Row(
                               children: [
                                 const Icon(
-                                  Icons.calendar_today,
+                                  Icons.date_range,
                                   color: Color(0xFF94A3B8),
                                   size: 20,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    _selectedDate != null
-                                        ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                                        : 'Seleccionar fecha',
+                                    _startDate != null && _endDate != null
+                                        ? '${_startDate!.day}/${_startDate!.month}/${_startDate!.year} - ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
+                                        : 'Seleccionar rango de fechas',
                                     style: TextStyle(
-                                      color: _selectedDate != null
+                                      color:
+                                          _startDate != null && _endDate != null
                                           ? const Color(0xFFF8FAFC)
                                           : const Color(0xFF94A3B8),
                                       fontSize: 16,
@@ -337,7 +371,7 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                           ),
                         ),
                         subtitle:
-                            'Selecciona cualquier fecha desde 2020 hasta ayer',
+                            'Selecciona el rango de fechas para la simulación (desde 2020 hasta ayer)',
                       ),
                       const SizedBox(height: 20),
 
@@ -609,7 +643,11 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                         width: double.infinity,
                         height: 60,
                         decoration: BoxDecoration(
-                          gradient: _isLoading || _selectedSetup == null
+                          gradient:
+                              _isLoading ||
+                                  _selectedSetup == null ||
+                                  _startDate == null ||
+                                  _endDate == null
                               ? const LinearGradient(
                                   colors: [
                                     Color(0xFF6B7280),
@@ -626,7 +664,10 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                                 ),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
-                            if (!(_isLoading || _selectedSetup == null))
+                            if (!(_isLoading ||
+                                _selectedSetup == null ||
+                                _startDate == null ||
+                                _endDate == null))
                               BoxShadow(
                                 color: const Color(
                                   0xFF10B981,
@@ -638,7 +679,11 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: _isLoading || _selectedSetup == null
+                          onPressed:
+                              _isLoading ||
+                                  _selectedSetup == null ||
+                                  _startDate == null ||
+                                  _endDate == null
                               ? null
                               : _startSimulation,
                           style: ElevatedButton.styleFrom(
@@ -739,8 +784,8 @@ class _SimulationSetupScreenState extends State<SimulationSetupScreen> {
         sectionIcon = Icons.trending_up_rounded;
         sectionGradient = [const Color(0xFF10B981), const Color(0xFF059669)];
         break;
-      case 'fecha de inicio':
-        sectionIcon = Icons.calendar_today_rounded;
+      case 'rango de fechas':
+        sectionIcon = Icons.date_range_rounded;
         sectionGradient = [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)];
         break;
       case 'setup':
